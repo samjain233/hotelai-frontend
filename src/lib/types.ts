@@ -1,0 +1,128 @@
+// ─── Hotel ────────────────────────────────────────────────
+export interface Hotel {
+    id: string;
+    name: string;
+    slug: string;
+    address?: string;
+    phone?: string;
+    logoUrl?: string;
+}
+
+// ─── Admin ────────────────────────────────────────────────
+export interface Admin {
+    id: string;
+    email: string;
+    name: string;
+    role: 'OWNER' | 'MANAGER' | 'KITCHEN';
+}
+
+export interface AuthResponse {
+    token: string;
+    admin: Admin;
+    hotel: Hotel;
+}
+
+// ─── Menu ─────────────────────────────────────────────────
+export interface MenuCategory {
+    id: string;
+    name: string;
+    icon?: string;
+    sortOrder: number;
+    hotelId: string;
+    _count?: { items: number };
+    items?: MenuItem[];
+}
+
+export interface MenuItem {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    imageUrl?: string;
+    available: boolean;
+    dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
+    categoryId: string;
+    category?: MenuCategory;
+    hotelId: string;
+    createdAt: string;
+}
+
+// ─── Room ─────────────────────────────────────────────────
+export interface Room {
+    id: string;
+    number: string;
+    floor?: string;
+    type: 'STANDARD' | 'DELUXE' | 'SUITE';
+    hotelId: string;
+    _count?: { orders: number };
+}
+
+export interface RoomQr {
+    roomId: string;
+    roomNumber: string;
+    floor?: string;
+    type?: string;
+    qrCode: string;
+    menuUrl: string;
+}
+
+// ─── Order ────────────────────────────────────────────────
+export type OrderStatus = 'PLACED' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED';
+
+export interface OrderItem {
+    id: string;
+    itemId: string;
+    quantity: number;
+    price: number;
+    itemName: string;
+    item?: MenuItem;
+}
+
+export interface Order {
+    id: string;
+    orderNumber: number;
+    roomId: string;
+    room?: Room;
+    hotelId: string;
+    status: OrderStatus;
+    totalAmount: number;
+    notes?: string;
+    guestName?: string;
+    guestPhone?: string;
+    items: OrderItem[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+// ─── Cart ─────────────────────────────────────────────────
+export interface CartItem {
+    item: MenuItem;
+    quantity: number;
+}
+
+// ─── Public Menu ──────────────────────────────────────────
+export interface PublicMenuData {
+    hotel: Hotel;
+    categories: (MenuCategory & { items: MenuItem[] })[];
+}
+
+// ─── Service Request ──────────────────────────────────────
+export type ServiceRequestType = 'COMPLAINT' | 'ROOM_SERVICE' | 'HOUSEKEEPING';
+export type ServiceRequestStatus = 'SUBMITTED' | 'ACKNOWLEDGED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
+export type ServiceRequestPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+export interface ServiceRequest {
+    id: string;
+    type: ServiceRequestType;
+    category: string;
+    description?: string;
+    priority: ServiceRequestPriority;
+    status: ServiceRequestStatus;
+    roomId: string;
+    room?: Room;
+    hotelId: string;
+    guestName?: string;
+    guestPhone?: string;
+    createdAt: string;
+    updatedAt: string;
+}

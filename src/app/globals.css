@@ -1,26 +1,296 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-serif: var(--font-playfair), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 
-@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* 
+    Premium Light Theme - Crisp & Clean
+  */
+  --background: #f8fafc;
+  /* subtle slate-50 */
+  --foreground: #0f172a;
+  /* slate-900 */
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #0f172a;
+  --primary-foreground: #f8fafc;
+
+  --secondary: #f1f5f9;
+  /* slate-100 */
+  --secondary-foreground: #0f172a;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  /* slate-500 */
+
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+
+  --border: #e2e8f0;
+  /* slate-200 */
+  --input: #e2e8f0;
+  --ring: #cbd5e1;
+  /* slate-300 */
+
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* 
+    Premium Dark Theme - "Linear" Style (Deep Zinc)
+  */
+  --background: #09090b;
+  --foreground: #fafafa;
+
+  --card: #09090b;
+  --card-foreground: #fafafa;
+
+  --popover: #09090b;
+  --popover-foreground: #fafafa;
+
+  --primary: #ededed;
+  --primary-foreground: #09090b;
+
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: rgba(255, 255, 255, 0.4);
+}
+
+@layer base {
+
+  *,
+  ::after,
+  ::before {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 
+   Utility Classes 
+*/
+.glass-panel {
+  @apply bg-background/95 backdrop-blur-xl border border-border shadow-sm relative overflow-hidden;
+}
+
+.glass-panel::before {
+  content: '';
+  @apply absolute inset-0 pointer-events-none rounded-[inherit];
+  box-shadow: inset 0 1px 0 0 var(--ring);
+  opacity: 0.2;
+}
+
+.dashboard-card {
+  @apply bg-card/95 backdrop-blur-xl border border-border shadow-sm relative overflow-hidden rounded-xl transition-all duration-300 hover:border-border/80 hover:shadow-md;
+}
+
+.dashboard-card::before {
+  content: '';
+  @apply absolute inset-0 pointer-events-none rounded-[inherit];
+  box-shadow: inset 0 1px 0 0 var(--ring);
+  opacity: 0.2;
+}
+
+.table-row-hover {
+  @apply transition-colors hover:bg-secondary/50;
+}
+
+/* Glass Card (Legacy, mapping to new style) */
+.glass-card {
+  @apply bg-card/95 backdrop-blur-xl border border-border shadow-sm relative overflow-hidden rounded-2xl;
+}
+
+.glass-card::before {
+  content: '';
+  @apply absolute inset-0 pointer-events-none rounded-[inherit];
+  box-shadow: inset 0 1px 0 0 var(--ring);
+  opacity: 0.2;
+}
+
+/* Menu Card Hover */
+.menu-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--border);
+}
+
+.menu-card:hover {
+  border-color: rgba(212, 168, 83, 0.3);
+  box-shadow: 0 0 20px rgba(212, 168, 83, 0.05);
+  transform: translateY(-1px);
+}
+
+/* Gold Accent */
+.text-gold {
+  color: #d4a853;
+}
+
+.bg-gold {
+  background: linear-gradient(135deg, #d4a853 0%, #c9973a 100%);
+}
+
+.border-gold {
+  border-color: rgba(212, 168, 83, 0.3);
+}
+
+/* Shimmer Skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 25%, var(--ring) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  opacity: 0.3;
+}
+
+/* Staggered skeleton card pulse */
+@keyframes skeletonFade {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.skeleton-card {
+  animation: skeletonFade 1.8s ease-in-out infinite;
+}
+
+/* Page Transition */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-transition {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Cart Pulse */
+@keyframes cartPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.cart-pulse {
+  animation: cartPulse 0.3s ease-in-out;
+}
+
+/* No Scrollbar */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fade Mask for Horizontal Scroll */
+.mask-fade-right {
+  -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  mask-image: linear-gradient(to right, black 85%, transparent 100%);
+}
+
+/* Custom Scrollbar - Minimal */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-800 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-zinc-700;
 }
