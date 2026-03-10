@@ -1,6 +1,6 @@
 import { AuthResponse, MenuCategory, MenuItem, Room, RoomQr, Order, PublicMenuData, ServiceRequest } from './types';
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 class ApiClient {
     private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -17,8 +17,19 @@ class ApiClient {
 
         if (!res.ok) {
             if (res.status === 401) {
+                // Avoid redirect loop: don't redirect when already on public routes
+                // where being unauthenticated is expected (login, register, guest pages)
                 if (typeof window !== 'undefined') {
-                    window.location.href = '/login';
+                    const path = window.location.pathname;
+                    const isPublicRoute =
+                        path === '/login' ||
+                        path === '/register' ||
+                        path === '/' ||
+                        path.startsWith('/menu/') ||
+                        path.startsWith('/services/');
+                    if (!isPublicRoute) {
+                        window.location.href = '/login';
+                    }
                 }
                 throw new Error('Session expired');
             }
