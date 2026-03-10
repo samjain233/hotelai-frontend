@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { api, API_URL } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { ServiceRequest } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -88,6 +89,7 @@ function playAlertSound(priority: string) {
 }
 
 export default function AdminServicesPage() {
+    const { hotel } = useAuth();
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [typeFilter, setTypeFilter] = useState("");
@@ -108,41 +110,33 @@ export default function AdminServicesPage() {
     }, [loadRequests]);
 
     // ─── WebSocket: live new requests & status updates ─────
+    // Auth cookie is sent automatically with withCredentials; server validates JWT and derives hotelId
     useEffect(() => {
-        // We need hotelId — fetch from /auth/me
-        let socket: Socket;
-        api.getProfile().then((admin: any) => {
-            socket = io(`${API_URL}/service-requests`, {
-                query: { hotelId: admin.hotel?.id ?? admin.hotelId },
-                withCredentials: true,
-            });
-            socketRef.current = socket;
+        if (!hotel?.id) return;
+        const socket = io(`${API_URL}/service-requests`, { withCredentials: true });
+        socketRef.current = socket;
 
-            socket.on("connect", () => setIsLive(true));
-            socket.on("disconnect", () => setIsLive(false));
+        socket.on("connect", () => setIsLive(true));
+        socket.on("disconnect", () => setIsLive(false));
 
-            // New request arrives → prepend to list + play audio if high priority
-            socket.on("service-request:new", (req: ServiceRequest) => {
-                setRequests(prev => {
-                    // Only add if it passes current type filter
-                    if (typeFilter && req.type !== typeFilter) return prev;
-                    return [req, ...prev];
-                });
-                if (req.priority === "URGENT" || req.priority === "HIGH") {
-                    playAlertSound(req.priority);
-                }
+        socket.on("service-request:new", (req: ServiceRequest) => {
+            setRequests(prev => {
+                if (typeFilter && req.type !== typeFilter) return prev;
+                return [req, ...prev];
             });
-
-            // Status updated → replace in list
-            socket.on("service-request:updated", (updated: ServiceRequest) => {
-                setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
-            });
-        }).catch(() => {/* not logged in */ });
+            if (req.priority === "URGENT" || req.priority === "HIGH") {
+                playAlertSound(req.priority);
+            }
+        });
+        socket.on("service-request:updated", (updated: ServiceRequest) => {
+            setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+        });
 
         return () => {
             socketRef.current?.disconnect();
+            socketRef.current = null;
         };
-    }, [typeFilter]);
+    }, [hotel?.id, typeFilter]);
 
     async function updateStatus(id: string, status: string) {
         setUpdatingId(id);
