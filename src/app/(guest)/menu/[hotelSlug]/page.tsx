@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { MenuItem, MenuCategory, CartItem, Hotel, Order } from "@/lib/types";
 import { api, API_URL } from "@/lib/api";
+import { usePublicMenu, usePublicRooms } from "@/hooks/useSwrApi";
 import { io, Socket } from "socket.io-client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -38,10 +39,14 @@ interface Props {
 
 export default function GuestMenuPage({ params }: Props) {
     const [hotelSlug, setHotelSlug] = useState<string>("");
-    const [hotel, setHotel] = useState<Hotel | null>(null);
-    const [categories, setCategories] = useState<(MenuCategory & { items: MenuItem[] })[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const menuRes = usePublicMenu(hotelSlug || null);
+    const roomsRes = usePublicRooms(hotelSlug || null);
+
+    const hotel = menuRes.data?.hotel ?? null;
+    const categories = menuRes.data?.categories ?? [];
+    const availableRooms = roomsRes.data ?? [];
+    const loading = menuRes.isLoading || roomsRes.isLoading;
+    const error = menuRes.error?.message ?? "";
     const [activeCategory, setActiveCategory] = useState<string>("");
     const [cart, setCart] = useState<CartItem[]>([]);
     const [showCart, setShowCart] = useState(false);
@@ -53,7 +58,6 @@ export default function GuestMenuPage({ params }: Props) {
     const [searchQuery, setSearchQuery] = useState("");
     const [cartAnimKey, setCartAnimKey] = useState(0);
     const [showRoomModal, setShowRoomModal] = useState(false);
-    const [availableRooms, setAvailableRooms] = useState<{ id: string; number: string; floor?: string; type?: string }[]>([]);
 
     // Order History State
     const [pastOrders, setPastOrders] = useState<Order[]>([]);
@@ -74,10 +78,10 @@ export default function GuestMenuPage({ params }: Props) {
     }, [params]);
 
     useEffect(() => {
-        if (!hotelSlug) return;
-        loadMenu();
-        loadRooms();
-    }, [hotelSlug]);
+        if (categories.length > 0 && !activeCategory) {
+            setActiveCategory(categories[0].id);
+        }
+    }, [categories, activeCategory]);
 
     useEffect(() => {
         if (roomId) loadPastOrders();
@@ -118,31 +122,6 @@ export default function GuestMenuPage({ params }: Props) {
             setPastOrders(orders);
         } catch (err) {
             console.error("Failed to load past orders", err);
-        }
-    }
-
-    async function loadMenu() {
-        try {
-            const data = await api.getPublicMenu(hotelSlug);
-            setHotel(data.hotel);
-            setCategories(data.categories);
-            if (data.categories.length > 0) {
-                setActiveCategory(data.categories[0].id);
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Could not load menu");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function loadRooms() {
-        if (!hotelSlug) return;
-        try {
-            const rooms = await api.getPublicRooms(hotelSlug);
-            setAvailableRooms(rooms);
-        } catch (err) {
-            console.error("Failed to load rooms", err);
         }
     }
 

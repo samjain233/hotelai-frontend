@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "@/lib/api";
 import { MenuCategory, MenuItem } from "@/lib/types";
+import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwrApi";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AnimatePresence, motion } from "framer-motion";
@@ -18,9 +19,9 @@ import {
 } from "lucide-react";
 
 export default function MenuPage() {
-    const [categories, setCategories] = useState<MenuCategory[]>([]);
-    const [items, setItems] = useState<MenuItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+    const { data: items = [], isLoading: itemsLoading } = useMenuItems();
+    const loading = categoriesLoading || itemsLoading;
     const [activeTab, setActiveTab] = useState<"items" | "categories">("items");
     const [search, setSearch] = useState("");
     const [showItemModal, setShowItemModal] = useState(false);
@@ -30,18 +31,6 @@ export default function MenuPage() {
     const [catForm, setCatForm] = useState({ name: "", icon: "" });
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => { loadData(); }, []);
-
-    async function loadData() {
-        try {
-            const [c, i] = await Promise.all([api.getCategories(), api.getMenuItems()]);
-            setCategories(c);
-            setItems(i);
-        } catch (err) { console.error(err); }
-        finally { setLoading(false); }
-    }
-
-    // ... (Keep CRUD functions same as before to save context length, just focus on UI) ...
     function openNewItem() {
         setEditingItem(null);
         setItemForm({ name: "", description: "", price: "", categoryId: categories[0]?.id || "", imageUrl: "", dietaryPreference: "NONE" });
@@ -60,29 +49,29 @@ export default function MenuPage() {
             if (editingItem) { await api.updateMenuItem(editingItem.id, data as any); }
             else { await api.createMenuItem(data); }
             setShowItemModal(false);
-            await loadData();
+            invalidateMenuCache();
         } catch (err: any) { alert(err.message); }
         finally { setSaving(false); }
     }
     async function toggleAvailability(item: MenuItem) {
-        try { await api.updateMenuItem(item.id, { available: !item.available } as any); await loadData(); }
+        try { await api.updateMenuItem(item.id, { available: !item.available } as any); invalidateMenuCache(); }
         catch (err: any) { alert(err.message); }
     }
     async function deleteItem(id: string) {
         if (!confirm("Delete this item?")) return;
-        try { await api.deleteMenuItem(id); await loadData(); }
+        try { await api.deleteMenuItem(id); invalidateMenuCache(); }
         catch (err: any) { alert(err.message); }
     }
     async function saveCategory(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true);
-        try { await api.createCategory({ name: catForm.name, icon: catForm.icon || undefined }); setShowCatModal(false); setCatForm({ name: "", icon: "" }); await loadData(); }
+        try { await api.createCategory({ name: catForm.name, icon: catForm.icon || undefined }); setShowCatModal(false); setCatForm({ name: "", icon: "" }); invalidateMenuCache(); }
         catch (err: any) { alert(err.message); }
         finally { setSaving(false); }
     }
     async function deleteCategory(id: string) {
         if (!confirm("Delete this category and all its items?")) return;
-        try { await api.deleteCategory(id); await loadData(); }
+        try { await api.deleteCategory(id); invalidateMenuCache(); }
         catch (err: any) { alert(err.message); }
     }
 

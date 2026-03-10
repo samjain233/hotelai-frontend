@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { api, API_URL } from "@/lib/api";
+import { usePublicRooms } from "@/hooks/useSwrApi";
 import { ServiceRequest } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -71,14 +72,16 @@ export default function GuestServicesPage() {
     const hotelSlug = params.hotelSlug as string;
     const roomFromUrl = searchParams.get("room") || "";
 
+    const roomsRes = usePublicRooms(hotelSlug || null);
+    const rooms = roomsRes.data ?? [];
+    const loading = roomsRes.isLoading;
+
     const [activeTab, setActiveTab] = useState<Tab>("complaint");
-    const [rooms, setRooms] = useState<{ id: string; number: string; hotelId?: string }[]>([]);
     const [selectedRoom, setSelectedRoom] = useState(roomFromUrl); // only pre-fill if from QR
     const [guestName, setGuestName] = useState("");
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
-    const [loading, setLoading] = useState(true);
     const socketRef = useRef<Socket | null>(null);
 
     // Complaint form state
@@ -94,9 +97,14 @@ export default function GuestServicesPage() {
     const [hkCategory, setHkCategory] = useState("");
     const [hkNote, setHkNote] = useState("");
 
+    const hasAutoSelectedRef = useRef(false);
     useEffect(() => {
-        loadRooms();
-    }, [hotelSlug]);
+        if (hasAutoSelectedRef.current || !roomFromUrl || rooms.length === 0) return;
+        if (rooms.some((r) => r.id === roomFromUrl)) {
+            setSelectedRoom(roomFromUrl);
+            hasAutoSelectedRef.current = true;
+        }
+    }, [rooms, roomFromUrl]);
 
     useEffect(() => {
         if (selectedRoom) loadRequests();
@@ -115,19 +123,6 @@ export default function GuestServicesPage() {
         });
         return () => { socket.disconnect(); };
     }, [selectedRoom, rooms]);
-
-    async function loadRooms() {
-        try {
-            const data = await api.getPublicRooms(hotelSlug);
-            setRooms(data);
-            // Only auto-select if room came from QR URL — never guess
-            if (roomFromUrl && data.some((r: any) => r.id === roomFromUrl)) {
-                setSelectedRoom(roomFromUrl);
-            }
-            // If no QR param → leave selectedRoom blank → guest must pick
-        } catch (err) { console.error(err); }
-        finally { setLoading(false); }
-    }
 
     async function loadRequests() {
         try {

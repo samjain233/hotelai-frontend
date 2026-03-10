@@ -41,6 +41,11 @@ class ApiClient {
         return res.json();
     }
 
+    /** GET request for SWR fetcher. Same credentials/error handling as request. */
+    async get<T>(path: string): Promise<T> {
+        return this.request<T>(path);
+    }
+
     async logout(): Promise<void> {
         await this.request('/auth/logout', { method: 'POST' });
     }
@@ -257,3 +262,8 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+
+/** GET-only fetcher for SWR. Uses same credentials/error handling as api. */
+export async function swrFetcher<T>(path: string): Promise<T> {
+    return api.get<T>(path);
+}
