@@ -7,7 +7,6 @@ import { api } from '@/lib/api';
 interface AuthContextType {
     admin: Admin | null;
     hotel: Hotel | null;
-    token: string | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<Admin>;
     register: (data: {
@@ -24,32 +23,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [admin, setAdmin] = useState<Admin | null>(null);
     const [hotel, setHotel] = useState<Hotel | null>(null);
-    const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const saved = localStorage.getItem('auth');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setAdmin(parsed.admin);
-                setHotel(parsed.hotel);
-                setToken(parsed.token);
-                api.setToken(parsed.token);
-            } catch {
-                localStorage.removeItem('auth');
-            }
-        }
-        setLoading(false);
+        api.getProfile()
+            .then((profile: any) => {
+                setAdmin({
+                    id: profile.id,
+                    email: profile.email,
+                    name: profile.name,
+                    role: profile.role,
+                });
+                setHotel(profile.hotel);
+            })
+            .catch(() => {
+                setAdmin(null);
+                setHotel(null);
+            })
+            .finally(() => setLoading(false));
     }, []);
 
     async function login(email: string, password: string) {
         const res = await api.login(email, password);
         setAdmin(res.admin);
         setHotel(res.hotel);
-        setToken(res.token);
-        api.setToken(res.token);
-        localStorage.setItem('auth', JSON.stringify(res));
         return res.admin;
     }
 
@@ -62,21 +59,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await api.register(data);
         setAdmin(res.admin);
         setHotel(res.hotel);
-        setToken(res.token);
-        api.setToken(res.token);
-        localStorage.setItem('auth', JSON.stringify(res));
     }
 
-    function logout() {
-        setAdmin(null);
-        setHotel(null);
-        setToken(null);
-        api.setToken(null);
-        localStorage.removeItem('auth');
+    async function logout() {
+        try {
+            await api.logout();
+        } finally {
+            setAdmin(null);
+            setHotel(null);
+        }
     }
 
     return (
-        <AuthContext.Provider value={{ admin, hotel, token, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ admin, hotel, loading, login, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

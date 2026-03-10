@@ -3,33 +3,21 @@ import { AuthResponse, MenuCategory, MenuItem, Room, RoomQr, Order, PublicMenuDa
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 class ApiClient {
-    private token: string | null = null;
-
-    setToken(token: string | null) {
-        this.token = token;
-    }
-
     private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             ...(options.headers as Record<string, string>),
         };
 
-        if (this.token) {
-            headers['Authorization'] = `Bearer ${this.token}`;
-        }
-
         const res = await fetch(`${API_URL}${path}`, {
             ...options,
             headers,
+            credentials: 'include',
         });
 
         if (!res.ok) {
-            // If token expired or unauthorized, clear auth and redirect to login
             if (res.status === 401) {
-                this.token = null;
                 if (typeof window !== 'undefined') {
-                    localStorage.removeItem('auth');
                     window.location.href = '/login';
                 }
                 throw new Error('Session expired');
@@ -40,6 +28,10 @@ class ApiClient {
         }
 
         return res.json();
+    }
+
+    async logout(): Promise<void> {
+        await this.request('/auth/logout', { method: 'POST' });
     }
 
     // ─── Auth ─────────────────────────────────────────────

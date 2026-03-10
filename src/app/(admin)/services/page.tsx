@@ -94,13 +94,6 @@ export default function AdminServicesPage() {
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [isLive, setIsLive] = useState(false);
     const socketRef = useRef<Socket | null>(null);
-    const adminTokenRef = useRef<string | null>(null);
-
-    // Load admin's hotelId from token for WS room
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        adminTokenRef.current = token;
-    }, []);
 
     const loadRequests = useCallback(async () => {
         try {
@@ -120,8 +113,8 @@ export default function AdminServicesPage() {
         let socket: Socket;
         api.getProfile().then((admin: any) => {
             socket = io(`${API_URL}/service-requests`, {
-                query: { hotelId: admin.hotelId },
-                auth: { token: adminTokenRef.current },
+                query: { hotelId: admin.hotel?.id ?? admin.hotelId },
+                withCredentials: true,
             });
             socketRef.current = socket;
 

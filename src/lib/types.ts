@@ -13,11 +13,10 @@ export interface Admin {
     id: string;
     email: string;
     name: string;
-    role: 'OWNER' | 'MANAGER' | 'KITCHEN';
+    role: 'OWNER' | 'MANAGER' | 'KITCHEN' | 'FRONT_DESK';
 }
 
 export interface AuthResponse {
-    token: string;
     admin: Admin;
     hotel: Hotel;
 }
