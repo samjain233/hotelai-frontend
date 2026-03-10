@@ -105,6 +105,10 @@ export interface PublicMenuData {
     categories: (MenuCategory & { items: MenuItem[] })[];
 }
 
+export interface PublicMenuFullData extends PublicMenuData {
+    rooms: { id: string; number: string; floor?: string; type?: string }[];
+}
+
 // ─── Service Request ──────────────────────────────────────
 export type ServiceRequestType = 'COMPLAINT' | 'ROOM_SERVICE' | 'HOUSEKEEPING';
 export type ServiceRequestStatus = 'SUBMITTED' | 'ACKNOWLEDGED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';

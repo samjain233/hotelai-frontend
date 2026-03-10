@@ -2,11 +2,12 @@
 
 import useSWR, { mutate as globalMutate } from 'swr';
 import { swrFetcher } from '@/lib/api';
-import type { PublicMenuData } from '@/lib/types';
+import type { PublicMenuData, PublicMenuFullData } from '@/lib/types';
 
 /** Cache keys - centralized for consistent invalidation */
 export const SWR_KEYS = {
     publicMenu: (hotelSlug: string) => [`guest/menu/${hotelSlug}`] as const,
+    publicMenuFull: (hotelSlug: string) => [`guest/menu/${hotelSlug}/full`] as const,
     publicRooms: (hotelSlug: string) => [`guest/rooms/${hotelSlug}`] as const,
     categories: () => ['admin/categories'] as const,
     menuItems: () => ['admin/menu'] as const,
@@ -34,6 +35,24 @@ export function usePublicRooms(hotelSlug: string | null) {
         hotelSlug ? `/guest/rooms/${hotelSlug}` : null,
         swrFetcher,
         STALE_60,
+    );
+}
+
+/**
+ * Combined menu + rooms (single request). Use with initialData from server for faster load.
+ */
+export function usePublicMenuFull(
+    hotelSlug: string | null,
+    options?: { fallbackData?: PublicMenuFullData }
+) {
+    return useSWR<PublicMenuFullData>(
+        hotelSlug ? `/guest/menu/${hotelSlug}/full` : null,
+        swrFetcher,
+        {
+            ...STALE_60,
+            fallbackData: options?.fallbackData ?? undefined,
+            revalidateOnMount: !!options?.fallbackData,
+        },
     );
 }
 

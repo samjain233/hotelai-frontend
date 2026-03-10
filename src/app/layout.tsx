@@ -3,6 +3,8 @@ import { Outfit, Playfair_Display } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit",
@@ -27,6 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href={API_URL} crossOrigin="anonymous" />
+      </head>
       <body className={`${outfit.variable} ${playfair.variable} font-sans antialiased selection:bg-primary/30 selection:text-white`}>
         <ThemeProvider
           attribute="class"

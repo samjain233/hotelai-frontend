@@ -181,6 +181,11 @@ class ApiClient {
         return this.request<PublicMenuData>(`/guest/menu/${hotelSlug}`);
     }
 
+    /** Combined menu + rooms: single request for faster load */
+    async getPublicMenuFull(hotelSlug: string): Promise<import('./types').PublicMenuFullData> {
+        return this.request<import('./types').PublicMenuFullData>(`/guest/menu/${hotelSlug}/full`);
+    }
+
     async placeOrder(data: {
         roomId: string;
         items: { itemId: string; quantity: number }[];
