@@ -16,9 +16,11 @@ class ApiClient {
         });
 
         if (!res.ok) {
+            const error = await res.json().catch(() => ({ message: 'Request failed' }));
+            const message = error.message || `HTTP ${res.status}`;
+
             if (res.status === 401) {
                 // Avoid redirect loop: don't redirect when already on public routes
-                // where being unauthenticated is expected (login, register, guest pages)
                 if (typeof window !== 'undefined') {
                     const path = window.location.pathname;
                     const isPublicRoute =
@@ -31,11 +33,10 @@ class ApiClient {
                         window.location.href = '/login';
                     }
                 }
-                throw new Error('Session expired');
+                throw new Error(message);
             }
 
-            const error = await res.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(error.message || `HTTP ${res.status}`);
+            throw new Error(message);
         }
 
         return res.json();
