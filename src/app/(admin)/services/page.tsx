@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { OrdersSkeleton } from "@/components/ui/Skeleton";
 
 const TYPE_TABS = [
     { key: "", label: "All", icon: MessageSquare },
@@ -176,11 +177,7 @@ export default function AdminServicesPage() {
         .filter(r => ["RESOLVED", "REJECTED"].includes(r.status))
         .slice(0, 50);
 
-    if (loading) return (
-        <div className="flex items-center justify-center py-32">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <OrdersSkeleton />;
 
     return (
         <div className="space-y-6">

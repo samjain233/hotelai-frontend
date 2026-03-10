@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
+import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 
 interface StaffMember {
     id: string;
@@ -102,11 +103,7 @@ export default function StaffPage() {
         }
     }
 
-    if (loading) return (
-        <div className="flex items-center justify-center py-32">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <AdminPageSkeleton cardCount={4} />;
 
     return (
         <div className="space-y-6">

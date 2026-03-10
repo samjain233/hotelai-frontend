@@ -17,6 +17,7 @@ import {
     BedDouble
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 
 export default function DashboardPage() {
     const { hotel } = useAuth();
@@ -45,11 +46,7 @@ export default function DashboardPage() {
         load();
     }, []);
 
-    if (loading) return (
-        <div className="flex items-center justify-center h-[50vh]">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <AdminPageSkeleton cardCount={4} />;
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

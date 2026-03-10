@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { MenuCategory, MenuItem } from "@/lib/types";
 import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwrApi";
+import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AnimatePresence, motion } from "framer-motion";
@@ -77,11 +78,7 @@ export default function MenuPage() {
 
     const filteredItems = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.description?.toLowerCase().includes(search.toLowerCase()));
 
-    if (loading) return (
-        <div className="flex items-center justify-center py-32">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <AdminPageSkeleton cardCount={9} />;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">

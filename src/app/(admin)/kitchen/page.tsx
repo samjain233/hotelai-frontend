@@ -18,6 +18,7 @@ import {
     AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OrdersSkeleton } from "@/components/ui/Skeleton";
 
 // ─── Config ───────────────────────────────────────────
 const REFRESH_INTERVAL = 8000; // 8 seconds
@@ -166,14 +167,7 @@ export default function KitchenPage() {
         return "";
     }
 
-    if (loading) return (
-        <div className="flex items-center justify-center py-32">
-            <div className="text-center">
-                <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm">Loading kitchen board...</p>
-            </div>
-        </div>
-    );
+    if (loading) return <OrdersSkeleton />;
 
     const totalActive = orders.length;
 

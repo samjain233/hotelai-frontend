@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Room, RoomQr } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { RoomsSkeleton } from "@/components/ui/Skeleton";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { AnimatePresence, motion } from "framer-motion";
@@ -88,11 +89,7 @@ export default function RoomsPage() {
 
     const filteredRooms = rooms.filter(r => r.number.toLowerCase().includes(search.toLowerCase()));
 
-    if (loading) return (
-        <div className="flex items-center justify-center py-32">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <RoomsSkeleton />;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">

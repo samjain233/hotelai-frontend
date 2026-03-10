@@ -16,6 +16,7 @@ import {
     Filter
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OrdersSkeleton } from "@/components/ui/Skeleton";
 
 const STATUS_ICONS: Record<string, any> = {
     PLACED: ClipboardList,
@@ -57,11 +58,7 @@ export default function OrdersPage() {
 
     const filteredOrders = filter === "ALL" ? orders : orders.filter((o) => o.status === filter);
 
-    if (loading) return (
-        <div className="flex items-center justify-center py-32">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <OrdersSkeleton />;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
