@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { api } from "@/lib/api";
 import { MenuCategory, MenuItem } from "@/lib/types";
 import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwrApi";
@@ -8,6 +8,7 @@ import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AnimatePresence, motion } from "framer-motion";
+import { upload } from "@vercel/blob/client";
 import {
     Plus,
     Search,
@@ -16,8 +17,11 @@ import {
     FolderOpen,
     X,
     Image as ImageIcon,
-    MoreHorizontal
+    Upload
 } from "lucide-react";
+
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function MenuPage() {
     const { data: categories = [], isLoading: categoriesLoading } = useCategories();
@@ -31,6 +35,36 @@ export default function MenuPage() {
     const [itemForm, setItemForm] = useState({ name: "", description: "", price: "", categoryId: "", imageUrl: "", dietaryPreference: "NONE" });
     const [catForm, setCatForm] = useState({ name: "", icon: "" });
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = '';
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            alert('Please select a JPEG, PNG, or WebP image.');
+            return;
+        }
+        if (file.size > MAX_SIZE) {
+            alert('Image must be 10 MB or smaller.');
+            return;
+        }
+        setUploading(true);
+        try {
+            const { token } = await api.getUploadToken();
+            const blob = await upload(file.name, file, {
+                access: 'public',
+                handleUploadUrl: '/api/blob-upload',
+                clientPayload: JSON.stringify({ token }),
+            });
+            setItemForm((prev) => ({ ...prev, imageUrl: blob.url }));
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : 'Upload failed');
+        } finally {
+            setUploading(false);
+        }
+    }
 
     function openNewItem() {
         setEditingItem(null);
@@ -218,8 +252,30 @@ export default function MenuPage() {
                                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">Image</label>
+                                    <div className="flex flex-wrap gap-2 items-center">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={handleImageUpload}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={uploading}
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            {uploading ? "Uploading…" : <><Upload className="w-4 h-4 mr-1.5" /> Choose Image</>}
+                                        </Button>
+                                        <span className="text-xs text-muted-foreground">JPEG, PNG, WebP • max 10 MB</span>
+                                    </div>
+                                    <Input placeholder="Or paste image URL (optional)" value={itemForm.imageUrl} onChange={e => setItemForm({ ...itemForm, imageUrl: e.target.value })} />
+                                </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Input placeholder="Image URL (optional)" value={itemForm.imageUrl} onChange={e => setItemForm({ ...itemForm, imageUrl: e.target.value })} />
                                     <select
                                         value={itemForm.dietaryPreference}
                                         onChange={e => setItemForm({ ...itemForm, dietaryPreference: e.target.value })}

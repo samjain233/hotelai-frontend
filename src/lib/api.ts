@@ -108,6 +108,13 @@ class ApiClient {
         return this.request('/admin/menu');
     }
 
+    /** Get a single-use upload token for menu image upload. */
+    async getUploadToken(): Promise<{ token: string }> {
+        return this.request<{ token: string }>('/admin/menu/upload-token', {
+            method: 'POST',
+        });
+    }
+
     async createMenuItem(data: {
         name: string;
         price: number;
