@@ -16,6 +16,7 @@ interface AuthContextType {
         password: string;
     }) => Promise<void>;
     logout: () => void;
+    refreshHotel: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         api.getProfile()
-            .then((profile: any) => {
+            .then((profile) => {
                 setAdmin({
                     id: profile.id,
                     email: profile.email,
@@ -70,8 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
+    async function refreshHotel() {
+        try {
+            const profile = await api.getProfile();
+            setHotel(profile?.hotel ?? null);
+        } catch {
+            // Leave hotel state unchanged on refresh failure
+        }
+    }
+
     return (
-        <AuthContext.Provider value={{ admin, hotel, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ admin, hotel, loading, login, register, logout, refreshHotel }}>
             {children}
         </AuthContext.Provider>
     );

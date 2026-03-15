@@ -6,6 +6,8 @@ export interface Hotel {
     address?: string;
     phone?: string;
     logoUrl?: string;
+    openTime?: string;
+    closeTime?: string;
 }
 
 // ─── Admin ────────────────────────────────────────────────
@@ -103,6 +105,7 @@ export interface CartItem {
 export interface PublicMenuData {
     hotel: Hotel;
     categories: (MenuCategory & { items: MenuItem[] })[];
+    isOpen?: boolean;
 }
 
 export interface PublicMenuFullData extends PublicMenuData {

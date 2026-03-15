@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { MapPin, Plus, Minus, X, Receipt, Clock } from "lucide-react";
 import type { Order, CartItem } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function formatPrice(price: number) {
     return `₹${price.toLocaleString()}`;
@@ -50,6 +51,7 @@ interface AnimatedOverlaysProps {
     pastOrders: Order[];
     availableRooms: { id: string; number: string; floor?: string }[];
     selectedRoomId: string;
+    isOpen?: boolean;
     onCloseCart: () => void;
     onCloseHistory: () => void;
     onCloseRoomModal: () => void;
@@ -65,7 +67,7 @@ interface AnimatedOverlaysProps {
 
 export function AnimatedOverlays({
     showCart, showHistory, showRoomModal, cartCount, cart, cartTotal, cartAnimKey,
-    guestName, notes, placing, pastOrders, availableRooms, selectedRoomId,
+    guestName, notes, placing, pastOrders, availableRooms, selectedRoomId, isOpen = true,
     onCloseCart, onCloseHistory, onCloseRoomModal, onShowCart, onPlaceOrder, onInitiateOrder,
     onRemoveFromCart, onAddToCart, setGuestName, setNotes, setSelectedRoomId,
 }: AnimatedOverlaysProps) {
@@ -77,7 +79,7 @@ export function AnimatedOverlays({
             <AnimatePresence>
                 {showCart && (
                     <CartDrawer
-                        cart={cart} guestName={guestName} notes={notes} cartTotal={cartTotal} placing={placing}
+                        cart={cart} guestName={guestName} notes={notes} cartTotal={cartTotal} placing={placing} isOpen={isOpen}
                         onClose={onCloseCart} onPlaceOrder={onPlaceOrder} onInitiateOrder={onInitiateOrder}
                         onRemoveFromCart={onRemoveFromCart} onAddToCart={onAddToCart}
                         setGuestName={setGuestName} setNotes={setNotes} formatPrice={formatPrice}
@@ -90,7 +92,7 @@ export function AnimatedOverlays({
             <AnimatePresence>
                 {showRoomModal && (
                     <RoomModal
-                        availableRooms={availableRooms} selectedRoomId={selectedRoomId}
+                        availableRooms={availableRooms} selectedRoomId={selectedRoomId} isOpen={isOpen}
                         onClose={onCloseRoomModal} onConfirm={onPlaceOrder} setSelectedRoomId={setSelectedRoomId}
                     />
                 )}
@@ -105,6 +107,7 @@ interface CartDrawerProps {
     notes: string;
     cartTotal: number;
     placing: boolean;
+    isOpen?: boolean;
     onClose: () => void;
     onPlaceOrder: () => void;
     onInitiateOrder: () => void;
@@ -114,7 +117,7 @@ interface CartDrawerProps {
     setNotes: (v: string) => void;
     formatPrice: (p: number) => string;
 }
-export function CartDrawer({ cart, guestName, notes, cartTotal, placing, onClose, onPlaceOrder, onInitiateOrder, onRemoveFromCart, onAddToCart, setGuestName, setNotes, formatPrice }: CartDrawerProps) {
+export function CartDrawer({ cart, guestName, notes, cartTotal, placing, isOpen = true, onClose, onPlaceOrder, onInitiateOrder, onRemoveFromCart, onAddToCart, setGuestName, setNotes, formatPrice }: CartDrawerProps) {
     return (
         <motion.div
             key="cart-drawer"
@@ -147,7 +150,7 @@ export function CartDrawer({ cart, guestName, notes, cartTotal, placing, onClose
                                         <Minus className="w-3.5 h-3.5" />
                                     </button>
                                     <span className="font-bold text-foreground w-4 text-center text-sm">{ci.quantity}</span>
-                                    <button onClick={() => onAddToCart(ci.item)} className="w-7 h-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground">
+                                    <button onClick={() => onAddToCart(ci.item)} disabled={!isOpen} className={cn("w-7 h-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground", !isOpen && "opacity-50 cursor-not-allowed")}>
                                         <Plus className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -170,8 +173,11 @@ export function CartDrawer({ cart, guestName, notes, cartTotal, placing, onClose
                         <span className="text-muted-foreground font-medium">Total</span>
                         <span className="text-2xl font-bold text-foreground">{formatPrice(cartTotal)}</span>
                     </div>
-                    <Button onClick={onInitiateOrder} disabled={placing} className="w-full h-12 text-base font-bold">
-                        {placing ? "Sending Order..." : "Place Order"}
+                    {!isOpen && (
+                        <p className="text-sm text-muted-foreground mb-3 text-center">Room service is currently closed. Orders can be placed during operating hours.</p>
+                    )}
+                    <Button onClick={onInitiateOrder} disabled={placing || !isOpen} className="w-full h-12 text-base font-bold">
+                        {placing ? "Sending Order..." : !isOpen ? "Outside Operating Hours" : "Place Order"}
                     </Button>
                 </div>
             </motion.div>
@@ -254,11 +260,12 @@ export function HistoryDrawer({ pastOrders, onClose, formatPrice }: HistoryDrawe
 interface RoomModalProps {
     availableRooms: { id: string; number: string; floor?: string }[];
     selectedRoomId: string;
+    isOpen?: boolean;
     onClose: () => void;
     onConfirm: () => void;
     setSelectedRoomId: (v: string) => void;
 }
-export function RoomModal({ availableRooms, selectedRoomId, onClose, onConfirm, setSelectedRoomId }: RoomModalProps) {
+export function RoomModal({ availableRooms, selectedRoomId, isOpen = true, onClose, onConfirm, setSelectedRoomId }: RoomModalProps) {
     return (
         <motion.div
             key="room-modal"
@@ -292,8 +299,8 @@ export function RoomModal({ availableRooms, selectedRoomId, onClose, onConfirm, 
                     <Button variant="outline" className="flex-1" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button className="flex-1" disabled={!selectedRoomId} onClick={onConfirm}>
-                        Confirm & Order
+                    <Button className="flex-1" disabled={!selectedRoomId || !isOpen} onClick={onConfirm}>
+                        {!isOpen ? "Closed" : "Confirm & Order"}
                     </Button>
                 </div>
             </motion.div>

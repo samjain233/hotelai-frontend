@@ -1,4 +1,4 @@
-import { AuthResponse, MenuCategory, MenuItem, Room, RoomQr, Order, PublicMenuData, ServiceRequest } from './types';
+import { Admin, AuthResponse, Hotel, MenuCategory, MenuItem, Room, RoomQr, Order, PublicMenuData, ServiceRequest } from './types';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -83,8 +83,22 @@ class ApiClient {
         });
     }
 
-    async getProfile() {
+    async getProfile(): Promise<Admin & { hotel: Hotel }> {
         return this.request('/auth/me');
+    }
+
+    async updateHotel(data: { name?: string; address?: string; phone?: string; logoUrl?: string; openTime?: string; closeTime?: string }) {
+        return this.request<Hotel>('/auth/hotel', {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async getHotelLogoUploadPathname(token: string): Promise<{ pathname: string }> {
+        return this.request('/admin/hotel/upload-token/pathname', {
+            method: 'POST',
+            body: JSON.stringify({ token }),
+        });
     }
 
     // ─── Categories ───────────────────────────────────────
@@ -289,6 +303,7 @@ class ApiClient {
             method: 'DELETE',
         });
     }
+
 }
 
 export const api = new ApiClient();

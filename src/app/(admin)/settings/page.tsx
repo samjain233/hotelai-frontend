@@ -1,14 +1,169 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor, Volume2, VolumeX } from "lucide-react";
+import { Sun, Moon, Monitor, Volume2, VolumeX, Hotel as HotelIcon, Clock, Upload, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { upload } from "@vercel/blob/client";
+import { toast } from "sonner";
+import type { Hotel } from "@/lib/types";
 
 const NOTIFICATION_SOUND_KEY = "hotel-admin-notification-sound";
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function HotelProfileSection({ hotel, refreshHotel }: { hotel: { id: string; name: string; slug: string; address?: string | null; phone?: string | null; logoUrl?: string | null; openTime?: string | null; closeTime?: string | null }; refreshHotel: () => Promise<void> }) {
+    const [name, setName] = useState(hotel?.name ?? "");
+    const [address, setAddress] = useState(hotel?.address ?? "");
+    const [phone, setPhone] = useState(hotel?.phone ?? "");
+    const [logoUrl, setLogoUrl] = useState(hotel?.logoUrl ?? "");
+    const [openTime, setOpenTime] = useState(hotel?.openTime ?? "");
+    const [closeTime, setCloseTime] = useState(hotel?.closeTime ?? "");
+    const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [logoUnsaved, setLogoUnsaved] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setName(hotel?.name ?? "");
+        setAddress(hotel?.address ?? "");
+        setPhone(hotel?.phone ?? "");
+        setLogoUrl(hotel?.logoUrl ?? "");
+        setOpenTime(hotel?.openTime ?? "");
+        setCloseTime(hotel?.closeTime ?? "");
+        setLogoUnsaved(false);
+    }, [hotel]);
+
+    async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = "";
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+            toast.error("Please select JPEG, PNG, or WebP.");
+            return;
+        }
+        if (file.size > MAX_IMAGE_SIZE) {
+            toast.error("Image must be 5 MB or smaller.");
+            return;
+        }
+        setUploading(true);
+        try {
+            const { token } = await api.getUploadToken();
+            const { pathname } = await api.getHotelLogoUploadPathname(token);
+            const blob = await upload(pathname, file, {
+                access: "public",
+                handleUploadUrl: "/api/blob-upload",
+                clientPayload: JSON.stringify({ token }),
+            });
+            setLogoUrl(blob.url);
+            setLogoUnsaved(true);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Upload failed");
+        } finally {
+            setUploading(false);
+        }
+    }
+
+    async function handleSave(e: React.FormEvent) {
+        e.preventDefault();
+
+        const hasOpen = openTime.trim().length > 0;
+        const hasClose = closeTime.trim().length > 0;
+        if (hasOpen !== hasClose) {
+            toast.error("Please set both open and close times, or leave both empty for always open.");
+            return;
+        }
+        if (hasOpen && !TIME_REGEX.test(openTime)) {
+            toast.error("Open time must be in HH:mm format (e.g. 07:00).");
+            return;
+        }
+        if (hasClose && !TIME_REGEX.test(closeTime)) {
+            toast.error("Close time must be in HH:mm format (e.g. 23:00).");
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await api.updateHotel({
+                name: name || undefined,
+                address: address || undefined,
+                phone: phone || undefined,
+                logoUrl: logoUrl || undefined,
+                openTime: openTime || undefined,
+                closeTime: closeTime || undefined,
+            });
+            await refreshHotel();
+            setLogoUnsaved(false);
+            toast.success("Hotel profile updated.");
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to save");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <section className="rounded-xl border border-border bg-card p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <HotelIcon className="w-5 h-5" />
+                Hotel Profile
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+                Edit your hotel details. Operating hours control when guests can place food orders.
+            </p>
+            <form onSubmit={handleSave} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Hotel name</label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Hotel name" className="bg-secondary/50" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Address</label>
+                    <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" className="bg-secondary/50" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="bg-secondary/50" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Logo</label>
+                    <div className="flex items-center gap-4">
+                        {logoUrl && (
+                            <img src={logoUrl} alt="Logo" className="w-16 h-16 rounded-lg object-cover border border-border" />
+                        )}
+                        <div>
+                            <input ref={fileInputRef} type="file" accept={ALLOWED_IMAGE_TYPES.join(",")} className="hidden" onChange={handleLogoUpload} />
+                            <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                                {uploading ? "Uploading..." : <><Upload className="w-4 h-4 mr-2" />Change logo</>}
+                            </Button>
+                            {logoUnsaved && <p className="text-xs text-amber-500 mt-1">Logo uploaded — click Save to apply.</p>}
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-4">
+                    <div className="flex-1">
+                        <label className="block text-sm font-medium text-foreground mb-1">Open (HH:mm)</label>
+                        <Input value={openTime} onChange={(e) => setOpenTime(e.target.value)} placeholder="07:00" className="bg-secondary/50" />
+                    </div>
+                    <div className="flex-1">
+                        <label className="block text-sm font-medium text-foreground mb-1">Close (HH:mm)</label>
+                        <Input value={closeTime} onChange={(e) => setCloseTime(e.target.value)} placeholder="23:00" className="bg-secondary/50" />
+                    </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Leave both empty for always open. Use 24h format (e.g. 07:00, 23:00).</p>
+                <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save changes"}</Button>
+            </form>
+        </section>
+    );
+}
 
 export default function SettingsPage() {
+    const { admin, hotel, refreshHotel } = useAuth();
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const [notificationSound, setNotificationSound] = useState(true);
@@ -108,6 +263,11 @@ export default function SettingsPage() {
                         </button>
                     </div>
                 </section>
+
+                {/* Hotel Profile (Owner only) */}
+                {admin?.role === "OWNER" && hotel && (
+                    <HotelProfileSection hotel={hotel} refreshHotel={refreshHotel} />
+                )}
 
                 {/* Account (placeholder) */}
                 <section className="rounded-xl border border-border bg-card p-6">

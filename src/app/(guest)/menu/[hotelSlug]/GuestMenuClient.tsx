@@ -34,6 +34,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const hotel = menuRes.data?.hotel ?? null;
     const categories = menuRes.data?.categories ?? [];
     const availableRooms = menuRes.data?.rooms ?? [];
+    const isOpen = menuRes.data ? menuRes.data.isOpen !== false : true;
     const loading = menuRes.isLoading && !initialData;
     const error = menuRes.error?.message ?? "";
 
@@ -100,6 +101,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     });
 
     function addToCart(item: MenuItem) {
+        if (!isOpen) return;
         setCart((prev) => {
             const existing = prev.find((ci) => ci.item.id === item.id);
             if (existing) return prev.map((ci) => (ci.item.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci));
@@ -124,6 +126,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const cartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
     function initiateOrder() {
+        if (!isOpen) return;
         if (!roomId) {
             setShowCart(false);
             setShowRoomModal(true);
@@ -133,7 +136,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }
 
     async function placeOrder() {
-        if (!roomId) return;
+        if (!isOpen || !roomId) return;
         setPlacing(true);
         try {
             const result = await api.placeOrder({
@@ -336,6 +339,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             </header>
 
             <main className="max-w-md mx-auto px-5 py-6 space-y-10">
+                {!isOpen && (
+                    <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
+                        <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                        <div>
+                            <p className="font-semibold text-foreground text-sm">Room service is currently closed</p>
+                            <p className="text-xs text-muted-foreground">Orders can be placed during operating hours.</p>
+                        </div>
+                    </div>
+                )}
                 {!searchQuery && (
                     <div className="text-center py-2 animate-fade-in-up">
                         <h2 className="text-2xl font-serif font-bold text-foreground mb-1" style={{ fontFamily: "var(--font-playfair), serif" }}>
@@ -395,8 +407,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
                                             <div className="flex justify-end">
                                                 {qty === 0 ? (
-                                                    <Button size="sm" onClick={() => addToCart(item)} disabled={!item.available} variant={item.available ? "secondary" : "ghost"} className={cn("h-8 text-xs", !item.available && "opacity-50")}>
-                                                        {item.available ? <><Plus className="w-3.5 h-3.5 mr-1.5" /> Add</> : "Sold Out"}
+                                                    <Button size="sm" onClick={() => addToCart(item)} disabled={!item.available || !isOpen} variant={item.available && isOpen ? "secondary" : "ghost"} className={cn("h-8 text-xs", (!item.available || !isOpen) && "opacity-50")}>
+                                                        {!isOpen ? "Closed" : item.available ? <><Plus className="w-3.5 h-3.5 mr-1.5" /> Add</> : "Sold Out"}
                                                     </Button>
                                                 ) : (
                                                     <div className="flex items-center gap-3 bg-secondary rounded-lg p-1">
@@ -404,7 +416,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                             <Minus className="w-4 h-4" />
                                                         </button>
                                                         <span className="font-bold text-foreground w-4 text-center text-sm">{qty}</span>
-                                                        <button onClick={() => addToCart(item)} className="w-7 h-7 flex items-center justify-center rounded-md bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white hover:opacity-90 transition-opacity">
+                                                        <button onClick={() => addToCart(item)} disabled={!isOpen} className={cn("w-7 h-7 flex items-center justify-center rounded-md bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white transition-opacity", isOpen ? "hover:opacity-90" : "opacity-50 cursor-not-allowed")}>
                                                             <Plus className="w-4 h-4" />
                                                         </button>
                                                     </div>
@@ -435,6 +447,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     cart={cart}
                     cartTotal={cartTotal}
                     cartAnimKey={cartAnimKey}
+                    isOpen={isOpen}
                     guestName={guestName}
                     notes={notes}
                     placing={placing}
