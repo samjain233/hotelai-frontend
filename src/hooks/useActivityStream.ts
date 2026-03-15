@@ -33,16 +33,29 @@ export interface UseActivityStreamGuestOptions {
     onServiceRequestUpdated?: (req: ServiceRequest) => void;
 }
 
+const KNOWN_EVENT_TYPES = new Set<string>([
+    "order:new",
+    "order:updated",
+    "service-request:new",
+    "service-request:updated",
+    "ping",
+]);
+
 function parseEventData(raw: string): ActivityEvent | null {
     try {
         const parsed = JSON.parse(raw) as { type?: string; data?: unknown };
-        // Backend sends { data: { type, data } } for unnamed message events
-        const payload =
-            parsed?.data && typeof parsed.data === "object" && "type" in (parsed.data as object)
-                ? (parsed.data as { type: string; data?: unknown })
-                : parsed;
-        if (payload && typeof payload.type === "string") {
-            return { type: payload.type as ActivityEventType, data: (payload.data ?? {}) as ActivityEvent["data"] };
+
+        // If top-level type is a known event type, use it directly
+        if (parsed?.type && KNOWN_EVENT_TYPES.has(parsed.type)) {
+            return { type: parsed.type as ActivityEventType, data: (parsed.data ?? {}) as ActivityEvent["data"] };
+        }
+
+        // Otherwise check if it's wrapped: { data: { type, data } }
+        if (parsed?.data && typeof parsed.data === "object") {
+            const inner = parsed.data as { type?: string; data?: unknown };
+            if (inner.type && KNOWN_EVENT_TYPES.has(inner.type)) {
+                return { type: inner.type as ActivityEventType, data: (inner.data ?? {}) as ActivityEvent["data"] };
+            }
         }
     } catch {
         // ignore
