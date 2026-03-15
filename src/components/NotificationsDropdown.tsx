@@ -8,6 +8,37 @@ import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
 import { Bell, ClipboardList, Headset, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** Play a gentle notification sound when a new order/request arrives */
+function playNotificationSound(urgent = false) {
+    try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(urgent ? 880 : 660, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.25, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.25);
+        if (urgent) {
+            const o2 = ctx.createOscillator();
+            const g2 = ctx.createGain();
+            o2.connect(g2);
+            g2.connect(ctx.destination);
+            o2.type = "sine";
+            o2.frequency.setValueAtTime(1046, ctx.currentTime + 0.3);
+            g2.gain.setValueAtTime(0.25, ctx.currentTime + 0.3);
+            g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+            o2.start(ctx.currentTime + 0.3);
+            o2.stop(ctx.currentTime + 0.55);
+        }
+    } catch {
+        // Audio not supported or blocked
+    }
+}
+
 export function NotificationsDropdown() {
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -34,7 +65,11 @@ export function NotificationsDropdown() {
     useActivityStreamAdmin({
         onOrderNew: useCallback((order: Order) => {
             if (order.status === "PLACED") {
-                setOrders((prev) => (prev.some((o) => o.id === order.id) ? prev : [order, ...prev]));
+                setOrders((prev) => {
+                    const isNew = !prev.some((o) => o.id === order.id);
+                    if (isNew) playNotificationSound(false);
+                    return isNew ? [order, ...prev] : prev;
+                });
             }
         }, []),
         onOrderUpdated: useCallback((order: Order) => {
@@ -42,7 +77,11 @@ export function NotificationsDropdown() {
         }, []),
         onServiceRequestNew: useCallback((req: ServiceRequest) => {
             if (req.status === "SUBMITTED") {
-                setRequests((prev) => (prev.some((r) => r.id === req.id) ? prev : [req, ...prev]));
+                setRequests((prev) => {
+                    const isNew = !prev.some((r) => r.id === req.id);
+                    if (isNew) playNotificationSound(req.priority === "URGENT" || req.priority === "HIGH");
+                    return isNew ? [req, ...prev] : prev;
+                });
             }
         }, []),
         onServiceRequestUpdated: useCallback((req: ServiceRequest) => {
