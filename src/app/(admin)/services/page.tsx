@@ -94,6 +94,8 @@ export default function AdminServicesPage() {
     const [typeFilter, setTypeFilter] = useState("");
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const prevRequestIdsRef = useRef<Set<string>>(new Set());
+    const typeFilterRef = useRef(typeFilter);
+    typeFilterRef.current = typeFilter;
 
     const loadRequests = useCallback(async () => {
         try {
@@ -118,10 +120,27 @@ export default function AdminServicesPage() {
 
     useActivityStreamAdmin({
         onServiceRequestNew: (req) => {
-            loadRequests();
+            // Optimistically add new request (respects typeFilter via ref to avoid stale closure)
+            setRequests((prev) => {
+                if (prev.some((r) => r.id === req.id)) return prev;
+                const filter = typeFilterRef.current;
+                if (filter && req.type !== filter) return prev;
+                return [req, ...prev];
+            });
             if (req.priority === "URGENT" || req.priority === "HIGH") playAlertSound(req.priority);
         },
-        onServiceRequestUpdated: loadRequests,
+        onServiceRequestUpdated: (req) => {
+            setRequests((prev) => {
+                const hasIt = prev.some((r) => r.id === req.id);
+                if (hasIt) {
+                    return prev.map((r) => (r.id === req.id ? req : r));
+                }
+                // Request not in list (e.g. created before we loaded) – add if matches filter
+                const filter = typeFilterRef.current;
+                if (filter && req.type !== filter) return prev;
+                return [req, ...prev];
+            });
+        },
     });
 
     async function updateStatus(id: string, status: string) {
