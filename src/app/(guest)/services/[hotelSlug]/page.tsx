@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { io, Socket } from "socket.io-client";
-import { api, API_URL } from "@/lib/api";
+import { api } from "@/lib/api";
 import { usePublicRooms } from "@/hooks/useSwrApi";
+import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { ServiceRequest } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -83,7 +83,6 @@ export default function GuestServicesPage() {
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
-    const socketRef = useRef<Socket | null>(null);
 
     // Complaint form state
     const [complaintCategory, setComplaintCategory] = useState("");
@@ -107,30 +106,25 @@ export default function GuestServicesPage() {
         }
     }, [rooms, roomFromUrl]);
 
-    useEffect(() => {
-        if (selectedRoom) loadRequests();
-    }, [selectedRoom]);
-
-    // WebSocket: live status updates for this guest's requests
-    useEffect(() => {
-        const room = rooms.find(r => r.id === selectedRoom);
-        if (!room?.hotelId) return;
-        const socket = io(`${API_URL}/service-requests`, {
-            query: { hotelId: room.hotelId },
-        });
-        socketRef.current = socket;
-        socket.on("service-request:updated", (updated: ServiceRequest) => {
-            setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
-        });
-        return () => { socket.disconnect(); };
-    }, [selectedRoom, rooms]);
-
-    async function loadRequests() {
+    const loadRequests = useCallback(async () => {
+        if (!selectedRoom) return;
         try {
             const data = await api.getGuestServiceRequests(selectedRoom);
             setRequests(data);
         } catch (err) { console.error(err); }
-    }
+    }, [selectedRoom]);
+
+    useEffect(() => {
+        if (selectedRoom) loadRequests();
+    }, [selectedRoom, loadRequests]);
+
+    useActivityStreamGuest({
+        hotelSlug: hotelSlug || "",
+        roomId: selectedRoom,
+        enabled: !!selectedRoom && !!hotelSlug,
+        onServiceRequestNew: loadRequests,
+        onServiceRequestUpdated: loadRequests,
+    });
 
     async function handleSubmit() {
         if (!selectedRoom) return;

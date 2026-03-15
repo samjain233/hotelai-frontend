@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { io, Socket } from "socket.io-client";
-import { api, API_URL } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
 import { ServiceRequest } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,8 +17,6 @@ import {
     XCircle,
     MessageSquare,
     RefreshCw,
-    Wifi,
-    WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -95,13 +93,21 @@ export default function AdminServicesPage() {
     const [loading, setLoading] = useState(true);
     const [typeFilter, setTypeFilter] = useState("");
     const [updatingId, setUpdatingId] = useState<string | null>(null);
-    const [isLive, setIsLive] = useState(false);
-    const socketRef = useRef<Socket | null>(null);
+    const prevRequestIdsRef = useRef<Set<string>>(new Set());
 
     const loadRequests = useCallback(async () => {
         try {
             const data = await api.getServiceRequests(typeFilter || undefined);
             setRequests(data);
+            // Alert for new URGENT/HIGH requests (compare to previous fetch)
+            const currentIds = new Set(data.map((r) => r.id));
+            const prevIds = prevRequestIdsRef.current;
+            for (const r of data) {
+                if (!prevIds.has(r.id) && (r.priority === "URGENT" || r.priority === "HIGH")) {
+                    playAlertSound(r.priority);
+                }
+            }
+            prevRequestIdsRef.current = currentIds;
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
     }, [typeFilter]);
@@ -110,40 +116,19 @@ export default function AdminServicesPage() {
         loadRequests();
     }, [loadRequests]);
 
-    // ─── WebSocket: live new requests & status updates ─────
-    // Auth cookie is sent automatically with withCredentials; server validates JWT and derives hotelId
-    useEffect(() => {
-        if (!hotel?.id) return;
-        const socket = io(`${API_URL}/service-requests`, { withCredentials: true });
-        socketRef.current = socket;
-
-        socket.on("connect", () => setIsLive(true));
-        socket.on("disconnect", () => setIsLive(false));
-
-        socket.on("service-request:new", (req: ServiceRequest) => {
-            setRequests(prev => {
-                if (typeFilter && req.type !== typeFilter) return prev;
-                return [req, ...prev];
-            });
-            if (req.priority === "URGENT" || req.priority === "HIGH") {
-                playAlertSound(req.priority);
-            }
-        });
-        socket.on("service-request:updated", (updated: ServiceRequest) => {
-            setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
-        });
-
-        return () => {
-            socketRef.current?.disconnect();
-            socketRef.current = null;
-        };
-    }, [hotel?.id, typeFilter]);
+    useActivityStreamAdmin({
+        onServiceRequestNew: (req) => {
+            loadRequests();
+            if (req.priority === "URGENT" || req.priority === "HIGH") playAlertSound(req.priority);
+        },
+        onServiceRequestUpdated: loadRequests,
+    });
 
     async function updateStatus(id: string, status: string) {
         setUpdatingId(id);
         try {
             await api.updateServiceRequestStatus(id, status);
-            // Optimistic update — WS will also push the change
+            // Optimistic update
             setRequests(prev => prev.map(r => r.id === id ? { ...r, status: status as any } : r));
         } catch (err: any) {
             alert(err.message);
@@ -184,21 +169,8 @@ export default function AdminServicesPage() {
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
                         Guest Services
-                        {/* Live indicator */}
-                        <span className={cn(
-                            "flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border",
-                            isLive
-                                ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
-                                : "text-muted-foreground bg-secondary border-border"
-                        )}>
-                            {isLive ? (
-                                <><Wifi className="w-3 h-3" /> Live</>
-                            ) : (
-                                <><WifiOff className="w-3 h-3" /> Offline</>
-                            )}
-                        </span>
                     </h1>
                     <p className="text-muted-foreground mt-1">
                         {activeRequests.length} active | {resolvedRequests.length} resolved (last 50)

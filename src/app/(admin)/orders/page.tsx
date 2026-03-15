@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
+import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
 import { Order, OrderStatus } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { AnimatePresence, motion } from "framer-motion";
@@ -41,13 +42,18 @@ export default function OrdersPage() {
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-    useEffect(() => { loadOrders(); }, []);
-
-    async function loadOrders() {
+    const loadOrders = useCallback(async () => {
         try { const data = await api.getOrders(); setOrders(data); }
         catch (err) { console.error(err); }
         finally { setLoading(false); }
-    }
+    }, []);
+
+    useEffect(() => { loadOrders(); }, [loadOrders]);
+
+    useActivityStreamAdmin({
+        onOrderNew: loadOrders,
+        onOrderUpdated: loadOrders,
+    });
 
     async function updateStatus(id: string, newStatus: string) {
         setUpdatingId(id);

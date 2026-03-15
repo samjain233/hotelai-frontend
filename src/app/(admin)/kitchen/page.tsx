@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { api } from "@/lib/api";
+import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +22,6 @@ import { cn } from "@/lib/utils";
 import { OrdersSkeleton } from "@/components/ui/Skeleton";
 
 // ─── Config ───────────────────────────────────────────
-const REFRESH_INTERVAL = 8000; // 8 seconds
 const URGENCY_WARN_MINS = 10;  // Yellow after 10 min
 const URGENCY_DANGER_MINS = 20; // Red after 20 min
 
@@ -105,9 +105,12 @@ export default function KitchenPage() {
 
     useEffect(() => {
         loadOrders();
-        const interval = setInterval(loadOrders, REFRESH_INTERVAL);
-        return () => clearInterval(interval);
     }, [loadOrders]);
+
+    useActivityStreamAdmin({
+        onOrderNew: loadOrders,
+        onOrderUpdated: loadOrders,
+    });
 
     // ─── Status Transition ───
     async function moveForward(order: Order, nextStatus: string) {
@@ -181,7 +184,7 @@ export default function KitchenPage() {
                             🔥 Kitchen Display
                         </h1>
                         <p className="text-muted-foreground mt-0.5 text-sm">
-                            {totalActive} active order{totalActive !== 1 ? "s" : ""} · Auto-refreshes every {REFRESH_INTERVAL / 1000}s
+                            {totalActive} active order{totalActive !== 1 ? "s" : ""} · Live updates
                         </p>
                     </div>
                 </div>

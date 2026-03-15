@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { MenuItem, CartItem, Hotel, Order } from "@/lib/types";
 import type { PublicMenuFullData } from "@/lib/types";
-import { api, API_URL } from "@/lib/api";
+import { api } from "@/lib/api";
 import { usePublicMenuFull } from "@/hooks/useSwrApi";
+import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, Headset } from "lucide-react";
@@ -59,41 +60,44 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0].id);
     }, [categories, activeCategory]);
 
-    useEffect(() => {
-        if (roomId) loadPastOrders();
-    }, [roomId]);
+    const orderRef = useRef<Order | null>(null);
+    orderRef.current = order;
 
-    // Lazy-load socket.io only when hotel exists (connects for real-time order updates)
-    const socketRef = useRef<{ disconnect: () => void } | null>(null);
-    useEffect(() => {
-        if (hotel?.id) {
-            import("socket.io-client").then(({ io }) => {
-                const s = io(`${API_URL}/orders`, { query: { hotelId: hotel.id } });
-                socketRef.current = s;
-                s.on("order:updated", (updatedOrder: Order) => {
-                    setOrder((prev) => (prev && updatedOrder.id === prev.id ? updatedOrder : prev));
-                    setPastOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
-                });
-                s.on("order:new", (newOrder: Order) => {
-                    if (newOrder.roomId === roomId) setPastOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
-                });
-            });
-        }
-        return () => {
-            socketRef.current?.disconnect?.();
-            socketRef.current = null;
-        };
-    }, [hotel?.id, roomId]);
-
-    async function loadPastOrders() {
+    const loadPastOrders = useCallback(async () => {
         if (!roomId) return;
         try {
             const orders = await api.getGuestRoomOrders(roomId);
             setPastOrders(orders);
+            const tracking = orderRef.current;
+            if (tracking?.id) {
+                const match = orders.find((o) => o.id === tracking.id);
+                if (match && match.status !== tracking.status) setOrder(match);
+            }
         } catch (err) {
             console.error("Failed to load past orders", err);
         }
-    }
+    }, [roomId]);
+
+    useEffect(() => {
+        if (roomId) loadPastOrders();
+    }, [roomId, loadPastOrders]);
+
+    const handleOrderUpdated = useCallback((ord: Order) => {
+        setPastOrders((prev) => {
+            const idx = prev.findIndex((o) => o.id === ord.id);
+            if (idx >= 0) return prev.map((o) => (o.id === ord.id ? ord : o));
+            return [...prev, ord];
+        });
+        setOrder((o) => (o?.id === ord.id ? ord : o));
+    }, []);
+
+    useActivityStreamGuest({
+        hotelSlug,
+        roomId: roomId || "",
+        enabled: !!roomId,
+        onOrderNew: loadPastOrders,
+        onOrderUpdated: handleOrderUpdated,
+    });
 
     function addToCart(item: MenuItem) {
         setCart((prev) => {
