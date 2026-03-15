@@ -2,8 +2,13 @@ import { AuthResponse, MenuCategory, MenuItem, Room, RoomQr, Order, PublicMenuDa
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-/** When true (e.g. on Vercel), use same-origin /api proxy so cookies work for SSE */
-const USE_PROXY = process.env.NEXT_PUBLIC_USE_PROXY === 'true';
+/** Use same-origin /api proxy when not on localhost (e.g. Vercel) so cookies work for SSE */
+function useProxy(): boolean {
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_USE_PROXY === 'true';
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1';
+    return !isLocal || process.env.NEXT_PUBLIC_USE_PROXY === 'true';
+}
 
 class ApiClient {
     private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -12,7 +17,7 @@ class ApiClient {
             ...(options.headers as Record<string, string>),
         };
 
-        const url = USE_PROXY ? `/api${path.startsWith('/') ? path : '/' + path}` : `${API_URL}${path}`;
+        const url = useProxy() ? `/api${path.startsWith('/') ? path : '/' + path}` : `${API_URL}${path}`;
         const res = await fetch(url, {
             ...options,
             headers,

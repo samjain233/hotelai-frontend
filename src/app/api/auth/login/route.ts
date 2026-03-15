@@ -30,8 +30,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(data, { status: res.status });
         }
 
-        const setCookies = res.headers.getSetCookie?.() ?? [];
-        const token = extractTokenFromSetCookie(setCookies);
+        // Prefer token from body (backend returns it); fallback to Set-Cookie parsing
+        let token: string | null = data.token ?? null;
+        if (!token) {
+            const setCookies = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+            token = extractTokenFromSetCookie(setCookies);
+        }
+        if (!token) {
+            const raw = res.headers.get('set-cookie');
+            if (raw) token = extractTokenFromSetCookie([raw]);
+        }
 
         const response = NextResponse.json({ admin: data.admin, hotel: data.hotel });
 
