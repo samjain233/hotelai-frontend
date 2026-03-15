@@ -3,7 +3,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { useState, useEffect } from "react";
 import {
@@ -19,6 +18,7 @@ import {
     Search,
     Headset,
     Users,
+    Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +31,7 @@ const allNavItems = [
     { name: "Rooms & QR", href: "/rooms", icon: BedDouble, roles: ["OWNER", "MANAGER", "FRONT_DESK"] },
     { name: "Kitchen", href: "/kitchen", icon: ChefHat, roles: ["OWNER", "MANAGER", "KITCHEN"] },
     { name: "Staff", href: "/staff", icon: Users, roles: ["OWNER"] },
+    { name: "Settings", href: "/settings", icon: Settings, roles: ["OWNER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -122,8 +123,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <p className="text-xs font-medium text-foreground truncate">{admin?.name}</p>
                         <p className="text-[10px] text-muted-foreground truncate">{admin?.email}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <ThemeToggle />
+                    <div className="flex gap-2">
                         <button
                             onClick={logout}
                             className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors group"
