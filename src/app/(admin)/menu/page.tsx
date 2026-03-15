@@ -7,8 +7,10 @@ import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwr
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { AnimatePresence, motion } from "framer-motion";
 import { upload } from "@vercel/blob/client";
+import { cn } from "@/lib/utils";
 import {
     Plus,
     Search,
@@ -17,7 +19,10 @@ import {
     FolderOpen,
     X,
     Image as ImageIcon,
-    Upload
+    Upload,
+    Leaf,
+    Beef,
+    Egg
 } from "lucide-react";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -53,7 +58,8 @@ export default function MenuPage() {
         setUploading(true);
         try {
             const { token } = await api.getUploadToken();
-            const blob = await upload(file.name, file, {
+            const { pathname } = await api.getUploadPathname(token);
+            const blob = await upload(pathname, file, {
                 access: 'public',
                 handleUploadUrl: '/api/blob-upload',
                 clientPayload: JSON.stringify({ token }),
@@ -224,72 +230,139 @@ export default function MenuPage() {
                 )}
             </AnimatePresence>
 
-            {/* Modals - Simplified styling */}
+            {/* New Item / Edit Item Modal */}
             <AnimatePresence>
                 {showItemModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowItemModal(false)}>
-                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
-                            <div className="flex justify-between items-center p-5 border-b border-border bg-muted/20">
-                                <h3 className="font-semibold text-foreground">{editingItem ? "Edit Item" : "New Item"}</h3>
-                                <button onClick={() => setShowItemModal(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto py-8" onClick={() => setShowItemModal(false)}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-4xl my-auto bg-card border border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden"
+                        >
+                            {/* Header */}
+                            <div className="px-6 py-4 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold text-foreground tracking-tight">{editingItem ? "Edit Item" : "New Item"}</h3>
+                                    <button
+                                        onClick={() => setShowItemModal(false)}
+                                        className="p-2 -m-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
-                            <form onSubmit={saveItem} className="p-6 space-y-4">
-                                <Input placeholder="Item Name" value={itemForm.name} onChange={e => setItemForm({ ...itemForm, name: e.target.value })} required />
-                                <textarea
-                                    placeholder="Description"
-                                    className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary min-h-[100px] resize-none"
-                                    value={itemForm.description}
-                                    onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
-                                />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input type="number" placeholder="Price" value={itemForm.price} onChange={e => setItemForm({ ...itemForm, price: e.target.value })} required />
-                                    <select
-                                        value={itemForm.categoryId}
-                                        onChange={e => setItemForm({ ...itemForm, categoryId: e.target.value })}
-                                        className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                                    >
-                                        <option value="">Category</option>
-                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">Image</label>
-                                    <div className="flex flex-wrap gap-2 items-center">
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/jpeg,image/png,image/webp"
-                                            className="hidden"
-                                            onChange={handleImageUpload}
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            disabled={uploading}
-                                            onClick={() => fileInputRef.current?.click()}
-                                        >
-                                            {uploading ? "Uploading…" : <><Upload className="w-4 h-4 mr-1.5" /> Choose Image</>}
-                                        </Button>
-                                        <span className="text-xs text-muted-foreground">JPEG, PNG, WebP • max 10 MB</span>
+
+                            <form onSubmit={saveItem}>
+                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
+                                    {/* Left column: Basic info */}
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground mb-1.5 block">Item name</label>
+                                            <Input placeholder="e.g. Masala Dosa" value={itemForm.name} onChange={e => setItemForm({ ...itemForm, name: e.target.value })} required className="h-11" />
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground mb-1.5 block">Description</label>
+                                            <textarea
+                                                placeholder="Brief description of the dish"
+                                                className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 min-h-[180px] resize-none transition-all"
+                                                value={itemForm.description}
+                                                onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-sm font-medium text-foreground mb-1.5 block">Price (₹)</label>
+                                                <Input type="number" placeholder="0" value={itemForm.price} onChange={e => setItemForm({ ...itemForm, price: e.target.value })} required className="h-11" />
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-foreground mb-1.5 block">Category</label>
+                                                <SearchableSelect
+                                                    options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                                                    value={itemForm.categoryId}
+                                                    onChange={(v) => setItemForm({ ...itemForm, categoryId: v })}
+                                                    placeholder="Select category"
+                                                    searchPlaceholder="Type to search..."
+                                                    emptyMessage="No categories found"
+                                                    className="[&>button]:h-11 [&>button]:rounded-xl"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <Input placeholder="Or paste image URL (optional)" value={itemForm.imageUrl} onChange={e => setItemForm({ ...itemForm, imageUrl: e.target.value })} />
+
+                                    {/* Right column: Image + Dietary */}
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-foreground block">Image</label>
+                                            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
+                                            <div
+                                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("!border-primary/60", "!bg-primary/10"); }}
+                                                onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove("!border-primary/60", "!bg-primary/10"); }}
+                                                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("!border-primary/60", "!bg-primary/10"); const f = e.dataTransfer.files?.[0]; if (f) handleImageUpload({ target: { files: [f] } } as any); }}
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className={cn(
+                                                    "relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 min-h-[280px] group",
+                                                    itemForm.imageUrl
+                                                        ? "border-white/20 bg-secondary/40 hover:border-white/30"
+                                                        : "border-white/15 bg-white/[0.02] hover:border-primary/40 hover:bg-primary/5"
+                                                )}
+                                            >
+                                                {itemForm.imageUrl ? (
+                                                    <>
+                                                        <div className="w-full aspect-video rounded-lg overflow-hidden bg-secondary ring-1 ring-white/10">
+                                                            <img src={itemForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                                                            <span className="px-4 py-2 bg-white/90 text-black text-sm font-medium rounded-lg">Change image</span>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                                            <Upload className="w-6 h-6 text-primary" />
+                                                        </div>
+                                                        <div className="text-center space-y-0.5">
+                                                            <p className="text-sm font-medium text-foreground">{uploading ? "Uploading…" : "Drop or click to upload"}</p>
+                                                            <p className="text-xs text-muted-foreground">JPEG, PNG, WebP • max 10 MB</p>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-foreground block">Dietary preference</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {[
+                                                    { value: "NONE" as const, label: "None", icon: null, activeClass: "bg-white/15 text-foreground border-white/25", inactiveClass: "bg-white/[0.03] text-muted-foreground border-white/10 hover:border-white/20" },
+                                                    { value: "VEG" as const, label: "Veg", icon: <Leaf className="w-4 h-4" />, activeClass: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40", inactiveClass: "bg-emerald-500/5 text-emerald-400/70 border-emerald-500/20 hover:border-emerald-500/40" },
+                                                    { value: "NON_VEG" as const, label: "Non-Veg", icon: <Beef className="w-4 h-4" />, activeClass: "bg-red-500/20 text-red-400 border-red-500/40", inactiveClass: "bg-red-500/5 text-red-400/70 border-red-500/20 hover:border-red-500/40" },
+                                                    { value: "EGGITARIAN" as const, label: "Egg", icon: <Egg className="w-4 h-4" />, activeClass: "bg-amber-500/20 text-amber-400 border-amber-500/40", inactiveClass: "bg-amber-500/5 text-amber-400/70 border-amber-500/20 hover:border-amber-500/40" },
+                                                ].map((opt) => (
+                                                    <button
+                                                        key={opt.value}
+                                                        type="button"
+                                                        onClick={() => setItemForm({ ...itemForm, dietaryPreference: opt.value })}
+                                                        className={cn(
+                                                            "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200",
+                                                            itemForm.dietaryPreference === opt.value ? opt.activeClass : opt.inactiveClass
+                                                        )}
+                                                    >
+                                                        {opt.icon}
+                                                        {opt.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <select
-                                        value={itemForm.dietaryPreference}
-                                        onChange={e => setItemForm({ ...itemForm, dietaryPreference: e.target.value })}
-                                        className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                                    >
-                                        <option value="NONE">None</option>
-                                        <option value="VEG">Veg</option>
-                                        <option value="NON_VEG">Non-Veg</option>
-                                        <option value="EGGITARIAN">Eggitarian</option>
-                                    </select>
-                                </div>
-                                <div className="flex gap-3 pt-4">
-                                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowItemModal(false)}>Cancel</Button>
-                                    <Button type="submit" loading={saving} className="flex-1">Save Changes</Button>
+
+                                {/* Actions - full width footer */}
+                                <div className="flex gap-3 px-6 pb-6 pt-5">
+                                    <Button type="button" variant="outline" className="flex-1 h-11 rounded-xl" onClick={() => setShowItemModal(false)}>Cancel</Button>
+                                    <Button type="submit" loading={saving} className="flex-1 h-11 rounded-xl shadow-lg shadow-primary/20">Save Changes</Button>
                                 </div>
                             </form>
                         </motion.div>

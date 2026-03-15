@@ -1,6 +1,5 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -35,16 +34,13 @@ export async function POST(request: Request): Promise<NextResponse> {
                     throw new Error(err.message || 'Token invalid or already used');
                 }
 
-                const { hotelId } = (await res.json()) as { hotelId: string };
-                const uuid = randomUUID();
-                const pathname = `menu-items/${hotelId}/${uuid}`;
+                await res.json(); // consume validates token
 
                 return {
                     allowedContentTypes: [...ALLOWED_TYPES],
                     maximumSizeInBytes: MAX_SIZE,
                     addRandomSuffix: true,
                     validUntil: Date.now() + 60_000,
-                    pathname,
                 };
             },
         });

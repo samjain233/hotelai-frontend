@@ -115,6 +115,14 @@ class ApiClient {
         });
     }
 
+    /** Get pathname for blob upload (must use before calling upload). Does not consume token. */
+    async getUploadPathname(token: string): Promise<{ pathname: string }> {
+        return this.request<{ pathname: string }>('/admin/menu/upload-token/pathname', {
+            method: 'POST',
+            body: JSON.stringify({ token }),
+        });
+    }
+
     async createMenuItem(data: {
         name: string;
         price: number;
