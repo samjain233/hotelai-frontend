@@ -42,7 +42,7 @@ function parseEventData(raw: string): ActivityEvent | null {
                 ? (parsed.data as { type: string; data?: unknown })
                 : parsed;
         if (payload && typeof payload.type === "string") {
-            return { type: payload.type as ActivityEventType, data: payload.data ?? {} };
+            return { type: payload.type as ActivityEventType, data: (payload.data ?? {}) as ActivityEvent["data"] };
         }
     } catch {
         // ignore
