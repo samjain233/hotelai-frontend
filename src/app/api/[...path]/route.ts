@@ -1,0 +1,54 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+    return proxyRequest(request, await params);
+}
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+    return proxyRequest(request, await params);
+}
+
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+    return proxyRequest(request, await params);
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+    return proxyRequest(request, await params);
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+    return proxyRequest(request, await params);
+}
+
+async function proxyRequest(request: NextRequest, { path }: { path: string[] }) {
+    const pathStr = path.join('/');
+    const url = new URL(request.url);
+    const query = url.searchParams.toString();
+    const target = `${API_URL}/${pathStr}${query ? `?${query}` : ''}`;
+
+    const headers: Record<string, string> = {};
+    const cookie = request.headers.get('cookie');
+    if (cookie) headers['Cookie'] = cookie;
+    const contentType = request.headers.get('content-type');
+    if (contentType) headers['Content-Type'] = contentType;
+
+    const body = request.method !== 'GET' && request.method !== 'HEAD'
+        ? await request.text()
+        : undefined;
+
+    const res = await fetch(target, {
+        method: request.method,
+        headers,
+        body,
+    });
+
+    const data = await res.text();
+    return new NextResponse(data, {
+        status: res.status,
+        headers: {
+            'Content-Type': res.headers.get('content-type') || 'application/json',
+        },
+    });
+}
