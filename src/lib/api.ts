@@ -197,6 +197,8 @@ class ApiClient {
         categoryId: string;
         description?: string;
         imageUrl?: string;
+        dietaryPreference?: string;
+        available?: boolean;
     }): Promise<MenuItem> {
         return this.request('/admin/menu', {
             method: 'POST',

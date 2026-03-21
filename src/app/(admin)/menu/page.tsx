@@ -45,7 +45,15 @@ export default function MenuPage() {
     const [showItemModal, setShowItemModal] = useState(false);
     const [showCatModal, setShowCatModal] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
-    const [itemForm, setItemForm] = useState({ name: "", description: "", price: "", categoryId: "", imageUrl: "", dietaryPreference: "NONE" });
+    const [itemForm, setItemForm] = useState({
+        name: "",
+        description: "",
+        price: "",
+        categoryId: "",
+        imageUrl: "",
+        dietaryPreference: "NONE",
+        available: true,
+    });
     const [catForm, setCatForm] = useState({ name: "", icon: "" });
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -108,12 +116,28 @@ export default function MenuPage() {
 
     function openNewItem() {
         setEditingItem(null);
-        setItemForm({ name: "", description: "", price: "", categoryId: categories[0]?.id || "", imageUrl: "", dietaryPreference: "NONE" });
+        setItemForm({
+            name: "",
+            description: "",
+            price: "",
+            categoryId: categories[0]?.id || "",
+            imageUrl: "",
+            dietaryPreference: "NONE",
+            available: true,
+        });
         setShowItemModal(true);
     }
     function openEditItem(item: MenuItem) {
         setEditingItem(item);
-        setItemForm({ name: item.name, description: item.description || "", price: String(item.price), categoryId: item.categoryId, imageUrl: item.imageUrl || "", dietaryPreference: (item as any).dietaryPreference || "NONE" });
+        setItemForm({
+            name: item.name,
+            description: item.description || "",
+            price: String(item.price),
+            categoryId: item.categoryId,
+            imageUrl: item.imageUrl || "",
+            dietaryPreference: item.dietaryPreference || "NONE",
+            available: item.available,
+        });
         setShowItemModal(true);
     }
     async function saveItem(e: React.FormEvent) {
@@ -121,17 +145,24 @@ export default function MenuPage() {
         if (uploading) return;
         setSaving(true);
         try {
-            const data = { name: itemForm.name, description: itemForm.description || undefined, price: Number(itemForm.price), categoryId: itemForm.categoryId, imageUrl: itemForm.imageUrl || undefined, dietaryPreference: itemForm.dietaryPreference };
-            if (editingItem) { await api.updateMenuItem(editingItem.id, data as any); }
-            else { await api.createMenuItem(data); }
+            const data = {
+                name: itemForm.name,
+                description: itemForm.description || undefined,
+                price: Number(itemForm.price),
+                categoryId: itemForm.categoryId,
+                imageUrl: itemForm.imageUrl || undefined,
+                dietaryPreference: itemForm.dietaryPreference,
+                available: itemForm.available,
+            };
+            if (editingItem) {
+                await api.updateMenuItem(editingItem.id, data as Parameters<typeof api.updateMenuItem>[1]);
+            } else {
+                await api.createMenuItem(data);
+            }
             closeItemModal();
             invalidateMenuCache();
         } catch (err: any) { alert(err.message); }
         finally { setSaving(false); }
-    }
-    async function toggleAvailability(item: MenuItem) {
-        try { await api.updateMenuItem(item.id, { available: !item.available } as any); invalidateMenuCache(); }
-        catch (err: any) { alert(err.message); }
     }
     async function deleteItem(id: string) {
         if (!confirm("Delete this item?")) return;
@@ -257,14 +288,8 @@ export default function MenuPage() {
                                     <h3 className="font-semibold text-foreground text-lg mb-1">{item.name}</h3>
                                     <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">{item.description}</p>
 
-                                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                                    <div className="pt-4 border-t border-border">
                                         <span className="text-lg font-bold text-foreground">₹{item.price}</span>
-                                        <button
-                                            onClick={() => toggleAvailability(item)}
-                                            className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${item.available ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-secondary text-muted-foreground border-border"}`}
-                                        >
-                                            {item.available ? "Available" : "Sold Out"}
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -359,6 +384,24 @@ export default function MenuPage() {
                                                 value={itemForm.description}
                                                 onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
                                             />
+                                        </div>
+                                        <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-foreground">On menu</p>
+                                                <p className="text-xs text-muted-foreground">Sold out hides the item from guests</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setItemForm({ ...itemForm, available: !itemForm.available })}
+                                                className={cn(
+                                                    "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
+                                                    itemForm.available
+                                                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                                        : "bg-secondary text-muted-foreground border-border",
+                                                )}
+                                            >
+                                                {itemForm.available ? "Available" : "Sold out"}
+                                            </button>
                                         </div>
                                     </div>
 
