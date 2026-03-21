@@ -280,7 +280,7 @@ export default function RoomsPage() {
                 )}
             </AnimatePresence>
 
-            {/* QR Modal - Clean white paper look for QRs because they need to be scanned */}
+            {/* QR Modal — white tile behind each code (no mix-blend) so black/white PNG stays scannable */}
             <AnimatePresence>
                 {showQrModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowQrModal(false)}>
@@ -301,8 +301,12 @@ export default function RoomsPage() {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 print:grid-cols-4">
                                     {qrs.map((qr) => (
                                         <div key={qr.roomId} className="bg-card border border-border text-foreground p-4 rounded-xl shadow-sm text-center flex flex-col items-center">
-                                            <div className="aspect-square w-full bg-secondary mb-3">
-                                                <img src={qr.qrCode} alt={`Room ${qr.roomNumber}`} className="w-full h-full object-contain mix-blend-multiply" />
+                                            <div className="aspect-square w-full mb-3 rounded-lg bg-white p-2 ring-1 ring-black/10 dark:ring-white/20">
+                                                <img
+                                                    src={qr.qrCode}
+                                                    alt={`Room ${qr.roomNumber}`}
+                                                    className="h-full w-full object-contain"
+                                                />
                                             </div>
                                             <p className="font-bold text-lg">Room {qr.roomNumber}</p>
                                             <p className="text-xs text-muted-foreground mb-3">Scan to Order</p>
