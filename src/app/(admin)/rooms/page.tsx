@@ -6,7 +6,6 @@ import { Room, RoomQr } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { RoomsSkeleton } from "@/components/ui/Skeleton";
 import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Plus,
@@ -18,7 +17,8 @@ import {
     Printer,
     Link,
     Check,
-    LogOut
+    LogOut,
+    CircleHelp,
 } from "lucide-react";
 import { parseRoomNumbersInput } from "@/lib/parseRoomNumbersInput";
 
@@ -32,8 +32,13 @@ export default function RoomsPage() {
     const [search, setSearch] = useState("");
     const [saving, setSaving] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [roomNumberHelpOpen, setRoomNumberHelpOpen] = useState(false);
 
     useEffect(() => { loadRooms(); }, []);
+
+    useEffect(() => {
+        if (!showModal) setRoomNumberHelpOpen(false);
+    }, [showModal]);
 
     // ... Keep CRUD logic same ...
     async function loadRooms() {
@@ -200,17 +205,64 @@ export default function RoomsPage() {
                             </div>
                             <form onSubmit={handleCreateRoom} className="p-6 space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-muted-foreground">Room number(s)</label>
+                                    <div
+                                        className="relative"
+                                        onMouseEnter={() => setRoomNumberHelpOpen(true)}
+                                        onMouseLeave={() => setRoomNumberHelpOpen(false)}
+                                    >
+                                        <div className="flex items-center gap-1.5">
+                                            <label htmlFor="add-room-numbers" className="text-xs font-medium text-muted-foreground">
+                                                Room number(s)
+                                            </label>
+                                            <button
+                                                type="button"
+                                                className="rounded-full p-0.5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                                                aria-label="Room number format help"
+                                                aria-expanded={roomNumberHelpOpen}
+                                            >
+                                                <CircleHelp className="w-4 h-4 shrink-0" aria-hidden />
+                                            </button>
+                                        </div>
+                                        {roomNumberHelpOpen && (
+                                            <div
+                                                role="tooltip"
+                                                className="absolute left-0 top-full z-[100] mt-1.5 w-full min-w-[16rem] max-w-[min(18rem,calc(100vw-3rem))] rounded-lg border border-border bg-popover px-3 py-2.5 text-left text-popover-foreground shadow-xl shadow-black/15"
+                                            >
+                                                <p className="text-[11px] font-semibold text-foreground mb-2">Formats &amp; examples</p>
+                                                <ul className="text-[11px] text-muted-foreground space-y-1.5 list-none">
+                                                    <li>
+                                                        <span className="font-medium text-foreground">One room:</span>{" "}
+                                                        <code className="rounded bg-secondary px-1 py-0.5 text-foreground">101</code>
+                                                    </li>
+                                                    <li>
+                                                        <span className="font-medium text-foreground">List:</span>{" "}
+                                                        <code className="rounded bg-secondary px-1 py-0.5 text-foreground">101, 102, 105</code>
+                                                    </li>
+                                                    <li>
+                                                        <span className="font-medium text-foreground">Range:</span>{" "}
+                                                        <code className="rounded bg-secondary px-1 py-0.5 text-foreground">101-105</code>
+                                                        <span className="block pt-0.5 text-[10px]">→ creates 101, 102, … 105</span>
+                                                    </li>
+                                                    <li>
+                                                        <span className="font-medium text-foreground">Combined:</span>{" "}
+                                                        <code className="rounded bg-secondary px-1 py-0.5 text-foreground">101-103, 201</code>
+                                                    </li>
+                                                </ul>
+                                                <p className="mt-2 border-t border-border pt-2 text-[10px] leading-relaxed text-muted-foreground">
+                                                    Optional <strong className="text-foreground">floor</strong> applies to every room in this batch.
+                                                    Max <strong className="text-foreground">100</strong> rooms per save. Ranges use numbers only (hyphen).
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                     <Input
-                                        placeholder="e.g. 101 or 101,102,105 or 101-105"
+                                        id="add-room-numbers"
+                                        placeholder="101  or  101,102,105  or  101-105"
                                         value={form.number}
                                         onChange={(e) => setForm({ ...form, number: e.target.value })}
                                         required
                                         autoComplete="off"
                                     />
-                                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                        One room, comma-separated list, or a numeric range (hyphen). Same floor applies to all. Max 100 per save.
-                                    </p>
                                 </div>
                                 <Input placeholder="Floor (Optional) — applies to all" value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} />
                                 <div className="flex gap-3 pt-2">
