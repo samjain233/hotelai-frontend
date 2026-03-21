@@ -100,15 +100,7 @@ export default function LoginPage() {
                                 />
                             </div>
                             <div>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <label className="block text-xs font-medium text-zinc-400">Password</label>
-                                    <Link
-                                        href="/forgot-password"
-                                        className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
-                                    >
-                                        Forgot password?
-                                    </Link>
-                                </div>
+                                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Password</label>
                                 <Input
                                     icon={<Lock className="w-4 h-4" />}
                                     type="password"
@@ -117,6 +109,14 @@ export default function LoginPage() {
                                     onChange={e => setPassword(e.target.value)}
                                     required
                                 />
+                                <div className="flex justify-end mt-1.5">
+                                    <Link
+                                        href="/forgot-password"
+                                        className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                                    >
+                                        Forgot password?
+                                    </Link>
+                                </div>
                             </div>
                         </div>
 
