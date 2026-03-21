@@ -1,8 +1,9 @@
 "use client";
 
+import type { ComponentType } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
-import { Order, MenuCategory, Room } from "@/lib/types";
+import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { useEffect, useState } from "react";
 import {
@@ -10,14 +11,12 @@ import {
     ShoppingBag,
     Utensils,
     Users,
-    TrendingUp,
     ArrowRight,
-    Clock,
-    CheckCircle2,
     BedDouble
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
+import { ENABLE_ORDERING_ADMIN_NAV } from "@/lib/adminNavConfig";
 
 export default function DashboardPage() {
     const { hotel } = useAuth();
@@ -28,15 +27,19 @@ export default function DashboardPage() {
     useEffect(() => {
         async function load() {
             try {
-                const [o, c, r] = await Promise.all([api.getOrders(), api.getCategories(), api.getRooms()]);
-                setOrders(o);
-
-                // Calculate Stats
-                const revenue = o.filter(x => x.status !== 'CANCELLED').reduce((acc, curr) => acc + curr.totalAmount, 0);
-                const active = o.filter(x => ['PLACED', 'CONFIRMED', 'PREPARING'].includes(x.status)).length;
-                const items = c.reduce((acc, curr) => acc + (curr._count?.items || 0), 0);
-
-                setStats({ revenue, activeOrders: active, totalItems: items, occupancy: r.length }); // Mock occupancy as room count for now
+                if (ENABLE_ORDERING_ADMIN_NAV) {
+                    const [o, c, r] = await Promise.all([api.getOrders(), api.getCategories(), api.getRooms()]);
+                    setOrders(o);
+                    const revenue = o.filter(x => x.status !== 'CANCELLED').reduce((acc, curr) => acc + curr.totalAmount, 0);
+                    const active = o.filter(x => ['PLACED', 'CONFIRMED', 'PREPARING'].includes(x.status)).length;
+                    const items = c.reduce((acc, curr) => acc + (curr._count?.items || 0), 0);
+                    setStats({ revenue, activeOrders: active, totalItems: items, occupancy: r.length });
+                } else {
+                    const [c, r] = await Promise.all([api.getCategories(), api.getRooms()]);
+                    setOrders([]);
+                    const items = c.reduce((acc, curr) => acc + (curr._count?.items || 0), 0);
+                    setStats({ revenue: 0, activeOrders: 0, totalItems: items, occupancy: r.length });
+                }
             } catch (error) {
                 console.error(error);
             } finally {
@@ -55,16 +58,18 @@ export default function DashboardPage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
                     <p className="text-muted-foreground mt-1">
-                        Overview of {hotel?.name || "your hotel"}'s performance today.
+                        Overview of {hotel?.name || "your hotel"}&apos;s performance today.
                     </p>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="outline">View Reports</Button>
-                    <Button>
-                        <ShoppingBag className="w-4 h-4 mr-2" />
-                        New Order
-                    </Button>
-                </div>
+                {ENABLE_ORDERING_ADMIN_NAV && (
+                    <div className="flex gap-3">
+                        <Button variant="outline">View Reports</Button>
+                        <Button>
+                            <ShoppingBag className="w-4 h-4 mr-2" />
+                            New Order
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* 
@@ -79,6 +84,7 @@ export default function DashboardPage() {
                     value={`₹${stats.revenue.toLocaleString()}`}
                     icon={DollarSign}
                     trend="+12.5%"
+                    disabled={!ENABLE_ORDERING_ADMIN_NAV}
                 />
                 <StatCard
                     title="Active Orders"
@@ -86,6 +92,7 @@ export default function DashboardPage() {
                     icon={ShoppingBag}
                     trend="+2"
                     active
+                    disabled={!ENABLE_ORDERING_ADMIN_NAV}
                 />
                 <StatCard
                     title="Menu Items"
@@ -102,12 +109,25 @@ export default function DashboardPage() {
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* RECENT ORDERS (Takes up 2 columns) */}
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-semibold text-foreground">Recent Orders</h2>
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
-                            View All <ArrowRight className="w-4 h-4 ml-1" />
-                        </Button>
+                <div
+                    className={cn(
+                        "lg:col-span-2 space-y-4",
+                        !ENABLE_ORDERING_ADMIN_NAV && "opacity-45 pointer-events-none select-none",
+                    )}
+                    aria-disabled={!ENABLE_ORDERING_ADMIN_NAV}
+                >
+                    <div className="flex items-center justify-between gap-2">
+                        <div>
+                            <h2 className="text-lg font-semibold text-foreground">Recent Orders</h2>
+                            {!ENABLE_ORDERING_ADMIN_NAV && (
+                                <p className="text-xs text-muted-foreground mt-0.5">Available when ordering is enabled</p>
+                            )}
+                        </div>
+                        {ENABLE_ORDERING_ADMIN_NAV && (
+                            <Button variant="ghost" size="sm" className="text-primary hover:text-primary shrink-0">
+                                View All <ArrowRight className="w-4 h-4 ml-1" />
+                            </Button>
+                        )}
                     </div>
 
                     <div className="dashboard-card overflow-hidden">
@@ -171,7 +191,8 @@ export default function DashboardPage() {
                             icon={Users}
                             title="Staff & Access"
                             subtitle="Manage permissions"
-                            href="#"
+                            href="/staff"
+                            disabled={!ENABLE_ORDERING_ADMIN_NAV}
                         />
                     </div>
 
@@ -195,17 +216,35 @@ export default function DashboardPage() {
 // Sub-components for cleaner file
 // ----------------------------------------------------------------------
 
-function StatCard({ title, value, icon: Icon, trend, active }: { title: string, value: string, icon: any, trend?: string, active?: boolean }) {
+function StatCard({
+    title,
+    value,
+    icon: Icon,
+    trend,
+    active,
+    disabled,
+}: {
+    title: string;
+    value: string;
+    icon: ComponentType<{ className?: string }>;
+    trend?: string;
+    active?: boolean;
+    disabled?: boolean;
+}) {
     return (
-        <div className={cn(
-            "dashboard-card p-6 flex flex-col justify-between h-32 relative overflow-hidden group",
-            active && "border-primary/30 bg-primary/5 shadow-[inset_0_0_20px_rgba(99,102,241,0.05)]"
-        )}>
+        <div
+            className={cn(
+                "dashboard-card p-6 flex flex-col justify-between h-32 relative overflow-hidden group",
+                active && !disabled && "border-primary/30 bg-primary/5 shadow-[inset_0_0_20px_rgba(99,102,241,0.05)]",
+                disabled && "opacity-45 pointer-events-none select-none",
+            )}
+            aria-disabled={disabled}
+        >
             <div className="flex justify-between items-start">
                 <div className="p-2.5 rounded-lg bg-secondary border border-border text-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                     <Icon className="w-4 h-4" />
                 </div>
-                {trend && (
+                {trend && !disabled && (
                     <span className="text-xs font-semibold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                         {trend}
                     </span>
@@ -214,6 +253,9 @@ function StatCard({ title, value, icon: Icon, trend, active }: { title: string, 
             <div>
                 <p className="text-sm font-medium text-muted-foreground">{title}</p>
                 <div className="text-2xl font-bold text-foreground mt-1 tracking-tight">{value}</div>
+                {disabled && (
+                    <p className="text-[11px] text-muted-foreground mt-1">Ordering not active</p>
+                )}
             </div>
         </div>
     );
@@ -235,17 +277,57 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 
-function ActionRow({ icon: Icon, title, subtitle, href }: { icon: any, title: string, subtitle: string, href: string }) {
-    return (
-        <a href={href} className="flex items-center gap-4 p-3 rounded-xl hover:bg-secondary transition-colors group">
-            <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 group-hover:border-primary/20 transition-all">
+function ActionRow({
+    icon: Icon,
+    title,
+    subtitle,
+    href,
+    disabled,
+}: {
+    icon: ComponentType<{ className?: string }>;
+    title: string;
+    subtitle: string;
+    href: string;
+    disabled?: boolean;
+}) {
+    const className = cn(
+        "flex items-center gap-4 p-3 rounded-xl transition-colors group",
+        disabled
+            ? "opacity-45 cursor-not-allowed pointer-events-none select-none"
+            : "hover:bg-secondary",
+    );
+    const inner = (
+        <>
+            <div
+                className={cn(
+                    "w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground transition-all",
+                    !disabled && "group-hover:text-primary group-hover:bg-primary/10 group-hover:border-primary/20",
+                )}
+            >
                 <Icon className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">{title}</p>
                 <p className="text-xs text-muted-foreground">{subtitle}</p>
+                {disabled && (
+                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">Available when ordering is enabled</p>
+                )}
             </div>
-            <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-foreground opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+            {!disabled && (
+                <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-foreground opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1 shrink-0" />
+            )}
+        </>
+    );
+    if (disabled) {
+        return (
+            <div className={className} aria-disabled="true">
+                {inner}
+            </div>
+        );
+    }
+    return (
+        <a href={href} className={className}>
+            {inner}
         </a>
     );
 }
