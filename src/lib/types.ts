@@ -61,7 +61,8 @@ export interface Room {
     id: string;
     number: string;
     floor?: string;
-    type: 'STANDARD' | 'DELUXE' | 'SUITE';
+    /** null / omitted when not set at creation */
+    type: string | null;
     hotelId: string;
     _count?: { orders: number };
 }

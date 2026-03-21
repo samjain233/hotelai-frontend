@@ -228,6 +228,13 @@ class ApiClient {
         });
     }
 
+    async createBulkRooms(rooms: { number: string; floor?: string; type?: string }[]): Promise<Room[]> {
+        return this.request('/admin/rooms/bulk', {
+            method: 'POST',
+            body: JSON.stringify({ rooms }),
+        });
+    }
+
     async deleteRoom(id: string): Promise<void> {
         return this.request(`/admin/rooms/${id}`, { method: 'DELETE' });
     }

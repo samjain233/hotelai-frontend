@@ -12,7 +12,6 @@ import {
     Plus,
     QrCode,
     Trash2,
-    BedDouble,
     Download,
     X,
     Search,
@@ -21,6 +20,7 @@ import {
     Check,
     LogOut
 } from "lucide-react";
+import { parseRoomNumbersInput } from "@/lib/parseRoomNumbersInput";
 
 export default function RoomsPage() {
     const [rooms, setRooms] = useState<Room[]>([]);
@@ -28,7 +28,7 @@ export default function RoomsPage() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showQrModal, setShowQrModal] = useState(false);
-    const [form, setForm] = useState({ number: "", floor: "", type: "STANDARD" });
+    const [form, setForm] = useState({ number: "", floor: "" });
     const [search, setSearch] = useState("");
     const [saving, setSaving] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -43,10 +43,27 @@ export default function RoomsPage() {
     }
     async function handleCreateRoom(e: React.FormEvent) {
         e.preventDefault();
+        const { numbers, error: parseError } = parseRoomNumbersInput(form.number);
+        if (parseError) {
+            alert(parseError);
+            return;
+        }
         setSaving(true);
-        try { await api.createRoom({ number: form.number, floor: form.floor || undefined, type: form.type }); setShowModal(false); setForm({ number: "", floor: "", type: "STANDARD" }); await loadRooms(); }
-        catch (err: any) { alert(err.message); }
-        finally { setSaving(false); }
+        try {
+            const floor = form.floor || undefined;
+            if (numbers.length === 1) {
+                await api.createRoom({ number: numbers[0], floor });
+            } else {
+                await api.createBulkRooms(numbers.map((number) => ({ number, floor })));
+            }
+            setShowModal(false);
+            setForm({ number: "", floor: "" });
+            await loadRooms();
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Failed to create rooms");
+        } finally {
+            setSaving(false);
+        }
     }
     async function deleteRoom(id: string) {
         if (!confirm("Delete this room?")) return;
@@ -143,7 +160,9 @@ export default function RoomsPage() {
                             </div>
 
                             <h3 className="font-semibold text-foreground">Room {room.number}</h3>
-                            <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{room.type}</p>
+                            {room.type?.trim() ? (
+                                <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{room.type}</p>
+                            ) : null}
 
                             {room.floor && (
                                 <span className="mt-3 text-xs bg-secondary px-2 py-0.5 rounded text-muted-foreground">
@@ -180,16 +199,28 @@ export default function RoomsPage() {
                                 <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
                             </div>
                             <form onSubmit={handleCreateRoom} className="p-6 space-y-4">
-                                <Input placeholder="Room Number (e.g. 101)" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} required />
-                                <Input placeholder="Floor (Optional)" value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} />
-                                <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                                    <option value="STANDARD">Standard</option>
-                                    <option value="DELUXE">Deluxe</option>
-                                    <option value="SUITE">Suite</option>
-                                </select>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-muted-foreground">Room number(s)</label>
+                                    <Input
+                                        placeholder="e.g. 101 or 101,102,105 or 101-105"
+                                        value={form.number}
+                                        onChange={(e) => setForm({ ...form, number: e.target.value })}
+                                        required
+                                        autoComplete="off"
+                                    />
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                        One room, comma-separated list, or a numeric range (hyphen). Same floor applies to all. Max 100 per save.
+                                    </p>
+                                </div>
+                                <Input placeholder="Floor (Optional) — applies to all" value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} />
                                 <div className="flex gap-3 pt-2">
                                     <Button type="button" variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-                                    <Button type="submit" loading={saving} className="flex-1">Add Room</Button>
+                                    <Button type="submit" loading={saving} className="flex-1">
+                                        {(() => {
+                                            const { numbers } = parseRoomNumbersInput(form.number);
+                                            return numbers.length > 1 ? `Add ${numbers.length} rooms` : "Add room";
+                                        })()}
+                                    </Button>
                                 </div>
                             </form>
                         </motion.div>
