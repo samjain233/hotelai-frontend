@@ -28,6 +28,30 @@ import {
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
+/** Quick-pick icons for new menu categories (food & drinks) */
+const CATEGORY_EMOJI_PICKER = [
+    "🍽️",
+    "🍕",
+    "🍔",
+    "🍜",
+    "🥗",
+    "🥤",
+    "☕",
+    "🍰",
+    "🍳",
+    "🍛",
+    "🥘",
+    "🧁",
+    "🍷",
+    "🍱",
+    "🥪",
+    "🌮",
+    "🍩",
+    "🍪",
+    "🍎",
+    "🥐",
+] as const;
+
 export default function MenuPage() {
     const { data: categories = [], isLoading: categoriesLoading } = useCategories();
     const { data: items = [], isLoading: itemsLoading } = useMenuItems();
@@ -42,6 +66,8 @@ export default function MenuPage() {
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    /** When true, next successful category create selects that category in the item form */
+    const selectNewCategoryInItemForm = useRef(false);
 
     async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -106,14 +132,30 @@ export default function MenuPage() {
     async function saveCategory(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true);
-        try { await api.createCategory({ name: catForm.name, icon: catForm.icon || undefined }); setShowCatModal(false); setCatForm({ name: "", icon: "" }); invalidateMenuCache(); }
-        catch (err: any) { alert(err.message); }
-        finally { setSaving(false); }
+        try {
+            const created = await api.createCategory({ name: catForm.name, icon: catForm.icon || undefined });
+            setShowCatModal(false);
+            setCatForm({ name: "", icon: "" });
+            invalidateMenuCache();
+            if (selectNewCategoryInItemForm.current) {
+                selectNewCategoryInItemForm.current = false;
+                setItemForm((prev) => ({ ...prev, categoryId: created.id }));
+            }
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setSaving(false);
+        }
     }
     async function deleteCategory(id: string) {
         if (!confirm("Delete this category and all its items?")) return;
         try { await api.deleteCategory(id); invalidateMenuCache(); }
         catch (err: any) { alert(err.message); }
+    }
+
+    function closeCatModal() {
+        selectNewCategoryInItemForm.current = false;
+        setShowCatModal(false);
     }
 
     const filteredItems = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.description?.toLowerCase().includes(search.toLowerCase()));
@@ -129,7 +171,14 @@ export default function MenuPage() {
                     <p className="text-muted-foreground mt-1">Organize your offerings into categories</p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" onClick={() => { setCatForm({ name: "", icon: "" }); setShowCatModal(true); }}>
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            selectNewCategoryInItemForm.current = false;
+                            setCatForm({ name: "", icon: "" });
+                            setShowCatModal(true);
+                        }}
+                    >
                         <FolderOpen className="w-4 h-4 mr-2" /> New Category
                     </Button>
                     <Button onClick={openNewItem}>
@@ -277,6 +326,14 @@ export default function MenuPage() {
                                                     placeholder="Select category"
                                                     searchPlaceholder="Type to search..."
                                                     emptyMessage="No categories found"
+                                                    emptyAction={{
+                                                        label: "Add category",
+                                                        onClick: (searchQuery) => {
+                                                            selectNewCategoryInItemForm.current = true;
+                                                            setCatForm({ name: searchQuery.trim(), icon: "" });
+                                                            setShowCatModal(true);
+                                                        },
+                                                    }}
                                                     className="[&>button]:h-11 [&>button]:rounded-xl"
                                                 />
                                             </div>
@@ -372,17 +429,44 @@ export default function MenuPage() {
             {/* Category modal similar structure... omitted for brevity but logic handles it */}
             <AnimatePresence>
                 {showCatModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowCatModal(false)}>
-                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm bg-card border border-border rounded-xl shadow-2xl">
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeCatModal}>
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl">
                             <div className="flex justify-between items-center p-5 border-b border-border bg-muted/20">
                                 <h3 className="font-semibold text-foreground">New Category</h3>
-                                <button onClick={() => setShowCatModal(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
+                                <button type="button" onClick={closeCatModal}><X className="w-5 h-5 text-muted-foreground" /></button>
                             </div>
                             <form onSubmit={saveCategory} className="p-6 space-y-4">
                                 <Input placeholder="Category Name" value={catForm.name} onChange={e => setCatForm({ ...catForm, name: e.target.value })} required />
-                                <Input placeholder="Icon (emoji)" value={catForm.icon} onChange={e => setCatForm({ ...catForm, icon: e.target.value })} />
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">Category icon</label>
+                                    <div className="grid grid-cols-5 gap-1.5 p-3 rounded-xl bg-secondary/40 border border-border">
+                                        {CATEGORY_EMOJI_PICKER.map((emoji) => (
+                                            <button
+                                                key={emoji}
+                                                type="button"
+                                                onClick={() => setCatForm((prev) => ({ ...prev, icon: emoji }))}
+                                                title={emoji}
+                                                className={cn(
+                                                    "text-2xl leading-none py-2.5 rounded-lg transition-colors hover:bg-secondary",
+                                                    catForm.icon === emoji && "ring-2 ring-primary bg-primary/15",
+                                                )}
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <Input
+                                        placeholder="Or type / paste another emoji…"
+                                        value={catForm.icon}
+                                        onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })}
+                                        className="text-base"
+                                    />
+                                    <p className="text-[11px] text-muted-foreground leading-snug">
+                                        Tap an emoji above or enter your own. Leave empty to use the default 🍽️ on the menu.
+                                    </p>
+                                </div>
                                 <div className="flex gap-3 pt-2">
-                                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowCatModal(false)}>Cancel</Button>
+                                    <Button type="button" variant="outline" className="flex-1" onClick={closeCatModal}>Cancel</Button>
                                     <Button type="submit" loading={saving} className="flex-1">Create</Button>
                                 </div>
                             </form>

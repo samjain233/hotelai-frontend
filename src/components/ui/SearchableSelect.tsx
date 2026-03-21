@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
 
 export interface SearchableSelectOption {
     value: string;
@@ -16,6 +17,11 @@ interface SearchableSelectProps {
     placeholder?: string;
     searchPlaceholder?: string;
     emptyMessage?: string;
+    /** Shown under emptyMessage when there are no matching options (e.g. “Add category”). Receives current search text. */
+    emptyAction?: {
+        label: string;
+        onClick: (searchQuery: string) => void;
+    };
     disabled?: boolean;
     className?: string;
 }
@@ -27,6 +33,7 @@ export function SearchableSelect({
     placeholder = "Select...",
     searchPlaceholder = "Search...",
     emptyMessage = "No results found",
+    emptyAction,
     disabled = false,
     className,
 }: SearchableSelectProps) {
@@ -83,8 +90,25 @@ export function SearchableSelect({
                     </div>
                     <div className="max-h-48 overflow-y-auto py-1">
                         {filteredOptions.length === 0 ? (
-                            <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                                {emptyMessage}
+                            <div className="px-3 py-4 text-center space-y-3">
+                                <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+                                {emptyAction && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={() => {
+                                            const q = search;
+                                            setIsOpen(false);
+                                            setSearch("");
+                                            emptyAction.onClick(q);
+                                        }}
+                                    >
+                                        <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                        {emptyAction.label}
+                                    </Button>
+                                )}
                             </div>
                         ) : (
                             filteredOptions.map((opt) => (
