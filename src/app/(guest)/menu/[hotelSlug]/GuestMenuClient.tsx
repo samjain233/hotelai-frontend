@@ -369,15 +369,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             </header>
 
             <main className="max-w-md mx-auto px-5 py-6 space-y-10">
-                {!ENABLE_GUEST_ORDERING && (
-                    <div className="rounded-xl bg-secondary/60 border border-border px-4 py-3 flex items-center gap-3 animate-fade-in-up">
-                        <Utensils className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                        <div>
-                            <p className="font-semibold text-foreground text-sm">View-only menu</p>
-                            <p className="text-xs text-muted-foreground">Browse dishes and prices — online ordering is not available yet.</p>
-                        </div>
-                    </div>
-                )}
                 {ENABLE_GUEST_ORDERING && !isOpen && (
                     <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
                         <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
@@ -385,15 +376,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             <p className="font-semibold text-foreground text-sm">Room service is currently closed</p>
                             <p className="text-xs text-muted-foreground">Orders can be placed during operating hours.</p>
                         </div>
-                    </div>
-                )}
-                {!searchQuery && (
-                    <div className="text-center py-2 animate-fade-in-up">
-                        <h2 className="text-2xl font-serif font-bold text-foreground mb-1" style={{ fontFamily: "var(--font-playfair), serif" }}>
-                            Welcome
-                        </h2>
-                        <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-[#d4a853] to-transparent mx-auto mb-2" />
-                        <p className="text-xs text-muted-foreground">Crafted with care, served with love</p>
                     </div>
                 )}
                 {searchQuery && (
