@@ -21,6 +21,11 @@ import {
     Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+    ENABLE_ORDERING_ADMIN_NAV,
+    filterVisibleNavItems,
+    isOrderingAdminNavPath,
+} from "@/lib/adminNavConfig";
 import { motion, AnimatePresence } from "framer-motion";
 
 const allNavItems = [
@@ -48,20 +53,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
     }, [loading, admin, router]);
 
+    // Block ordering-related routes when that nav is disabled (direct URL / bookmark)
+    useEffect(() => {
+        if (loading || !admin) return;
+        if (ENABLE_ORDERING_ADMIN_NAV) return;
+        if (isOrderingAdminNavPath(pathname)) {
+            router.replace("/dashboard");
+        }
+    }, [pathname, admin, loading, router]);
+
     // Guard against accessing unauthorized routes directly via URL
     useEffect(() => {
         if (!loading && admin) {
-            const currentNav = allNavItems.find(item => pathname.startsWith(item.href));
+            const visibleNav = filterVisibleNavItems(allNavItems);
+            const currentNav = visibleNav.find((item) => pathname.startsWith(item.href));
             // If the route exists in our nav system but the user's role isn't allowed to see it
             if (currentNav && !currentNav.roles.includes(admin.role)) {
-                // Find first allowed route
-                const allowedNavs = allNavItems.filter(item => item.roles.includes(admin.role));
-                router.replace(allowedNavs[0]?.href || "/orders");
+                const allowedNavs = visibleNav.filter((item) => item.roles.includes(admin.role));
+                router.replace(allowedNavs[0]?.href || "/dashboard");
             }
         }
     }, [pathname, admin, loading, router]);
 
-    const navItems = admin ? allNavItems.filter(item => item.roles.includes(admin.role)) : [];
+    const navItems = admin
+        ? filterVisibleNavItems(allNavItems.filter((item) => item.roles.includes(admin.role)))
+        : [];
 
     if (loading || !admin) {
         return (

@@ -7,6 +7,14 @@ import { Order, ServiceRequest } from "@/lib/types";
 import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
 import { Bell, ClipboardList, Headset, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ENABLE_ORDERING_ADMIN_NAV } from "@/lib/adminNavConfig";
+
+function ordersNavPath() {
+    return ENABLE_ORDERING_ADMIN_NAV ? "/orders" : "/dashboard";
+}
+function servicesNavPath() {
+    return ENABLE_ORDERING_ADMIN_NAV ? "/services" : "/dashboard";
+}
 
 const NOTIFICATION_SOUND_KEY = "hotel-admin-notification-sound";
 
@@ -163,7 +171,7 @@ export function NotificationsDropdown() {
                                         key={order.id}
                                         onClick={() => {
                                             setOpen(false);
-                                            router.push("/orders");
+                                            router.push(ordersNavPath());
                                         }}
                                         className="w-full px-4 py-3 flex items-start gap-3 hover:bg-secondary/50 transition-colors text-left"
                                     >
@@ -189,7 +197,7 @@ export function NotificationsDropdown() {
                                         key={req.id}
                                         onClick={() => {
                                             setOpen(false);
-                                            router.push("/services");
+                                            router.push(servicesNavPath());
                                         }}
                                         className="w-full px-4 py-3 flex items-start gap-3 hover:bg-secondary/50 transition-colors text-left"
                                     >
@@ -228,12 +236,12 @@ export function NotificationsDropdown() {
                         )}
                     </div>
 
-                    {count > 0 && !loading && (
+                    {count > 0 && !loading && ENABLE_ORDERING_ADMIN_NAV && (
                         <div className="px-4 py-2 border-t border-border bg-secondary/20 flex gap-2">
                             <button
                                 onClick={() => {
                                     setOpen(false);
-                                    router.push("/orders");
+                                    router.push(ordersNavPath());
                                 }}
                                 className="flex-1 text-xs font-medium text-primary hover:underline py-1.5"
                             >
@@ -242,7 +250,7 @@ export function NotificationsDropdown() {
                             <button
                                 onClick={() => {
                                     setOpen(false);
-                                    router.push("/services");
+                                    router.push(servicesNavPath());
                                 }}
                                 className="flex-1 text-xs font-medium text-primary hover:underline py-1.5"
                             >
