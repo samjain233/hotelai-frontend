@@ -98,7 +98,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                SIDEBAR - DESKTOP 
                Fixed width 260px, Z-index 40
             */}
-            <aside className="hidden lg:flex w-[260px] flex-col fixed inset-y-0 z-40 bg-background/80 backdrop-blur-3xl border-r border-border">
+            <aside className="hidden print:hidden lg:flex w-[260px] flex-col fixed inset-y-0 z-40 bg-background/80 backdrop-blur-3xl border-r border-border">
                 {/* Brand */}
                 <div className="h-16 flex items-center px-6 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 shadow-sm flex items-center justify-center text-primary mr-3">
@@ -154,11 +154,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* 
                MAIN CONTENT WRAPPER 
             */}
-            <div className="flex-1 flex flex-col min-w-0 lg:pl-[260px] transition-all duration-300">
+            <div className="flex-1 flex flex-col min-w-0 lg:pl-[260px] print:pl-0 transition-all duration-300">
                 {/* 
                    TOP HEADER 
                 */}
-                <header className="h-16 sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 lg:px-8">
+                <header className="h-16 sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 lg:px-8 print:hidden">
                     {/* Mobile Toggle */}
                     <button
                         className="lg:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -191,7 +191,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                    Added generous padding (p-6 lg:p-10) for that "airy" feel from the reference.
                    max-w-7xl to prevent stretching on huge screens.
                 */}
-                <main className="flex-1 p-6 lg:p-10 max-w-[1600px] mx-auto w-full">
+                <main className="mx-auto w-full max-w-[1600px] flex-1 p-6 lg:p-10 print:p-0 print:max-w-none">
                     {children}
                 </main>
             </div>

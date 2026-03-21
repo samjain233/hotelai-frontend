@@ -329,3 +329,21 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-zinc-700;
 }
+
+/* ─── Print: cleaner PDF / paper (e.g. Room QR batch) ─── */
+@media print {
+  @page {
+    margin: 12mm;
+    size: auto;
+  }
+
+  html,
+  body {
+    background: white !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

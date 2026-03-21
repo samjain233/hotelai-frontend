@@ -17,12 +17,13 @@ import {
     Printer,
     Link,
     Check,
-    LogOut,
     CircleHelp,
 } from "lucide-react";
 import { parseRoomNumbersInput } from "@/lib/parseRoomNumbersInput";
+import { useAuth } from "@/context/AuthContext";
 
 export default function RoomsPage() {
+    const { hotel } = useAuth();
     const [rooms, setRooms] = useState<Room[]>([]);
     const [qrs, setQrs] = useState<RoomQr[]>([]);
     const [loading, setLoading] = useState(true);
@@ -81,17 +82,6 @@ export default function RoomsPage() {
         catch (err: any) { alert(err.message); }
     }
 
-    async function handleCheckoutRoom(id: string, roomNumber: string) {
-        if (!confirm(`Clear all current orders for Room ${roomNumber}? This prepares the room for a new guest.`)) return;
-        try {
-            await api.checkoutRoom(id);
-            alert(`Room ${roomNumber} orders cleared.`);
-            await loadRooms();
-        } catch (err: any) {
-            alert(err.message);
-        }
-    }
-
     function downloadQr(qr: RoomQr) {
         const link = document.createElement("a");
         link.download = `room-${qr.roomNumber}-qr.png`;
@@ -114,7 +104,8 @@ export default function RoomsPage() {
     if (loading) return <RoomsSkeleton />;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <>
+        <div className="space-y-8 animate-in fade-in duration-500 print:hidden">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -174,14 +165,6 @@ export default function RoomsPage() {
                                     Floor {room.floor}
                                 </span>
                             )}
-
-                            <button
-                                onClick={() => handleCheckoutRoom(room.id, room.number)}
-                                title="Checkout Room (Clear Bill)"
-                                className="absolute top-3 left-3 p-1.5 text-muted-foreground hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                                <LogOut className="w-4 h-4" />
-                            </button>
 
                             <button
                                 onClick={() => deleteRoom(room.id)}
@@ -279,46 +262,76 @@ export default function RoomsPage() {
                     </div>
                 )}
             </AnimatePresence>
+        </div>
 
-            {/* QR Modal — white tile behind each code (no mix-blend) so black/white PNG stays scannable */}
+            {/* QR Modal — outside print:hidden so batch QRs still print; screen: modal; print: clean sheet */}
             <AnimatePresence>
                 {showQrModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowQrModal(false)}>
-                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-5xl h-[80vh] bg-card border border-border rounded-xl shadow-2xl flex flex-col">
-                            <div className="flex justify-between items-center p-5 border-b border-border">
+                    <div
+                        className="room-qr-print-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm print:static print:inset-auto print:flex print:min-h-0 print:bg-white print:p-0 print:backdrop-blur-0"
+                        onClick={() => setShowQrModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="room-qr-print-modal flex h-[80vh] w-full max-w-5xl flex-col rounded-xl border border-border bg-card shadow-2xl print:h-auto print:max-h-none print:max-w-none print:rounded-none print:border-0 print:bg-white print:shadow-none"
+                        >
+                            <div className="flex items-center justify-between border-b border-border p-5 print:hidden">
                                 <div>
-                                    <h3 className="font-semibold text-foreground text-lg">Room QR Codes</h3>
+                                    <h3 className="text-lg font-semibold text-foreground">Room QR Codes</h3>
                                     <p className="text-sm text-muted-foreground">Print these for guest access</p>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button variant="outline" onClick={() => window.print()}>
-                                        <Printer className="w-4 h-4 mr-2" /> Print All
+                                        <Printer className="mr-2 h-4 w-4" /> Print All
                                     </Button>
-                                    <button onClick={() => setShowQrModal(false)}><X className="w-6 h-6 text-muted-foreground" /></button>
+                                    <button type="button" onClick={() => setShowQrModal(false)} aria-label="Close">
+                                        <X className="h-6 w-6 text-muted-foreground" />
+                                    </button>
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-8 bg-secondary/30">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 print:grid-cols-4">
+
+                            {/* Print-only header (browser print / PDF) */}
+                            <div className="hidden px-2 pb-4 pt-2 print:block">
+                                <h1 className="text-center text-xl font-bold text-black">
+                                    {hotel?.name?.trim() ? `${hotel.name} — Room QR codes` : "Room QR codes"}
+                                </h1>
+                                <p className="mt-1 text-center text-sm text-neutral-600">Scan to open the guest menu for each room</p>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto bg-secondary/30 p-8 print:overflow-visible print:bg-white print:p-4">
+                                <div className="grid grid-cols-2 gap-6 md:grid-cols-4 print:grid-cols-4">
                                     {qrs.map((qr) => (
-                                        <div key={qr.roomId} className="bg-card border border-border text-foreground p-4 rounded-xl shadow-sm text-center flex flex-col items-center">
-                                            <div className="aspect-square w-full mb-3 rounded-lg bg-white p-2 ring-1 ring-black/10 dark:ring-white/20">
+                                        <div
+                                            key={qr.roomId}
+                                            className="room-qr-print-card flex flex-col items-center rounded-xl border border-border bg-card p-4 text-center text-foreground shadow-sm print:break-inside-avoid print:border print:border-neutral-300 print:bg-white print:shadow-none"
+                                        >
+                                            <div className="mb-3 aspect-square w-full rounded-lg bg-white p-2 ring-1 ring-black/10 dark:ring-white/20 print:ring-black/20">
                                                 <img
                                                     src={qr.qrCode}
                                                     alt={`Room ${qr.roomNumber}`}
                                                     className="h-full w-full object-contain"
                                                 />
                                             </div>
-                                            <p className="font-bold text-lg">Room {qr.roomNumber}</p>
-                                            <p className="text-xs text-muted-foreground mb-3">Scan to Order</p>
-                                            <div className="flex gap-2 w-full">
+                                            <p className="text-lg font-bold print:text-black">Room {qr.roomNumber}</p>
+                                            <p className="mb-3 text-xs text-muted-foreground print:mb-0 print:text-neutral-600">
+                                                Scan to order
+                                            </p>
+                                            <div className="flex w-full gap-2 print:hidden">
                                                 <Button variant="outline" size="sm" className="flex-1 px-0" onClick={() => downloadQr(qr)}>
-                                                    <Download className="w-3 h-3 mr-1" /> PNG
+                                                    <Download className="mr-1 h-3 w-3" /> PNG
                                                 </Button>
                                                 <Button variant="outline" size="sm" className="flex-1 px-0" onClick={() => copyUrl(qr)}>
                                                     {copiedId === qr.roomId ? (
-                                                        <><Check className="w-3 h-3 mr-1 text-emerald-500" /> Copied</>
+                                                        <>
+                                                            <Check className="mr-1 h-3 w-3 text-emerald-500" /> Copied
+                                                        </>
                                                     ) : (
-                                                        <><Link className="w-3 h-3 mr-1" /> Link</>
+                                                        <>
+                                                            <Link className="mr-1 h-3 w-3" /> Link
+                                                        </>
                                                     )}
                                                 </Button>
                                             </div>
@@ -330,6 +343,6 @@ export default function RoomsPage() {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </>
     );
 }
