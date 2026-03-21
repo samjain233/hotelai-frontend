@@ -69,6 +69,18 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         setGuestLogoFailed(false);
     }, [hotel?.logoUrl, hotel?.id]);
 
+    const MENU_TITLE_BRAND = "Dream Canvas";
+
+    useEffect(() => {
+        const hotelTitle = hotel?.name?.trim() || (loading ? "" : hotelSlug);
+        if (!hotelTitle) {
+            document.title = `Menu | ${MENU_TITLE_BRAND}`;
+            return;
+        }
+        const roomTitle = roomDisplayName ? `Room ${roomDisplayName}` : "Guest";
+        document.title = `${hotelTitle} | ${roomTitle} | ${MENU_TITLE_BRAND}`;
+    }, [hotel?.name, hotelSlug, roomDisplayName, loading]);
+
     const orderRef = useRef<Order | null>(null);
     orderRef.current = order;
 
