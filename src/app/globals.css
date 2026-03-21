@@ -333,17 +333,35 @@
 /* ─── Print: cleaner PDF / paper (e.g. Room QR batch) ─── */
 @media print {
   @page {
-    margin: 12mm;
+    margin: 10mm;
     size: auto;
   }
 
   html,
   body {
     background: white !important;
+    color: black !important;
   }
 
   body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* QR layout columns for print */
+  .qr-print-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .qr-print-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  .qr-print-cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
+
+  /* Cut guides: dashed borders between cards */
+  .qr-cut-guides .qr-print-card {
+    border: 1px dashed #999 !important;
+    border-radius: 2px !important;
+  }
+
+  /* QR card overrides */
+  .qr-print-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
