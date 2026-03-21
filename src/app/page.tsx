@@ -12,7 +12,90 @@ import {
     ArrowRight,
     Check,
     Star,
+    Search,
+    ShoppingCart,
+    Wifi,
+    ImageIcon,
+    Plus,
+    LayoutGrid,
+    Settings,
 } from "lucide-react";
+
+/* ─── Reusable mockup sub-components (server components, zero JS) ─── */
+
+function PhoneMockup({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div className={`relative mx-auto w-[280px] md:w-[300px] ${className}`}>
+            {/* Phone shell */}
+            <div className="rounded-[2.5rem] border border-white/[0.08] bg-[#111113] p-3 shadow-2xl shadow-black/60 ring-1 ring-white/[0.04]">
+                {/* Notch */}
+                <div className="absolute top-0 left-1/2 z-10 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-[#111113]" />
+                {/* Screen */}
+                <div className="overflow-hidden rounded-[2rem] bg-[#09090b]">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function BrowserMockup({ children, title, className = "" }: { children: React.ReactNode; title: string; className?: string }) {
+    return (
+        <div className={`overflow-hidden rounded-xl border border-white/[0.08] bg-[#111113] shadow-2xl shadow-black/40 ${className}`}>
+            {/* Title bar */}
+            <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
+                <div className="flex gap-1.5">
+                    <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+                </div>
+                <div className="ml-3 flex-1 rounded-md bg-white/[0.04] px-3 py-1 text-[10px] text-zinc-500 truncate">
+                    {title}
+                </div>
+            </div>
+            {/* Content */}
+            <div className="bg-[#09090b]">
+                {children}
+            </div>
+        </div>
+    );
+}
+
+function MockupMenuItem({ name, price, tag, veg }: { name: string; price: string; tag?: string; veg?: boolean }) {
+    return (
+        <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-2.5">
+            <div className="h-11 w-11 shrink-0 rounded-lg bg-gradient-to-br from-zinc-700/60 to-zinc-800/60 flex items-center justify-center">
+                <ImageIcon className="h-4 w-4 text-zinc-500" />
+            </div>
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                    {veg !== undefined && (
+                        <div className={`h-3 w-3 rounded-sm border ${veg ? "border-green-500" : "border-red-500"} flex items-center justify-center`}>
+                            <div className={`h-1.5 w-1.5 rounded-full ${veg ? "bg-green-500" : "bg-red-500"}`} />
+                        </div>
+                    )}
+                    <p className="truncate text-[11px] font-medium text-white">{name}</p>
+                </div>
+                {tag && <p className="mt-0.5 text-[9px] text-zinc-500">{tag}</p>}
+            </div>
+            <span className="shrink-0 text-[11px] font-bold text-[#d4a853]">{price}</span>
+        </div>
+    );
+}
+
+function MockupQrCard({ room }: { room: string }) {
+    return (
+        <div className="flex flex-col items-center rounded-lg border border-zinc-700/50 bg-zinc-800/50 p-3">
+            <div className="mb-2 grid h-14 w-14 grid-cols-5 grid-rows-5 gap-px rounded bg-white p-1">
+                {Array.from({ length: 25 }).map((_, i) => (
+                    <div key={i} className={`rounded-[1px] ${[0,1,2,4,5,6,10,12,14,18,20,21,22,24].includes(i) ? "bg-zinc-900" : "bg-white"}`} />
+                ))}
+            </div>
+            <span className="text-[10px] font-bold text-white">{room}</span>
+            <span className="text-[7px] text-zinc-500">Scan to view menu</span>
+        </div>
+    );
+}
 
 export const metadata = {
     title: "DreamCanvas — Digital Menu for Hotels",
@@ -94,6 +177,83 @@ export default function LandingPage() {
                     </div>
 
                     <p className="mt-5 text-xs text-zinc-500">No credit card required. Set up in under 5 minutes.</p>
+                </div>
+
+                {/* Hero phone mockup */}
+                <div className="relative mx-auto mt-16 max-w-5xl px-6 md:mt-24">
+                    <div className="absolute inset-0 -top-20 bg-[radial-gradient(ellipse_at_center,_rgba(212,168,83,0.08)_0%,_transparent_70%)]" />
+                    <div className="relative flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-center md:gap-12">
+
+                        {/* Phone: Guest Menu */}
+                        <PhoneMockup className="z-10">
+                            <div className="px-4 pt-8 pb-6">
+                                {/* Header */}
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#d4a853] to-[#c9973a] flex items-center justify-center text-white text-xs font-bold">H</div>
+                                    <div>
+                                        <p className="text-[12px] font-semibold text-white">The Grand Palace</p>
+                                        <p className="text-[9px] text-zinc-500">Room 204</p>
+                                    </div>
+                                </div>
+                                {/* Search */}
+                                <div className="flex items-center gap-2 rounded-lg bg-white/[0.05] px-3 py-2 mb-4">
+                                    <Search className="h-3 w-3 text-zinc-500" />
+                                    <span className="text-[10px] text-zinc-500">Search dishes...</span>
+                                </div>
+                                {/* Category pills */}
+                                <div className="flex gap-1.5 mb-4 overflow-hidden">
+                                    <span className="shrink-0 rounded-full bg-[#d4a853]/15 px-3 py-1 text-[9px] font-medium text-[#d4a853]">All</span>
+                                    <span className="shrink-0 rounded-full bg-white/[0.05] px-3 py-1 text-[9px] text-zinc-400">Starters</span>
+                                    <span className="shrink-0 rounded-full bg-white/[0.05] px-3 py-1 text-[9px] text-zinc-400">Main Course</span>
+                                    <span className="shrink-0 rounded-full bg-white/[0.05] px-3 py-1 text-[9px] text-zinc-400">Drinks</span>
+                                </div>
+                                {/* Menu items */}
+                                <div className="space-y-2">
+                                    <MockupMenuItem name="Paneer Tikka" price="₹349" tag="Chef's special" veg={true} />
+                                    <MockupMenuItem name="Butter Chicken" price="₹429" tag="Most ordered" veg={false} />
+                                    <MockupMenuItem name="Dal Makhani" price="₹299" veg={true} />
+                                    <MockupMenuItem name="Veg Biryani" price="₹349" veg={true} />
+                                </div>
+                                {/* Cart bar */}
+                                <div className="mt-4 flex items-center justify-between rounded-xl bg-[#d4a853] px-4 py-2.5">
+                                    <div className="flex items-center gap-2">
+                                        <ShoppingCart className="h-3.5 w-3.5 text-white" />
+                                        <span className="text-[10px] font-semibold text-white">2 items</span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-white">₹778</span>
+                                </div>
+                            </div>
+                        </PhoneMockup>
+
+                        {/* Floating elements around the phone */}
+                        <div className="pointer-events-none absolute inset-0 hidden md:block">
+                            {/* QR card float */}
+                            <div className="absolute top-8 left-4 lg:left-16 animate-[float_6s_ease-in-out_infinite] rounded-2xl border border-white/[0.08] bg-[#111113]/90 p-4 shadow-xl backdrop-blur-sm">
+                                <div className="mb-2 grid h-16 w-16 grid-cols-5 grid-rows-5 gap-px rounded bg-white p-1.5">
+                                    {Array.from({ length: 25 }).map((_, i) => (
+                                        <div key={i} className={`rounded-[1px] ${[0,1,2,4,5,6,10,12,14,18,20,21,22,24].includes(i) ? "bg-zinc-900" : "bg-white"}`} />
+                                    ))}
+                                </div>
+                                <p className="text-center text-[10px] font-bold text-white">Room 204</p>
+                                <p className="text-center text-[8px] text-zinc-500">Scan to view menu</p>
+                            </div>
+
+                            {/* Stat card float */}
+                            <div className="absolute top-16 right-4 lg:right-16 animate-[float_6s_ease-in-out_1s_infinite] rounded-2xl border border-white/[0.08] bg-[#111113]/90 p-4 shadow-xl backdrop-blur-sm">
+                                <p className="text-[10px] text-zinc-500 mb-1">Today&apos;s views</p>
+                                <p className="text-2xl font-bold text-white">128</p>
+                                <p className="text-[9px] text-emerald-400 mt-1">+23% from yesterday</p>
+                            </div>
+
+                            {/* Notification float */}
+                            <div className="absolute bottom-20 right-8 lg:right-24 animate-[float_6s_ease-in-out_2s_infinite] rounded-xl border border-white/[0.08] bg-[#111113]/90 px-4 py-3 shadow-xl backdrop-blur-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                                    <p className="text-[10px] text-white">Menu updated — live instantly</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -182,6 +342,189 @@ export default function LandingPage() {
                                 <p className="text-sm leading-relaxed text-zinc-400">{feature.desc}</p>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ─── Product Showcase ─── */}
+            <section className="py-24 md:py-32 border-y border-white/[0.04] bg-white/[0.01]">
+                <div className="mx-auto max-w-6xl px-6">
+                    <div className="mx-auto max-w-2xl text-center mb-16">
+                        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">See it in action</h2>
+                        <p className="mt-4 text-lg text-zinc-400">A quick look at what you and your guests experience.</p>
+                    </div>
+
+                    {/* Row 1: Admin Dashboard */}
+                    <div className="grid gap-12 md:grid-cols-2 md:items-center mb-24">
+                        <div>
+                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d4a853]/20 bg-[#d4a853]/[0.06] px-3 py-1 text-xs font-medium text-[#d4a853]">
+                                <BarChart3 className="h-3 w-3" />
+                                Admin Dashboard
+                            </div>
+                            <h3 className="text-2xl font-bold mb-3">Your command center</h3>
+                            <p className="text-zinc-400 leading-relaxed mb-6">
+                                See rooms, menu items, staff, and activity at a glance. 
+                                Everything is organized so you can manage your property without hunting through pages.
+                            </p>
+                            <ul className="space-y-2">
+                                {["Real-time stats overview", "Quick-action cards", "Staff activity feed"].map(item => (
+                                    <li key={item} className="flex items-center gap-2 text-sm text-zinc-300">
+                                        <Check className="h-3.5 w-3.5 text-[#d4a853]" />
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <BrowserMockup title="dreamcanvas.in/dashboard">
+                            <div className="p-5">
+                                {/* Top stats row */}
+                                <div className="grid grid-cols-3 gap-3 mb-5">
+                                    {[
+                                        { label: "Total Rooms", value: "42", icon: BedDouble },
+                                        { label: "Menu Items", value: "86", icon: UtensilsCrossed },
+                                        { label: "Staff", value: "5", icon: Users },
+                                    ].map(stat => (
+                                        <div key={stat.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                                            <stat.icon className="h-4 w-4 text-[#d4a853] mb-2" />
+                                            <p className="text-lg font-bold text-white">{stat.value}</p>
+                                            <p className="text-[9px] text-zinc-500">{stat.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                {/* Mini sidebar + content */}
+                                <div className="flex gap-3">
+                                    <div className="w-16 shrink-0 space-y-2">
+                                        {[LayoutGrid, UtensilsCrossed, BedDouble, Users, Settings].map((Icon, i) => (
+                                            <div key={i} className={`flex h-8 w-full items-center justify-center rounded-lg ${i === 0 ? "bg-[#d4a853]/15 text-[#d4a853]" : "text-zinc-600 hover:text-zinc-400"}`}>
+                                                <Icon className="h-3.5 w-3.5" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                                        <p className="text-[10px] font-medium text-zinc-400 mb-2">Recent Activity</p>
+                                        {[
+                                            { text: "Room 301 checked in", time: "2m ago" },
+                                            { text: "Menu updated: Starters", time: "15m ago" },
+                                            { text: "New staff added", time: "1h ago" },
+                                        ].map(item => (
+                                            <div key={item.text} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
+                                                <span className="text-[10px] text-zinc-300">{item.text}</span>
+                                                <span className="text-[9px] text-zinc-600">{item.time}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </BrowserMockup>
+                    </div>
+
+                    {/* Row 2: Menu Editor */}
+                    <div className="grid gap-12 md:grid-cols-2 md:items-center mb-24">
+                        <BrowserMockup title="dreamcanvas.in/menu" className="md:order-first">
+                            <div className="p-5">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <p className="text-[12px] font-semibold text-white">Menu Items</p>
+                                        <p className="text-[9px] text-zinc-500">86 items across 8 categories</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-lg bg-[#d4a853] px-3 py-1.5">
+                                        <Plus className="h-3 w-3 text-white" />
+                                        <span className="text-[10px] font-semibold text-white">Add Item</span>
+                                    </div>
+                                </div>
+                                {/* Category tabs */}
+                                <div className="flex gap-1.5 mb-4 overflow-hidden">
+                                    {["All", "Starters", "Main Course", "Desserts", "Beverages"].map((cat, i) => (
+                                        <span key={cat} className={`shrink-0 rounded-full px-3 py-1 text-[9px] font-medium ${i === 0 ? "bg-[#d4a853]/15 text-[#d4a853]" : "bg-white/[0.04] text-zinc-500"}`}>{cat}</span>
+                                    ))}
+                                </div>
+                                {/* Item cards */}
+                                <div className="space-y-2">
+                                    {[
+                                        { name: "Paneer Tikka", price: "₹349", cat: "Starters", veg: true },
+                                        { name: "Butter Chicken", price: "₹429", cat: "Main Course", veg: false },
+                                        { name: "Gulab Jamun", price: "₹199", cat: "Desserts", veg: true },
+                                    ].map(item => (
+                                        <div key={item.name} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                                            <div className="h-10 w-10 shrink-0 rounded-lg bg-zinc-800 flex items-center justify-center">
+                                                <ImageIcon className="h-4 w-4 text-zinc-600" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className={`h-2.5 w-2.5 rounded-sm border ${item.veg ? "border-green-500" : "border-red-500"} flex items-center justify-center`}>
+                                                        <div className={`h-1 w-1 rounded-full ${item.veg ? "bg-green-500" : "bg-red-500"}`} />
+                                                    </div>
+                                                    <p className="text-[10px] font-medium text-white">{item.name}</p>
+                                                </div>
+                                                <p className="text-[8px] text-zinc-500">{item.cat}</p>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-[#d4a853]">{item.price}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </BrowserMockup>
+                        <div className="md:order-last">
+                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d4a853]/20 bg-[#d4a853]/[0.06] px-3 py-1 text-xs font-medium text-[#d4a853]">
+                                <UtensilsCrossed className="h-3 w-3" />
+                                Menu Editor
+                            </div>
+                            <h3 className="text-2xl font-bold mb-3">Edit your menu in seconds</h3>
+                            <p className="text-zinc-400 leading-relaxed mb-6">
+                                Add dishes, set prices, upload photos, and mark dietary preferences. 
+                                Changes go live instantly — no reprinting, no waiting.
+                            </p>
+                            <ul className="space-y-2">
+                                {["Drag-and-drop categories", "Image upload for each dish", "Veg/Non-veg/Egg tags", "Instant availability toggle"].map(item => (
+                                    <li key={item} className="flex items-center gap-2 text-sm text-zinc-300">
+                                        <Check className="h-3.5 w-3.5 text-[#d4a853]" />
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Row 3: QR Printing */}
+                    <div className="grid gap-12 md:grid-cols-2 md:items-center">
+                        <div>
+                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d4a853]/20 bg-[#d4a853]/[0.06] px-3 py-1 text-xs font-medium text-[#d4a853]">
+                                <QrCode className="h-3 w-3" />
+                                QR Printing
+                            </div>
+                            <h3 className="text-2xl font-bold mb-3">Print-ready QR cards</h3>
+                            <p className="text-zinc-400 leading-relaxed mb-6">
+                                Choose layouts, add WiFi credentials, customize taglines, and print with cut guides.
+                                Each card has your hotel name and room number — ready to place on nightstands.
+                            </p>
+                            <ul className="space-y-2">
+                                {["4, 6, or 8 cards per page", "Hotel branding on every card", "WiFi credentials included", "Cut guides for clean edges"].map(item => (
+                                    <li key={item} className="flex items-center gap-2 text-sm text-zinc-300">
+                                        <Check className="h-3.5 w-3.5 text-[#d4a853]" />
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div className="rounded-2xl border border-white/[0.08] bg-[#111113] p-6 shadow-2xl shadow-black/40">
+                            <div className="flex items-center gap-2 mb-5">
+                                <Printer className="h-4 w-4 text-[#d4a853]" />
+                                <p className="text-[12px] font-semibold text-white">Room QR Codes</p>
+                                <span className="ml-auto rounded-full bg-[#d4a853]/15 px-2.5 py-0.5 text-[9px] font-medium text-[#d4a853]">6 per page</span>
+                            </div>
+                            {/* QR grid */}
+                            <div className="grid grid-cols-3 gap-2.5">
+                                {["101", "102", "103", "201", "202", "203"].map(room => (
+                                    <MockupQrCard key={room} room={`Room ${room}`} />
+                                ))}
+                            </div>
+                            {/* WiFi bar */}
+                            <div className="mt-4 flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                                <Wifi className="h-3 w-3 text-zinc-500" />
+                                <span className="text-[10px] text-zinc-400">GrandPalace_WiFi</span>
+                                <span className="ml-auto text-[9px] text-zinc-600">••••••••</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
