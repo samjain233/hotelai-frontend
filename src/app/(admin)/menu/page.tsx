@@ -23,7 +23,9 @@ import {
     Upload,
     Leaf,
     Beef,
-    Egg
+    Egg,
+    Check,
+    Loader2,
 } from "lucide-react";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -42,37 +44,56 @@ export default function MenuPage() {
     const [catForm, setCatForm] = useState({ name: "", icon: "" });
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     /** When true, next successful category create selects that category in the item form */
     const selectNewCategoryInItemForm = useRef(false);
 
-    async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        e.target.value = '';
+    function closeItemModal() {
+        setShowItemModal(false);
+        setUploading(false);
+        setUploadProgress(0);
+    }
+
+    async function processImageFile(file: File) {
         if (!ALLOWED_TYPES.includes(file.type)) {
-            alert('Please select a JPEG, PNG, or WebP image.');
+            alert("Please select a JPEG, PNG, or WebP image.");
             return;
         }
         if (file.size > MAX_SIZE) {
-            alert('Image must be 10 MB or smaller.');
+            alert("Image must be 10 MB or smaller.");
             return;
         }
         setUploading(true);
+        setUploadProgress(4);
         try {
             const { token } = await api.getUploadToken();
+            setUploadProgress(12);
             const { pathname } = await api.getUploadPathname(token);
+            setUploadProgress(22);
             const blob = await upload(pathname, file, {
-                access: 'public',
-                handleUploadUrl: '/api/blob-upload',
+                access: "public",
+                handleUploadUrl: "/api/blob-upload",
                 clientPayload: JSON.stringify({ token }),
+                onUploadProgress: ({ percentage }) => {
+                    setUploadProgress(22 + Math.round((percentage / 100) * 73));
+                },
             });
+            setUploadProgress(100);
             setItemForm((prev) => ({ ...prev, imageUrl: blob.url }));
         } catch (err: unknown) {
-            alert(err instanceof Error ? err.message : 'Upload failed');
+            alert(err instanceof Error ? err.message : "Upload failed");
         } finally {
             setUploading(false);
+            setUploadProgress(0);
         }
+    }
+
+    function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = "";
+        void processImageFile(file);
     }
 
     function openNewItem() {
@@ -87,12 +108,13 @@ export default function MenuPage() {
     }
     async function saveItem(e: React.FormEvent) {
         e.preventDefault();
+        if (uploading) return;
         setSaving(true);
         try {
             const data = { name: itemForm.name, description: itemForm.description || undefined, price: Number(itemForm.price), categoryId: itemForm.categoryId, imageUrl: itemForm.imageUrl || undefined, dietaryPreference: itemForm.dietaryPreference };
             if (editingItem) { await api.updateMenuItem(editingItem.id, data as any); }
             else { await api.createMenuItem(data); }
-            setShowItemModal(false);
+            closeItemModal();
             invalidateMenuCache();
         } catch (err: any) { alert(err.message); }
         finally { setSaving(false); }
@@ -259,7 +281,7 @@ export default function MenuPage() {
             {/* New Item / Edit Item Modal */}
             <AnimatePresence>
                 {showItemModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto py-8" onClick={() => setShowItemModal(false)}>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto py-8" onClick={() => closeItemModal()}>
                         <motion.div
                             initial={{ opacity: 0, scale: 0.96, y: 8 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -273,7 +295,7 @@ export default function MenuPage() {
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-foreground tracking-tight">{editingItem ? "Edit Item" : "New Item"}</h3>
                                     <button
-                                        onClick={() => setShowItemModal(false)}
+                                        onClick={() => closeItemModal()}
                                         className="p-2 -m-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
                                     >
                                         <X className="w-5 h-5" />
@@ -332,23 +354,61 @@ export default function MenuPage() {
                                             <label className="text-sm font-medium text-foreground block">Image</label>
                                             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
                                             <div
-                                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("!border-primary/60", "!bg-primary/10"); }}
-                                                onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove("!border-primary/60", "!bg-primary/10"); }}
-                                                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("!border-primary/60", "!bg-primary/10"); const f = e.dataTransfer.files?.[0]; if (f) handleImageUpload({ target: { files: [f] } } as any); }}
-                                                onClick={() => fileInputRef.current?.click()}
+                                                onDragOver={(e) => {
+                                                    if (uploading) return;
+                                                    e.preventDefault();
+                                                    e.currentTarget.classList.add("!border-primary/60", "!bg-primary/10");
+                                                }}
+                                                onDragLeave={(e) => {
+                                                    e.preventDefault();
+                                                    e.currentTarget.classList.remove("!border-primary/60", "!bg-primary/10");
+                                                }}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    e.currentTarget.classList.remove("!border-primary/60", "!bg-primary/10");
+                                                    if (uploading) return;
+                                                    const f = e.dataTransfer.files?.[0];
+                                                    if (f) void processImageFile(f);
+                                                }}
+                                                onClick={() => !uploading && fileInputRef.current?.click()}
                                                 className={cn(
-                                                    "relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 min-h-[280px] group",
+                                                    "relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 transition-all duration-200 min-h-[280px] group overflow-hidden",
+                                                    uploading ? "cursor-wait pointer-events-none" : "cursor-pointer",
                                                     itemForm.imageUrl
                                                         ? "border-white/20 bg-secondary/40 hover:border-white/30"
-                                                        : "border-white/15 bg-white/[0.02] hover:border-primary/40 hover:bg-primary/5"
+                                                        : "border-white/15 bg-white/[0.02] hover:border-primary/40 hover:bg-primary/5",
                                                 )}
                                             >
+                                                {uploading && (
+                                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 rounded-xl bg-background/85 backdrop-blur-sm px-8">
+                                                        <Loader2 className="w-9 h-9 text-primary animate-spin" aria-hidden />
+                                                        <div className="w-full max-w-[240px] space-y-2">
+                                                            <div className="h-2.5 rounded-full bg-secondary overflow-hidden border border-border">
+                                                                <div
+                                                                    className="h-full rounded-full bg-gradient-to-r from-primary to-amber-500/90 transition-[width] duration-200 ease-out"
+                                                                    style={{ width: `${Math.min(100, Math.max(uploadProgress, 2))}%` }}
+                                                                />
+                                                            </div>
+                                                            <p className="text-xs text-center text-muted-foreground">
+                                                                Uploading image…{" "}
+                                                                {uploadProgress > 0 ? (
+                                                                    <span className="tabular-nums text-foreground/90">{uploadProgress}%</span>
+                                                                ) : null}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {itemForm.imageUrl ? (
                                                     <>
                                                         <div className="w-full aspect-video rounded-lg overflow-hidden bg-secondary ring-1 ring-white/10">
                                                             <img src={itemForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                                                         </div>
-                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                                                        <div
+                                                            className={cn(
+                                                                "absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity rounded-xl",
+                                                                uploading ? "opacity-0" : "opacity-0 group-hover:opacity-100",
+                                                            )}
+                                                        >
                                                             <span className="px-4 py-2 bg-white/90 text-black text-sm font-medium rounded-lg">Change image</span>
                                                         </div>
                                                     </>
@@ -358,7 +418,7 @@ export default function MenuPage() {
                                                             <Upload className="w-6 h-6 text-primary" />
                                                         </div>
                                                         <div className="text-center space-y-0.5">
-                                                            <p className="text-sm font-medium text-foreground">{uploading ? "Uploading…" : "Drop or click to upload"}</p>
+                                                            <p className="text-sm font-medium text-foreground">Drop or click to upload</p>
                                                             <p className="text-xs text-muted-foreground">JPEG, PNG, WebP • max 10 MB</p>
                                                         </div>
                                                     </>
@@ -369,25 +429,62 @@ export default function MenuPage() {
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium text-foreground block">Dietary preference</label>
                                             <div className="flex flex-wrap gap-2">
-                                                {[
-                                                    { value: "NONE" as const, label: "None", icon: null, activeClass: "bg-white/15 text-foreground border-white/25", inactiveClass: "bg-white/[0.03] text-muted-foreground border-white/10 hover:border-white/20" },
-                                                    { value: "VEG" as const, label: "Veg", icon: <Leaf className="w-4 h-4" />, activeClass: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40", inactiveClass: "bg-emerald-500/5 text-emerald-400/70 border-emerald-500/20 hover:border-emerald-500/40" },
-                                                    { value: "NON_VEG" as const, label: "Non-Veg", icon: <Beef className="w-4 h-4" />, activeClass: "bg-red-500/20 text-red-400 border-red-500/40", inactiveClass: "bg-red-500/5 text-red-400/70 border-red-500/20 hover:border-red-500/40" },
-                                                    { value: "EGGITARIAN" as const, label: "Egg", icon: <Egg className="w-4 h-4" />, activeClass: "bg-amber-500/20 text-amber-400 border-amber-500/40", inactiveClass: "bg-amber-500/5 text-amber-400/70 border-amber-500/20 hover:border-amber-500/40" },
-                                                ].map((opt) => (
-                                                    <button
-                                                        key={opt.value}
-                                                        type="button"
-                                                        onClick={() => setItemForm({ ...itemForm, dietaryPreference: opt.value })}
-                                                        className={cn(
-                                                            "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200",
-                                                            itemForm.dietaryPreference === opt.value ? opt.activeClass : opt.inactiveClass
-                                                        )}
-                                                    >
-                                                        {opt.icon}
-                                                        {opt.label}
-                                                    </button>
-                                                ))}
+                                                {(
+                                                    [
+                                                        {
+                                                            value: "NONE" as const,
+                                                            label: "None",
+                                                            icon: null,
+                                                            selected:
+                                                                "border-white/70 bg-white/20 text-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_8px_24px_rgba(0,0,0,0.45)] ring-2 ring-white/50 ring-offset-2 ring-offset-card scale-[1.02]",
+                                                            idle: "border-white/10 bg-white/[0.04] text-muted-foreground hover:border-white/20 hover:bg-white/[0.08]",
+                                                        },
+                                                        {
+                                                            value: "VEG" as const,
+                                                            label: "Veg",
+                                                            icon: <Leaf className="w-4 h-4" />,
+                                                            selected:
+                                                                "border-emerald-400 bg-emerald-500/35 text-emerald-200 shadow-[0_0_0_1px_rgba(52,211,153,0.5),0_8px_24px_rgba(6,78,59,0.5)] ring-2 ring-emerald-400/80 ring-offset-2 ring-offset-card scale-[1.02]",
+                                                            idle: "border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-500/55 hover:border-emerald-500/40 hover:text-emerald-400/80",
+                                                        },
+                                                        {
+                                                            value: "NON_VEG" as const,
+                                                            label: "Non-Veg",
+                                                            icon: <Beef className="w-4 h-4" />,
+                                                            selected:
+                                                                "border-red-400 bg-red-500/35 text-red-200 shadow-[0_0_0_1px_rgba(248,113,113,0.5),0_8px_24px_rgba(127,29,29,0.45)] ring-2 ring-red-400/80 ring-offset-2 ring-offset-card scale-[1.02]",
+                                                            idle: "border-red-500/20 bg-red-500/[0.06] text-red-500/55 hover:border-red-500/40 hover:text-red-400/80",
+                                                        },
+                                                        {
+                                                            value: "EGGITARIAN" as const,
+                                                            label: "Egg",
+                                                            icon: <Egg className="w-4 h-4" />,
+                                                            selected:
+                                                                "border-amber-400 bg-amber-500/35 text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_8px_24px_rgba(120,53,15,0.45)] ring-2 ring-amber-400/80 ring-offset-2 ring-offset-card scale-[1.02]",
+                                                            idle: "border-amber-500/20 bg-amber-500/[0.06] text-amber-500/55 hover:border-amber-500/40 hover:text-amber-400/80",
+                                                        },
+                                                    ] as const
+                                                ).map((opt) => {
+                                                    const selected = itemForm.dietaryPreference === opt.value;
+                                                    return (
+                                                        <button
+                                                            key={opt.value}
+                                                            type="button"
+                                                            aria-pressed={selected}
+                                                            onClick={() => setItemForm({ ...itemForm, dietaryPreference: opt.value })}
+                                                            className={cn(
+                                                                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all duration-200",
+                                                                selected ? opt.selected : opt.idle,
+                                                            )}
+                                                        >
+                                                            {selected && (
+                                                                <Check className="w-4 h-4 shrink-0 stroke-[3] opacity-95" aria-hidden />
+                                                            )}
+                                                            {opt.icon}
+                                                            {opt.label}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     </div>
@@ -395,8 +492,17 @@ export default function MenuPage() {
 
                                 {/* Actions - full width footer */}
                                 <div className="flex gap-3 px-6 pb-6 pt-5">
-                                    <Button type="button" variant="outline" className="flex-1 h-11 rounded-xl" onClick={() => setShowItemModal(false)}>Cancel</Button>
-                                    <Button type="submit" loading={saving} className="flex-1 h-11 rounded-xl shadow-lg shadow-primary/20">Save Changes</Button>
+                                    <Button type="button" variant="outline" className="flex-1 h-11 rounded-xl" onClick={closeItemModal}>
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        loading={saving}
+                                        disabled={uploading}
+                                        className="flex-1 h-11 rounded-xl shadow-lg shadow-primary/20"
+                                    >
+                                        Save Changes
+                                    </Button>
                                 </div>
                             </form>
                         </motion.div>
