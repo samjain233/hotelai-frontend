@@ -53,7 +53,9 @@ class ApiClient {
                         path === '/verify-email/pending' ||
                         path === '/' ||
                         path.startsWith('/menu/') ||
-                        path.startsWith('/services/');
+                        path.startsWith('/services/') ||
+                        // Platform admin uses sessionStorage + x-platform-key, not hotel JWT
+                        path.startsWith('/superadmin');
                     if (!isPublicRoute) {
                         window.location.href = '/login';
                     }
