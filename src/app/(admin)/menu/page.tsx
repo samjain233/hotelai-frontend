@@ -11,7 +11,12 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { AnimatePresence, motion } from "framer-motion";
 import { upload } from "@vercel/blob/client";
 import { cn } from "@/lib/utils";
-import { CATEGORY_ICON_MAP, CATEGORY_ICON_PICKER_OPTIONS, CategoryIconDisplay } from "@/lib/categoryIcons";
+import {
+    CATEGORY_ICON_MAP,
+    CATEGORY_ICON_PICKER_OPTIONS,
+    CategoryIconDisplay,
+    hasCategoryIcon,
+} from "@/lib/categoryIcons";
 import {
     Plus,
     Search,
@@ -264,9 +269,13 @@ export default function MenuPage() {
                     <motion.div key="categories" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {categories.map((cat) => (
                             <div key={cat.id} className="dashboard-card p-8 flex flex-col items-center text-center cursor-pointer group hover:border-primary/50">
-                                <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                                    <CategoryIconDisplay icon={cat.icon} size="xl" className="text-primary" />
-                                </div>
+                                {hasCategoryIcon(cat.icon) ? (
+                                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                                        <CategoryIconDisplay icon={cat.icon} size="xl" className="text-primary" />
+                                    </div>
+                                ) : (
+                                    <div className="mb-4" aria-hidden />
+                                )}
                                 <h3 className="font-semibold text-foreground">{cat.name}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">{cat._count?.items || 0} items active</p>
                                 <button onClick={(e) => { e.stopPropagation(); deleteCategory(cat.id); }} className="mt-4 text-xs text-red-400 opacity-0 group-hover:opacity-100 hover:underline">
@@ -522,30 +531,7 @@ export default function MenuPage() {
                                 <Input placeholder="Category Name" value={catForm.name} onChange={e => setCatForm({ ...catForm, name: e.target.value })} required />
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-muted-foreground">Category icon</label>
-                                    <p className="text-[11px] text-muted-foreground leading-snug">
-                                        Icons from{" "}
-                                        <a
-                                            href="https://lucide.dev"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary hover:underline"
-                                        >
-                                            Lucide
-                                        </a>
-                                        . Old emoji values still work if pasted below.
-                                    </p>
                                     <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 p-3 rounded-xl bg-secondary/40 border border-border max-h-[240px] overflow-y-auto">
-                                        <button
-                                            type="button"
-                                            title="Default utensils icon"
-                                            onClick={() => setCatForm((prev) => ({ ...prev, icon: "" }))}
-                                            className={cn(
-                                                "flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border border-dashed border-border text-[10px] text-muted-foreground transition-all hover:bg-secondary",
-                                                catForm.icon === "" && "ring-2 ring-primary bg-primary/10 border-primary/30 text-foreground",
-                                            )}
-                                        >
-                                            Auto
-                                        </button>
                                         {CATEGORY_ICON_PICKER_OPTIONS.map(({ key, label }) => {
                                             const LucideIcon = CATEGORY_ICON_MAP[key];
                                             return (
@@ -573,9 +559,6 @@ export default function MenuPage() {
                                         onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })}
                                         className="text-sm font-mono"
                                     />
-                                    <p className="text-[11px] text-muted-foreground leading-snug">
-                                        Leave empty or Auto for the default utensils icon.
-                                    </p>
                                 </div>
                                 <div className="flex gap-3 pt-2">
                                     <Button type="button" variant="outline" className="flex-1" onClick={closeCatModal}>Cancel</Button>

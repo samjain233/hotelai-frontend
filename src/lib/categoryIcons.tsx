@@ -85,7 +85,12 @@ const sizeClasses = {
     xl: "w-10 h-10",
 } as const;
 
-/** Renders a Lucide icon for known keys, or legacy emoji text, or default utensils. */
+/** True when an icon should be shown (chosen Lucide key or legacy emoji/text). */
+export function hasCategoryIcon(icon?: string | null): boolean {
+    return Boolean(icon?.trim());
+}
+
+/** Renders a Lucide icon for known keys, legacy emoji/text, or nothing if unset. */
 export function CategoryIconDisplay({
     icon,
     className,
@@ -119,5 +124,5 @@ export function CategoryIconDisplay({
             </span>
         );
     }
-    return <UtensilsCrossed className={cn(sz, "shrink-0 text-muted-foreground", className)} aria-hidden />;
+    return null;
 }
