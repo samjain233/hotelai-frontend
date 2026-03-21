@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
     QrCode,
     UtensilsCrossed,
@@ -15,11 +16,24 @@ import {
     Search,
     ShoppingCart,
     Wifi,
-    ImageIcon,
     Plus,
     LayoutGrid,
     Settings,
 } from "lucide-react";
+
+/** Demo dish photos for landing mockups (Unsplash — free to use). */
+const LANDING_MENU_IMAGES = {
+    paneerTikka:
+        "https://images.unsplash.com/photo-1567188040759-fb2709f22607?w=160&h=160&fit=crop&q=80",
+    butterChicken:
+        "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=160&h=160&fit=crop&q=80",
+    dalMakhani:
+        "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=160&h=160&fit=crop&q=80",
+    biryani:
+        "https://images.unsplash.com/photo-1563379091339-03246963d334?w=160&h=160&fit=crop&q=80",
+    gulabJamun:
+        "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=160&h=160&fit=crop&q=80",
+} as const;
 
 /* ─── Reusable mockup sub-components (server components, zero JS) ─── */
 
@@ -61,11 +75,30 @@ function BrowserMockup({ children, title, className = "" }: { children: React.Re
     );
 }
 
-function MockupMenuItem({ name, price, tag, veg }: { name: string; price: string; tag?: string; veg?: boolean }) {
+function MockupMenuItem({
+    name,
+    price,
+    tag,
+    veg,
+    imageSrc,
+}: {
+    name: string;
+    price: string;
+    tag?: string;
+    veg?: boolean;
+    imageSrc: string;
+}) {
     return (
         <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-2.5">
-            <div className="h-11 w-11 shrink-0 rounded-lg bg-gradient-to-br from-zinc-700/60 to-zinc-800/60 flex items-center justify-center">
-                <ImageIcon className="h-4 w-4 text-zinc-500" />
+            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-white/10">
+                <Image
+                    src={imageSrc}
+                    alt=""
+                    width={44}
+                    height={44}
+                    className="h-full w-full object-cover"
+                    sizes="44px"
+                />
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -209,10 +242,32 @@ export default function LandingPage() {
                                 </div>
                                 {/* Menu items */}
                                 <div className="space-y-2">
-                                    <MockupMenuItem name="Paneer Tikka" price="₹349" tag="Chef's special" veg={true} />
-                                    <MockupMenuItem name="Butter Chicken" price="₹429" tag="Most ordered" veg={false} />
-                                    <MockupMenuItem name="Dal Makhani" price="₹299" veg={true} />
-                                    <MockupMenuItem name="Veg Biryani" price="₹349" veg={true} />
+                                    <MockupMenuItem
+                                        name="Paneer Tikka"
+                                        price="₹349"
+                                        tag="Chef's special"
+                                        veg={true}
+                                        imageSrc={LANDING_MENU_IMAGES.paneerTikka}
+                                    />
+                                    <MockupMenuItem
+                                        name="Butter Chicken"
+                                        price="₹429"
+                                        tag="Most ordered"
+                                        veg={false}
+                                        imageSrc={LANDING_MENU_IMAGES.butterChicken}
+                                    />
+                                    <MockupMenuItem
+                                        name="Dal Makhani"
+                                        price="₹299"
+                                        veg={true}
+                                        imageSrc={LANDING_MENU_IMAGES.dalMakhani}
+                                    />
+                                    <MockupMenuItem
+                                        name="Veg Biryani"
+                                        price="₹349"
+                                        veg={true}
+                                        imageSrc={LANDING_MENU_IMAGES.biryani}
+                                    />
                                 </div>
                                 {/* Cart bar */}
                                 <div className="mt-4 flex items-center justify-between rounded-xl bg-[#d4a853] px-4 py-2.5">
@@ -441,13 +496,38 @@ export default function LandingPage() {
                                 {/* Item cards */}
                                 <div className="space-y-2">
                                     {[
-                                        { name: "Paneer Tikka", price: "₹349", cat: "Starters", veg: true },
-                                        { name: "Butter Chicken", price: "₹429", cat: "Main Course", veg: false },
-                                        { name: "Gulab Jamun", price: "₹199", cat: "Desserts", veg: true },
+                                        {
+                                            name: "Paneer Tikka",
+                                            price: "₹349",
+                                            cat: "Starters",
+                                            veg: true,
+                                            imageSrc: LANDING_MENU_IMAGES.paneerTikka,
+                                        },
+                                        {
+                                            name: "Butter Chicken",
+                                            price: "₹429",
+                                            cat: "Main Course",
+                                            veg: false,
+                                            imageSrc: LANDING_MENU_IMAGES.butterChicken,
+                                        },
+                                        {
+                                            name: "Gulab Jamun",
+                                            price: "₹199",
+                                            cat: "Desserts",
+                                            veg: true,
+                                            imageSrc: LANDING_MENU_IMAGES.gulabJamun,
+                                        },
                                     ].map(item => (
                                         <div key={item.name} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                                            <div className="h-10 w-10 shrink-0 rounded-lg bg-zinc-800 flex items-center justify-center">
-                                                <ImageIcon className="h-4 w-4 text-zinc-600" />
+                                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg ring-1 ring-white/10">
+                                                <Image
+                                                    src={item.imageSrc}
+                                                    alt=""
+                                                    width={40}
+                                                    height={40}
+                                                    className="h-full w-full object-cover"
+                                                    sizes="40px"
+                                                />
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center gap-1.5">
