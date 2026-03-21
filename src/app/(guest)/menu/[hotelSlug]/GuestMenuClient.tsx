@@ -10,7 +10,7 @@ import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, Headset } from "lucide-react";
+import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
 import { ENABLE_GUEST_ORDERING } from "@/lib/guestMenuConfig";
@@ -493,15 +493,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
             {(!ENABLE_GUEST_ORDERING || (!showCart && !showHistory && !showRoomModal)) && (
                 <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border">
-                    <div className="max-w-md mx-auto flex">
-                        <div className="flex-1 flex flex-col items-center gap-0.5 py-3 text-primary cursor-default">
+                    <div className="max-w-md mx-auto flex justify-center">
+                        <div className="flex flex-col items-center gap-0.5 py-3 text-primary cursor-default">
                             <Utensils className="w-5 h-5" />
                             <span className="text-[10px] font-semibold">Food Menu</span>
                         </div>
-                        <a href={`/services/${hotelSlug}${roomId ? `?room=${roomId}` : ""}`} className="flex-1 flex flex-col items-center gap-0.5 py-3 text-muted-foreground hover:text-foreground transition-colors">
-                            <Headset className="w-5 h-5" />
-                            <span className="text-[10px] font-medium">Services</span>
-                        </a>
                     </div>
                 </div>
             )}
