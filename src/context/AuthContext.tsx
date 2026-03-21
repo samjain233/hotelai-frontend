@@ -11,10 +11,11 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<Admin>;
     register: (data: {
         hotelName: string;
+        hotelPhone?: string;
         adminName: string;
         email: string;
         password: string;
-    }) => Promise<void>;
+    }) => Promise<{ email: string }>;
     logout: () => void;
     refreshHotel: () => Promise<void>;
 }
@@ -53,13 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function register(data: {
         hotelName: string;
+        hotelPhone?: string;
         adminName: string;
         email: string;
         password: string;
     }) {
         const res = await api.register(data);
-        setAdmin(res.admin);
-        setHotel(res.hotel);
+        return { email: res.email };
     }
 
     async function logout() {

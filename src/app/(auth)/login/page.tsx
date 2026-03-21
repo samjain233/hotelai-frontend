@@ -7,6 +7,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Mail, Lock } from "lucide-react";
+import { LegalFooter } from "@/components/LegalFooter";
+import { GoogleSignInButton, isGoogleSignInEnabled } from "@/components/GoogleSignInButton";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -22,6 +24,17 @@ export default function LoginPage() {
             router.replace(admin.role === 'KITCHEN' ? '/orders' : '/dashboard');
         }
     }, [authLoading, admin, router]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const e = params.get("error");
+        if (e) {
+            setError(decodeURIComponent(e));
+            const url = new URL(window.location.href);
+            url.searchParams.delete("error");
+            window.history.replaceState({}, "", url.pathname + url.search);
+        }
+    }, []);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -52,7 +65,21 @@ export default function LoginPage() {
                 </div>
 
                 {/* Form */}
-                <div className="p-6 rounded-xl bg-card border border-border">
+                <div className="p-6 rounded-xl bg-card border border-border space-y-4">
+                    {isGoogleSignInEnabled() && (
+                        <>
+                            <GoogleSignInButton label="Sign in with Google" />
+                            <div className="relative py-1">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t border-border" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-card px-2 text-muted-foreground">or with email</span>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {error && (
                             <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg text-center">
@@ -73,7 +100,15 @@ export default function LoginPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Password</label>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="block text-xs font-medium text-zinc-400">Password</label>
+                                    <Link
+                                        href="/forgot-password"
+                                        className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                                    >
+                                        Forgot password?
+                                    </Link>
+                                </div>
                                 <Input
                                     icon={<Lock className="w-4 h-4" />}
                                     type="password"
@@ -97,6 +132,7 @@ export default function LoginPage() {
                         Register
                     </Link>
                 </p>
+                <LegalFooter className="mt-8" />
             </div>
         </div>
     );

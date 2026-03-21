@@ -19,8 +19,16 @@ export interface Admin {
 }
 
 export interface AuthResponse {
+    token?: string;
     admin: Admin;
     hotel: Hotel;
+}
+
+/** Email/password sign-up: verify inbox before login */
+export interface RegisterPendingResponse {
+    requiresVerification: true;
+    email: string;
+    message: string;
 }
 
 // ─── Menu ─────────────────────────────────────────────────

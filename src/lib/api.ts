@@ -1,4 +1,16 @@
-import { Admin, AuthResponse, Hotel, MenuCategory, MenuItem, Room, RoomQr, Order, PublicMenuData, ServiceRequest } from './types';
+import {
+    Admin,
+    AuthResponse,
+    Hotel,
+    MenuCategory,
+    MenuItem,
+    Room,
+    RoomQr,
+    Order,
+    PublicMenuData,
+    ServiceRequest,
+    RegisterPendingResponse,
+} from './types';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -35,6 +47,10 @@ class ApiClient {
                     const isPublicRoute =
                         path === '/login' ||
                         path === '/register' ||
+                        path === '/forgot-password' ||
+                        path === '/reset-password' ||
+                        path === '/verify-email' ||
+                        path === '/verify-email/pending' ||
                         path === '/' ||
                         path.startsWith('/menu/') ||
                         path.startsWith('/services/');
@@ -67,12 +83,25 @@ class ApiClient {
         adminName: string;
         email: string;
         password: string;
-        hotelAddress?: string;
         hotelPhone?: string;
-    }): Promise<AuthResponse> {
+    }): Promise<RegisterPendingResponse> {
         return this.request('/auth/register', {
             method: 'POST',
             body: JSON.stringify(data),
+        });
+    }
+
+    async verifyEmail(token: string): Promise<AuthResponse> {
+        return this.request('/auth/verify-email', {
+            method: 'POST',
+            body: JSON.stringify({ token }),
+        });
+    }
+
+    async resendVerification(email: string): Promise<{ message: string }> {
+        return this.request('/auth/resend-verification', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
         });
     }
 
@@ -80,6 +109,20 @@ class ApiClient {
         return this.request('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
+        });
+    }
+
+    async forgotPassword(email: string): Promise<{ message: string }> {
+        return this.request('/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        });
+    }
+
+    async resetPassword(token: string, password: string): Promise<{ message: string }> {
+        return this.request('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ token, password }),
         });
     }
 

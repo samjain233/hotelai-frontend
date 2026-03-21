@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
 import type { Hotel } from "@/lib/types";
+import { LegalFooter } from "@/components/LegalFooter";
 
 const NOTIFICATION_SOUND_KEY = "hotel-admin-notification-sound";
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -276,6 +277,8 @@ export default function SettingsPage() {
                         Account settings such as password and profile will be available in a future update.
                     </p>
                 </section>
+
+                <LegalFooter className="pt-2" />
             </div>
         </div>
     );

@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const AUTH_COOKIE_NAME = 'auth_token';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const AUTH_COOKIE_NAME = "auth_token";
 const COOKIE_MAX_AGE = 90 * 24 * 60 * 60; // ~3 months, match backend JWT
 
 function extractTokenFromSetCookie(setCookieHeaders: string[]): string | null {
     const prefix = `${AUTH_COOKIE_NAME}=`;
     for (const header of setCookieHeaders) {
-        const part = header.split(';')[0]?.trim();
+        const part = header.split(";")[0]?.trim();
         if (part?.startsWith(prefix)) {
             return part.slice(prefix.length).trim();
         }
@@ -18,9 +18,9 @@ function extractTokenFromSetCookie(setCookieHeaders: string[]): string | null {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const res = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        const res = await fetch(`${API_URL}/auth/verify-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         });
 
@@ -30,32 +30,35 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(data, { status: res.status });
         }
 
-        // Prefer token from body (backend returns it); fallback to Set-Cookie parsing
         let token: string | null = data.token ?? null;
         if (!token) {
-            const setCookies = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+            const setCookies = typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
             token = extractTokenFromSetCookie(setCookies);
         }
         if (!token) {
-            const raw = res.headers.get('set-cookie');
+            const raw = res.headers.get("set-cookie");
             if (raw) token = extractTokenFromSetCookie([raw]);
         }
 
-        const response = NextResponse.json({ admin: data.admin, hotel: data.hotel });
+        const response = NextResponse.json({
+            token: data.token,
+            admin: data.admin,
+            hotel: data.hotel,
+        });
 
         if (token) {
             response.cookies.set(AUTH_COOKIE_NAME, token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
                 maxAge: COOKIE_MAX_AGE,
-                path: '/',
+                path: "/",
             });
         }
 
         return response;
     } catch (err) {
-        console.error('Auth proxy error:', err);
-        return NextResponse.json({ message: 'Login failed' }, { status: 500 });
+        console.error("Verify-email proxy error:", err);
+        return NextResponse.json({ message: "Verification failed" }, { status: 500 });
     }
 }
