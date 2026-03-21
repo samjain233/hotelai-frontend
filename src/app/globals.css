@@ -359,9 +359,25 @@
     border-radius: 2px !important;
   }
 
-  /* QR card overrides */
+  /* QR card overrides — keep whole cards together when possible */
   .qr-print-card {
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+
+  /* Batch QR modal: flex + fixed vh clips multi-page print; force full document flow */
+  .room-qr-print-backdrop,
+  .room-qr-print-modal {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Let grid rows break across pages (cards still avoid split) */
+  .room-qr-print-modal .grid {
+    break-inside: auto;
+    page-break-inside: auto;
   }
 }

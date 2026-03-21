@@ -323,13 +323,13 @@ export default function RoomsPage() {
         {/* ───── Batch QR Modal (visible for print) ───── */}
         <AnimatePresence>
             {showQrModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm print:static print:inset-auto print:min-h-0 print:bg-transparent print:backdrop-blur-0" onClick={() => setShowQrModal(false)}>
+                <div className="room-qr-print-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm print:static print:inset-auto print:flex print:min-h-0 print:items-start print:justify-start print:overflow-visible print:bg-transparent print:backdrop-blur-0" onClick={() => setShowQrModal(false)}>
                     <motion.div
                         initial={{ opacity: 0, scale: 0.96 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.96 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex h-[92vh] w-full max-w-[1200px] mx-4 rounded-xl border border-border bg-card shadow-2xl overflow-hidden print:h-auto print:max-w-none print:mx-0 print:rounded-none print:border-0 print:bg-white print:shadow-none"
+                        className="room-qr-print-modal flex h-[92vh] w-full max-w-[1200px] mx-4 rounded-xl border border-border bg-card shadow-2xl overflow-hidden print:block print:h-auto print:max-h-none print:min-h-0 print:w-full print:max-w-none print:mx-0 print:overflow-visible print:rounded-none print:border-0 print:bg-white print:shadow-none"
                     >
                         {/* ── Sidebar (screen only) ── */}
                         <aside className="w-[280px] shrink-0 border-r border-border bg-muted/30 flex flex-col overflow-hidden print:hidden">
@@ -514,7 +514,7 @@ export default function RoomsPage() {
                         </aside>
 
                         {/* ── Main QR grid (screen + print) ── */}
-                        <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible">
+                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden print:block print:h-auto print:w-full print:min-h-0 print:overflow-visible print:max-h-none">
                             {/* Screen header */}
                             <div className="flex items-center justify-between border-b border-border p-4 print:hidden">
                                 <div>
@@ -535,7 +535,7 @@ export default function RoomsPage() {
                             </div>
 
                             {/* QR grid */}
-                            <div className="flex-1 overflow-y-auto bg-secondary/20 p-6 print:overflow-visible print:bg-white print:p-2">
+                            <div className="min-h-0 flex-1 overflow-y-auto bg-secondary/20 p-6 print:block print:h-auto print:w-full print:min-h-0 print:overflow-visible print:bg-white print:p-2 print:max-h-none">
                                 {printFloorGroups.map(([floor, floorQrs]) => (
                                     <div key={floor} className="mb-6 print:mb-2 last:mb-0">
                                         {floorGroups.length > 1 && (
