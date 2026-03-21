@@ -417,26 +417,40 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             </div>
                                         )}
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <div className="flex items-center gap-2 pr-2">
-                                                    <h3 className="font-semibold text-foreground text-base">{item.name}</h3>
+                                            <div className="mb-1 flex items-start justify-between gap-3">
+                                                <h3
+                                                    className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground line-clamp-2 break-words"
+                                                    title={item.name}
+                                                >
+                                                    {item.name}
+                                                </h3>
+                                                <div className="flex shrink-0 flex-col items-end gap-1">
                                                     {item.dietaryPreference === "VEG" && (
-                                                        <div className="w-4 h-4 border border-green-500 rounded-sm flex items-center justify-center flex-shrink-0" title="Vegetarian">
-                                                            <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                                        <div
+                                                            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border border-green-500"
+                                                            title="Vegetarian"
+                                                        >
+                                                            <div className="h-2 w-2 rounded-full bg-green-500" />
                                                         </div>
                                                     )}
                                                     {item.dietaryPreference === "NON_VEG" && (
-                                                        <div className="w-4 h-4 border border-red-500 rounded-sm flex items-center justify-center flex-shrink-0" title="Non-Vegetarian">
-                                                            <div className="w-2 h-2 bg-red-500 rounded-full" />
+                                                        <div
+                                                            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border border-red-500"
+                                                            title="Non-Vegetarian"
+                                                        >
+                                                            <div className="h-2 w-2 rounded-full bg-red-500" />
                                                         </div>
                                                     )}
                                                     {item.dietaryPreference === "EGGITARIAN" && (
-                                                        <div className="w-4 h-4 border border-yellow-500 rounded-sm flex items-center justify-center flex-shrink-0" title="Contains Egg">
-                                                            <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                                                        <div
+                                                            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border border-yellow-500"
+                                                            title="Contains Egg"
+                                                        >
+                                                            <div className="h-2 w-2 rounded-full bg-yellow-500" />
                                                         </div>
                                                     )}
+                                                    <span className="text-sm font-bold whitespace-nowrap text-gold">{formatPrice(item.price)}</span>
                                                 </div>
-                                                <span className="font-bold text-gold text-sm whitespace-nowrap">{formatPrice(item.price)}</span>
                                             </div>
                                             <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
                                             <div className="flex justify-end min-h-[32px] items-center">
