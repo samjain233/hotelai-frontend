@@ -11,11 +11,15 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
+import {
+    ALLOWED_IMAGE_CONTENT_TYPES,
+    blobPathnameWithExtension,
+    resolveImageContentType,
+} from "@/lib/imageUpload";
 import type { Hotel } from "@/lib/types";
 import { LegalFooter } from "@/components/LegalFooter";
 
 const NOTIFICATION_SOUND_KEY = "hotel-admin-notification-sound";
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -45,8 +49,11 @@ function HotelProfileSection({ hotel, refreshHotel }: { hotel: { id: string; nam
         const file = e.target.files?.[0];
         if (!file) return;
         e.target.value = "";
-        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-            toast.error("Please select JPEG, PNG, or WebP.");
+        const contentType = resolveImageContentType(file);
+        if (!contentType) {
+            toast.error(
+                "Please use JPEG, PNG, or WebP. If the file is correct, ensure the name ends in .jpg, .png, or .webp.",
+            );
             return;
         }
         if (file.size > MAX_IMAGE_SIZE) {
@@ -56,11 +63,13 @@ function HotelProfileSection({ hotel, refreshHotel }: { hotel: { id: string; nam
         setUploading(true);
         try {
             const { token } = await api.getUploadToken();
-            const { pathname } = await api.getHotelLogoUploadPathname(token);
+            const { pathname: basePath } = await api.getHotelLogoUploadPathname(token);
+            const pathname = blobPathnameWithExtension(basePath, contentType);
             const blob = await upload(pathname, file, {
                 access: "public",
                 handleUploadUrl: "/api/blob-upload",
                 clientPayload: JSON.stringify({ token }),
+                contentType,
             });
             setLogoUrl(blob.url);
             setLogoUnsaved(true);
@@ -138,7 +147,7 @@ function HotelProfileSection({ hotel, refreshHotel }: { hotel: { id: string; nam
                             <img src={logoUrl} alt="Logo" className="w-16 h-16 rounded-lg object-cover border border-border" />
                         )}
                         <div>
-                            <input ref={fileInputRef} type="file" accept={ALLOWED_IMAGE_TYPES.join(",")} className="hidden" onChange={handleLogoUpload} />
+                            <input ref={fileInputRef} type="file" accept={ALLOWED_IMAGE_CONTENT_TYPES.join(",")} className="hidden" onChange={handleLogoUpload} />
                             <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
                                 {uploading ? "Uploading..." : <><Upload className="w-4 h-4 mr-2" />Change logo</>}
                             </Button>

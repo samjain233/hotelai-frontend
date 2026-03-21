@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { AnimatePresence, motion } from "framer-motion";
 import { upload } from "@vercel/blob/client";
+import { blobPathnameWithExtension, resolveImageContentType } from "@/lib/imageUpload";
 import { cn } from "@/lib/utils";
 import {
     CATEGORY_ICON_MAP,
@@ -33,7 +34,6 @@ import {
     Loader2,
 } from "lucide-react";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function MenuPage() {
@@ -61,8 +61,11 @@ export default function MenuPage() {
     }
 
     async function processImageFile(file: File) {
-        if (!ALLOWED_TYPES.includes(file.type)) {
-            alert("Please select a JPEG, PNG, or WebP image.");
+        const contentType = resolveImageContentType(file);
+        if (!contentType) {
+            alert(
+                `Please use a JPEG, PNG, or WebP image. If your file is correct but still fails, rename it to end in .jpg, .png, or .webp (some phones send type "${file.type || "empty"}").`,
+            );
             return;
         }
         if (file.size > MAX_SIZE) {
@@ -74,12 +77,14 @@ export default function MenuPage() {
         try {
             const { token } = await api.getUploadToken();
             setUploadProgress(12);
-            const { pathname } = await api.getUploadPathname(token);
+            const { pathname: basePath } = await api.getUploadPathname(token);
+            const pathname = blobPathnameWithExtension(basePath, contentType);
             setUploadProgress(22);
             const blob = await upload(pathname, file, {
                 access: "public",
                 handleUploadUrl: "/api/blob-upload",
                 clientPayload: JSON.stringify({ token }),
+                contentType,
                 onUploadProgress: ({ percentage }) => {
                     setUploadProgress(22 + Math.round((percentage / 100) * 73));
                 },
