@@ -22,6 +22,11 @@ interface SearchableSelectProps {
         label: string;
         onClick: (searchQuery: string) => void;
     };
+    /** Always shown at the bottom of the open panel (e.g. create new item while list is non-empty). Receives current search text. */
+    footerAction?: {
+        label: string;
+        onClick: (searchQuery: string) => void;
+    };
     disabled?: boolean;
     className?: string;
 }
@@ -34,6 +39,7 @@ export function SearchableSelect({
     searchPlaceholder = "Search...",
     emptyMessage = "No results found",
     emptyAction,
+    footerAction,
     disabled = false,
     className,
 }: SearchableSelectProps) {
@@ -92,7 +98,7 @@ export function SearchableSelect({
                         {filteredOptions.length === 0 ? (
                             <div className="px-3 py-4 text-center space-y-3">
                                 <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-                                {emptyAction && (
+                                {emptyAction && !footerAction && (
                                     <Button
                                         type="button"
                                         variant="outline"
@@ -130,6 +136,25 @@ export function SearchableSelect({
                             ))
                         )}
                     </div>
+                    {footerAction && (
+                        <div className="p-2 border-t border-border bg-secondary/30">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => {
+                                    const q = search;
+                                    setIsOpen(false);
+                                    setSearch("");
+                                    footerAction.onClick(q);
+                                }}
+                            >
+                                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                {footerAction.label}
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

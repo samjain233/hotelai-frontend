@@ -303,8 +303,8 @@ export default function MenuPage() {
                                                     placeholder="Select category"
                                                     searchPlaceholder="Type to search..."
                                                     emptyMessage="No categories found"
-                                                    emptyAction={{
-                                                        label: "Add category",
+                                                    footerAction={{
+                                                        label: "Create new category",
                                                         onClick: (searchQuery) => {
                                                             selectNewCategoryInItemForm.current = true;
                                                             setCatForm({ name: searchQuery.trim(), icon: "" });
