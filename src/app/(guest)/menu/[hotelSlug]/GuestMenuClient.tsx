@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { MenuItem, CartItem, Hotel, Order } from "@/lib/types";
 import type { PublicMenuFullData } from "@/lib/types";
@@ -53,6 +54,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [pastOrders, setPastOrders] = useState<Order[]>([]);
     const [showHistory, setShowHistory] = useState(false);
+    const [guestLogoFailed, setGuestLogoFailed] = useState(false);
 
     const searchParams = useSearchParams();
     const roomId = searchParams.get("room") || selectedRoomId;
@@ -62,6 +64,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     useEffect(() => {
         if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0].id);
     }, [categories, activeCategory]);
+
+    useEffect(() => {
+        setGuestLogoFailed(false);
+    }, [hotel?.logoUrl, hotel?.id]);
 
     const orderRef = useRef<Order | null>(null);
     orderRef.current = order;
@@ -282,7 +288,22 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
                 <div className="px-5 py-4 max-w-md mx-auto">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#d4a853] to-[#c9973a] flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-[#d4a853]/20">{hotel?.name?.charAt(0) || "H"}</div>
+                        {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
+                            <Image
+                                src={hotel.logoUrl.trim()}
+                                alt=""
+                                width={44}
+                                height={44}
+                                sizes="44px"
+                                priority
+                                className="w-11 h-11 rounded-xl object-cover shadow-lg shadow-[#d4a853]/20 ring-1 ring-border/60 bg-card shrink-0"
+                                onError={() => setGuestLogoFailed(true)}
+                            />
+                        ) : (
+                            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#d4a853] to-[#c9973a] flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-[#d4a853]/20 shrink-0">
+                                {hotel?.name?.charAt(0) || "H"}
+                            </div>
+                        )}
                         <div className="flex-1 min-w-0">
                             <h1 className="text-lg font-bold text-foreground leading-tight truncate">{hotel?.name}</h1>
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
