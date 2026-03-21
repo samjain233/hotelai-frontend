@@ -263,15 +263,6 @@ export default function MenuPage() {
                                             <label className="text-sm font-medium text-foreground mb-1.5 block">Item name</label>
                                             <Input placeholder="e.g. Masala Dosa" value={itemForm.name} onChange={e => setItemForm({ ...itemForm, name: e.target.value })} required className="h-11" />
                                         </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-foreground mb-1.5 block">Description</label>
-                                            <textarea
-                                                placeholder="Brief description of the dish"
-                                                className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 min-h-[180px] resize-none transition-all"
-                                                value={itemForm.description}
-                                                onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
-                                            />
-                                        </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-sm font-medium text-foreground mb-1.5 block">Price (₹)</label>
@@ -289,6 +280,15 @@ export default function MenuPage() {
                                                     className="[&>button]:h-11 [&>button]:rounded-xl"
                                                 />
                                             </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground mb-1.5 block">Description</label>
+                                            <textarea
+                                                placeholder="Brief description of the dish"
+                                                className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 min-h-[180px] resize-none transition-all"
+                                                value={itemForm.description}
+                                                onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
+                                            />
                                         </div>
                                     </div>
 

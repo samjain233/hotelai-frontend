@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { Admin, Hotel } from '@/lib/types';
 import { api } from '@/lib/api';
 
@@ -27,28 +27,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [hotel, setHotel] = useState<Hotel | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const applyProfile = useCallback((profile: Awaited<ReturnType<typeof api.getProfile>>) => {
+        setAdmin({
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            role: profile.role,
+        });
+        setHotel(profile.hotel);
+    }, []);
+
     useEffect(() => {
         api.getProfile()
-            .then((profile) => {
-                setAdmin({
-                    id: profile.id,
-                    email: profile.email,
-                    name: profile.name,
-                    role: profile.role,
-                });
-                setHotel(profile.hotel);
-            })
+            .then(applyProfile)
             .catch(() => {
                 setAdmin(null);
                 setHotel(null);
             })
             .finally(() => setLoading(false));
-    }, []);
+    }, [applyProfile]);
 
     async function login(email: string, password: string) {
         const res = await api.login(email, password);
         setAdmin(res.admin);
         setHotel(res.hotel);
+        // Align with /auth/me so address, phone, logo, hours are always present (login payload can lag behind).
+        try {
+            const profile = await api.getProfile();
+            applyProfile(profile);
+        } catch {
+            // Keep login response if profile fetch fails
+        }
         return res.admin;
     }
 
@@ -75,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function refreshHotel() {
         try {
             const profile = await api.getProfile();
-            setHotel(profile?.hotel ?? null);
+            setHotel(profile.hotel);
         } catch {
             // Leave hotel state unchanged on refresh failure
         }
