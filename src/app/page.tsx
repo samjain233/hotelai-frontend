@@ -21,16 +21,16 @@ import {
     Settings,
 } from "lucide-react";
 
-/** Demo dish photos for landing mockups (Unsplash — free to use). */
+/** Demo dish photos for landing mockups (Unsplash — free to use). IDs verified live (some older Unsplash IDs 404). */
 const LANDING_MENU_IMAGES = {
     paneerTikka:
-        "https://images.unsplash.com/photo-1567188040759-fb2709f22607?w=160&h=160&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=160&h=160&fit=crop&q=80",
     butterChicken:
         "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=160&h=160&fit=crop&q=80",
     dalMakhani:
         "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=160&h=160&fit=crop&q=80",
     biryani:
-        "https://images.unsplash.com/photo-1563379091339-03246963d334?w=160&h=160&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=160&h=160&fit=crop&q=80",
     gulabJamun:
         "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=160&h=160&fit=crop&q=80",
 } as const;
