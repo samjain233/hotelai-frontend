@@ -83,8 +83,8 @@ export default function RegisterPage() {
                 className="relative z-10 w-full max-w-lg glass-card p-8"
             >
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold font-serif text-white mb-2">Partner with Us</h1>
-                    <p className="text-slate-400 text-sm">Create your hotel&apos;s digital experience</p>
+                    <h1 className="text-3xl font-bold font-serif text-white mb-2">Create your hotel&apos;s digital experience</h1>
+                    <p className="text-slate-400 text-sm">Add your property and admin details to get started.</p>
                 </div>
 
                 {error && (
