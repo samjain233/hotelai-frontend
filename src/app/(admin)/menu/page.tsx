@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { api } from "@/lib/api";
-import { MenuCategory, MenuItem } from "@/lib/types";
+import { MenuItem } from "@/lib/types";
 import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwrApi";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { AnimatePresence, motion } from "framer-motion";
 import { upload } from "@vercel/blob/client";
 import { cn } from "@/lib/utils";
+import { CATEGORY_ICON_MAP, CATEGORY_ICON_PICKER_OPTIONS, CategoryIconDisplay } from "@/lib/categoryIcons";
 import {
     Plus,
     Search,
@@ -27,30 +28,6 @@ import {
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-
-/** Quick-pick icons for new menu categories (food & drinks) */
-const CATEGORY_EMOJI_PICKER = [
-    "🍽️",
-    "🍕",
-    "🍔",
-    "🍜",
-    "🥗",
-    "🥤",
-    "☕",
-    "🍰",
-    "🍳",
-    "🍛",
-    "🥘",
-    "🧁",
-    "🍷",
-    "🍱",
-    "🥪",
-    "🌮",
-    "🍩",
-    "🍪",
-    "🍎",
-    "🥐",
-] as const;
 
 export default function MenuPage() {
     const { data: categories = [], isLoading: categoriesLoading } = useCategories();
@@ -265,8 +242,8 @@ export default function MenuPage() {
                     <motion.div key="categories" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {categories.map((cat) => (
                             <div key={cat.id} className="dashboard-card p-8 flex flex-col items-center text-center cursor-pointer group hover:border-primary/50">
-                                <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                                    {cat.icon || "🍽️"}
+                                <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                                    <CategoryIconDisplay icon={cat.icon} size="xl" className="text-primary" />
                                 </div>
                                 <h3 className="font-semibold text-foreground">{cat.name}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">{cat._count?.items || 0} items active</p>
@@ -430,7 +407,7 @@ export default function MenuPage() {
             <AnimatePresence>
                 {showCatModal && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeCatModal}>
-                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl">
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-card border border-border rounded-xl shadow-2xl">
                             <div className="flex justify-between items-center p-5 border-b border-border bg-muted/20">
                                 <h3 className="font-semibold text-foreground">New Category</h3>
                                 <button type="button" onClick={closeCatModal}><X className="w-5 h-5 text-muted-foreground" /></button>
@@ -439,30 +416,59 @@ export default function MenuPage() {
                                 <Input placeholder="Category Name" value={catForm.name} onChange={e => setCatForm({ ...catForm, name: e.target.value })} required />
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-muted-foreground">Category icon</label>
-                                    <div className="grid grid-cols-5 gap-1.5 p-3 rounded-xl bg-secondary/40 border border-border">
-                                        {CATEGORY_EMOJI_PICKER.map((emoji) => (
-                                            <button
-                                                key={emoji}
-                                                type="button"
-                                                onClick={() => setCatForm((prev) => ({ ...prev, icon: emoji }))}
-                                                title={emoji}
-                                                className={cn(
-                                                    "text-2xl leading-none py-2.5 rounded-lg transition-colors hover:bg-secondary",
-                                                    catForm.icon === emoji && "ring-2 ring-primary bg-primary/15",
-                                                )}
-                                            >
-                                                {emoji}
-                                            </button>
-                                        ))}
+                                    <p className="text-[11px] text-muted-foreground leading-snug">
+                                        Icons from{" "}
+                                        <a
+                                            href="https://lucide.dev"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-primary hover:underline"
+                                        >
+                                            Lucide
+                                        </a>
+                                        . Old emoji values still work if pasted below.
+                                    </p>
+                                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 p-3 rounded-xl bg-secondary/40 border border-border max-h-[240px] overflow-y-auto">
+                                        <button
+                                            type="button"
+                                            title="Default utensils icon"
+                                            onClick={() => setCatForm((prev) => ({ ...prev, icon: "" }))}
+                                            className={cn(
+                                                "flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl border border-dashed border-border text-[10px] text-muted-foreground transition-all hover:bg-secondary",
+                                                catForm.icon === "" && "ring-2 ring-primary bg-primary/10 border-primary/30 text-foreground",
+                                            )}
+                                        >
+                                            Auto
+                                        </button>
+                                        {CATEGORY_ICON_PICKER_OPTIONS.map(({ key, label }) => {
+                                            const LucideIcon = CATEGORY_ICON_MAP[key];
+                                            return (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    title={label}
+                                                    onClick={() => setCatForm((prev) => ({ ...prev, icon: key }))}
+                                                    className={cn(
+                                                        "flex flex-col items-center gap-1 py-2 px-1 rounded-xl border border-transparent transition-all hover:bg-secondary",
+                                                        catForm.icon === key && "ring-2 ring-primary bg-primary/15 border-border shadow-sm",
+                                                    )}
+                                                >
+                                                    <LucideIcon className="w-5 h-5 text-foreground shrink-0" />
+                                                    <span className="text-[9px] text-muted-foreground text-center leading-tight line-clamp-2 px-0.5">
+                                                        {label}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                     <Input
-                                        placeholder="Or type / paste another emoji…"
+                                        placeholder="Advanced: icon key (e.g. pizza) or emoji…"
                                         value={catForm.icon}
                                         onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })}
-                                        className="text-base"
+                                        className="text-sm font-mono"
                                     />
                                     <p className="text-[11px] text-muted-foreground leading-snug">
-                                        Tap an emoji above or enter your own. Leave empty to use the default 🍽️ on the menu.
+                                        Leave empty or Auto for the default utensils icon.
                                     </p>
                                 </div>
                                 <div className="flex gap-3 pt-2">

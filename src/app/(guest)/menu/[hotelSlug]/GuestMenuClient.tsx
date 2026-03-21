@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, Headset } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CategoryIconDisplay } from "@/lib/categoryIcons";
 
 // Lazy-load framer-motion overlays (cart, drawers, modals) - only when user interacts
 const AnimatedOverlays = dynamic(
@@ -327,10 +328,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
                                 }}
                                 className={cn(
-                                    "px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
+                                    "inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
                                     activeCategory === cat.id ? "bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white border-transparent shadow-sm shadow-[#d4a853]/20" : "bg-secondary/50 text-muted-foreground border-transparent hover:bg-secondary hover:border-border"
                                 )}
                             >
+                                <CategoryIconDisplay
+                                    icon={cat.icon}
+                                    size="sm"
+                                    className={activeCategory === cat.id ? "text-white" : "text-muted-foreground"}
+                                />
                                 {cat.name}
                             </button>
                         ))}
@@ -366,6 +372,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     <div key={cat.id} id={`cat-${cat.id}`} className="scroll-mt-48">
                         <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                             <div className="w-1 h-5 bg-gradient-to-b from-[#d4a853] to-[#c9973a] rounded-full" />
+                            <CategoryIconDisplay icon={cat.icon} size="md" className="text-[#d4a853]" />
                             {cat.name}
                         </h2>
                         <div className="space-y-4">
