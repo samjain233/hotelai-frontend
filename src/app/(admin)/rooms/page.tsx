@@ -403,24 +403,50 @@ export default function RoomsPage() {
                                 <div className="space-y-2">
                                     <button
                                         type="button"
+                                        role="switch"
+                                        aria-checked={qrShowBranding}
                                         onClick={() => setQrShowBranding(!qrShowBranding)}
                                         className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs transition-colors hover:bg-secondary/60"
                                     >
                                         <Hotel className="w-3.5 h-3.5 text-muted-foreground" />
-                                        <span className="flex-1 text-left text-foreground">Hotel branding</span>
-                                        <span className={cn("w-8 h-4.5 rounded-full transition-colors relative", qrShowBranding ? "bg-primary" : "bg-secondary")}>
-                                            <span className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all", qrShowBranding ? "left-[calc(100%-0.625rem)]" : "left-0.5")} />
+                                        <span className="flex-1 text-left text-foreground">Hotel name on cards</span>
+                                        <span
+                                            className={cn(
+                                                "relative flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors",
+                                                qrShowBranding ? "bg-primary" : "bg-muted-foreground/25",
+                                            )}
+                                            aria-hidden
+                                        >
+                                            <span
+                                                className={cn(
+                                                    "block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-out",
+                                                    qrShowBranding ? "translate-x-4" : "translate-x-0",
+                                                )}
+                                            />
                                         </span>
                                     </button>
                                     <button
                                         type="button"
+                                        role="switch"
+                                        aria-checked={qrShowCutGuides}
                                         onClick={() => setQrShowCutGuides(!qrShowCutGuides)}
                                         className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs transition-colors hover:bg-secondary/60"
                                     >
                                         <Scissors className="w-3.5 h-3.5 text-muted-foreground" />
                                         <span className="flex-1 text-left text-foreground">Cut guides</span>
-                                        <span className={cn("w-8 h-4.5 rounded-full transition-colors relative", qrShowCutGuides ? "bg-primary" : "bg-secondary")}>
-                                            <span className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all", qrShowCutGuides ? "left-[calc(100%-0.625rem)]" : "left-0.5")} />
+                                        <span
+                                            className={cn(
+                                                "relative flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors",
+                                                qrShowCutGuides ? "bg-primary" : "bg-muted-foreground/25",
+                                            )}
+                                            aria-hidden
+                                        >
+                                            <span
+                                                className={cn(
+                                                    "block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-out",
+                                                    qrShowCutGuides ? "translate-x-4" : "translate-x-0",
+                                                )}
+                                            />
                                         </span>
                                     </button>
                                 </div>
@@ -503,12 +529,7 @@ export default function RoomsPage() {
                             {/* Print-only header */}
                             <div className="hidden print:block px-4 pt-4 pb-2">
                                 {qrShowBranding && hotel?.name && (
-                                    <div className="flex items-center justify-center gap-3 mb-2">
-                                        {hotel.logoUrl?.trim() && (
-                                            <img src={hotel.logoUrl.trim()} alt="" className="w-8 h-8 rounded-lg object-cover" />
-                                        )}
-                                        <span className="text-lg font-bold text-black">{hotel.name}</span>
-                                    </div>
+                                    <p className="mb-2 text-center text-lg font-bold text-black">{hotel.name}</p>
                                 )}
                                 <p className="text-center text-sm text-neutral-500 mb-1">Room QR Codes</p>
                             </div>
@@ -540,7 +561,6 @@ export default function RoomsPage() {
                                                     wifiPass={qrWifiPass}
                                                     showBranding={qrShowBranding}
                                                     hotelName={hotel?.name}
-                                                    hotelLogo={hotel?.logoUrl}
                                                     copiedId={copiedId}
                                                     onDownload={() => downloadQr(qr)}
                                                     onCopy={() => copyUrl(qr)}
@@ -581,12 +601,7 @@ export default function RoomsPage() {
                         </div>
                         <div className="p-8 flex flex-col items-center print:p-4">
                             {hotel?.name && (
-                                <div className="flex items-center gap-2 mb-4 print:mb-3">
-                                    {hotel.logoUrl?.trim() && (
-                                        <img src={hotel.logoUrl.trim()} alt="" className="w-7 h-7 rounded-lg object-cover" />
-                                    )}
-                                    <span className="text-sm font-semibold text-foreground print:text-black">{hotel.name}</span>
-                                </div>
+                                <p className="mb-4 text-center text-sm font-semibold text-foreground print:mb-3 print:text-black">{hotel.name}</p>
                             )}
                             <div className="w-64 h-64 bg-white p-3 rounded-xl ring-1 ring-black/10 print:w-72 print:h-72 print:mx-auto">
                                 <img src={singleQr.qrCode} alt={`Room ${singleQr.roomNumber}`} className="w-full h-full object-contain" />
@@ -619,7 +634,6 @@ function QrCard({
     wifiPass,
     showBranding,
     hotelName,
-    hotelLogo,
     copiedId,
     onDownload,
     onCopy,
@@ -631,7 +645,6 @@ function QrCard({
     wifiPass: string;
     showBranding: boolean;
     hotelName?: string;
-    hotelLogo?: string;
     copiedId: string | null;
     onDownload: () => void;
     onCopy: () => void;
@@ -647,16 +660,15 @@ function QrCard({
         )}>
             {/* Branding (print only by default, always visible for large) */}
             {showBranding && hotelName && (
-                <div className={cn(
-                    "flex items-center gap-1.5 mb-2",
-                    !isLarge && "hidden print:flex",
-                    "print:mb-1.5",
-                )}>
-                    {hotelLogo?.trim() && (
-                        <img src={hotelLogo.trim()} alt="" className="w-4 h-4 rounded object-cover print:w-5 print:h-5" />
+                <p
+                    className={cn(
+                        "mb-2 max-w-full truncate text-center text-[10px] font-semibold text-muted-foreground",
+                        !isLarge && "hidden print:block",
+                        "print:mb-1.5 print:text-xs print:text-neutral-700",
                     )}
-                    <span className="text-[10px] font-semibold text-muted-foreground print:text-neutral-700 print:text-xs truncate max-w-[120px]">{hotelName}</span>
-                </div>
+                >
+                    {hotelName}
+                </p>
             )}
 
             {/* QR Image */}
