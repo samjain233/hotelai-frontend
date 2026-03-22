@@ -60,6 +60,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const scrollSpySuspended = useRef(false);
     const categoryChipStripRef = useRef<HTMLDivElement>(null);
 
+    /** Hide logo + hotel name + room row while scrolling down; show again when scrolling up or near top. */
+    const [brandingCollapsed, setBrandingCollapsed] = useState(false);
+    const lastScrollYForHeader = useRef(0);
+
     const searchParams = useSearchParams();
     const roomId = searchParams.get("room") || selectedRoomId;
     const currentRoom = availableRooms.find((r) => r.id === roomId);
@@ -99,11 +103,36 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const chipCategoriesRef = useRef(chipCategories);
     chipCategoriesRef.current = chipCategories;
 
+    const brandingCollapsedRef = useRef(brandingCollapsed);
+    brandingCollapsedRef.current = brandingCollapsed;
+
+    /** Collapse / expand hotel branding row based on scroll direction. */
+    useEffect(() => {
+        lastScrollYForHeader.current = typeof window !== "undefined" ? window.scrollY : 0;
+        const onScroll = () => {
+            const y = window.scrollY;
+            const last = lastScrollYForHeader.current;
+            const delta = y - last;
+            lastScrollYForHeader.current = y;
+
+            if (y < 20) {
+                setBrandingCollapsed(false);
+                return;
+            }
+            if (delta > 8 && y > 48) {
+                setBrandingCollapsed(true);
+            } else if (delta < -12) {
+                setBrandingCollapsed(false);
+            }
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
+
     /** Scroll-spy: active chip = last category section whose heading is at/above the sticky header line. */
     useEffect(() => {
         if (!chipCategoryIdsKey) return;
 
-        const HEADER_LINE_PX = 172;
         let raf = 0;
 
         const updateActiveFromScroll = () => {
@@ -114,12 +143,13 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             raf = requestAnimationFrame(() => {
                 const cats = chipCategoriesRef.current;
                 if (cats.length === 0) return;
+                const line = brandingCollapsedRef.current ? 120 : 188;
                 let currentId = cats[0].id;
                 for (const cat of cats) {
                     const el = document.getElementById(`cat-${cat.id}`);
                     if (!el) continue;
                     const top = el.getBoundingClientRect().top;
-                    if (top <= HEADER_LINE_PX) currentId = cat.id;
+                    if (top <= line) currentId = cat.id;
                 }
                 setActiveCategory((prev) => (prev === currentId ? prev : currentId));
             });
@@ -134,7 +164,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             window.removeEventListener("resize", updateActiveFromScroll);
             cancelAnimationFrame(raf);
         };
-    }, [chipCategoryIdsKey]);
+    }, [chipCategoryIdsKey, brandingCollapsed]);
 
     /** Keep the active chip in view inside the horizontal strip. */
     useEffect(() => {
@@ -371,48 +401,79 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     return (
         <div className="min-h-screen pb-32 bg-background font-sans page-transition">
-            <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
-                <div className="px-5 py-4 max-w-md mx-auto">
-                    <div className="flex items-center gap-3 mb-3">
-                        {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
-                            <Image
-                                src={hotel.logoUrl.trim()}
-                                alt=""
-                                width={44}
-                                height={44}
-                                sizes="44px"
-                                priority
-                                className="w-11 h-11 rounded-xl object-cover shadow-lg shadow-[#d4a853]/20 ring-1 ring-border/60 bg-card shrink-0"
-                                onError={() => setGuestLogoFailed(true)}
-                            />
-                        ) : (
-                            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#d4a853] to-[#c9973a] flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-[#d4a853]/20 shrink-0">
-                                {hotel?.name?.charAt(0) || "H"}
-                            </div>
+            <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border supports-[backdrop-filter]:bg-background/70">
+                <div
+                    className={cn(
+                        "px-5 max-w-md mx-auto transition-[padding] duration-300 ease-out motion-reduce:transition-none",
+                        brandingCollapsed ? "py-2.5" : "py-4",
+                    )}
+                >
+                    <div
+                        className={cn(
+                            "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+                            brandingCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
                         )}
-                        <div className="flex-1 min-w-0">
-                            <h1 className="text-lg font-bold text-foreground leading-tight truncate">{hotel?.name}</h1>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                {roomDisplayName ? (
-                                    <>
-                                        <MapPin className="w-3 h-3 text-gold" />
-                                        <span>Room {roomDisplayName}</span>
-                                    </>
+                    >
+                        <div className="min-h-0 overflow-hidden">
+                            <div className="flex items-center gap-3 mb-3">
+                                {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
+                                    <Image
+                                        src={hotel.logoUrl.trim()}
+                                        alt=""
+                                        width={44}
+                                        height={44}
+                                        sizes="44px"
+                                        priority
+                                        className="w-11 h-11 rounded-xl object-cover shadow-lg shadow-[#d4a853]/20 ring-1 ring-border/60 bg-card shrink-0"
+                                        onError={() => setGuestLogoFailed(true)}
+                                    />
                                 ) : (
-                                    <span className="italic">Explore our curated selections</span>
+                                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#d4a853] to-[#c9973a] flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-[#d4a853]/20 shrink-0">
+                                        {hotel?.name?.charAt(0) || "H"}
+                                    </div>
                                 )}
-                            </p>
-                        </div>
-                        {ENABLE_GUEST_ORDERING && (
-                            <div className="flex items-center gap-2 shrink-0">
-                                {pastOrders.length > 0 && (
-                                    <Button variant="outline" size="sm" onClick={() => setShowHistory(true)} className="h-8 rounded-full bg-background border-border text-xs px-3 shadow-sm">
-                                        <Receipt className="w-3.5 h-3.5 mr-1.5" /> Bill
-                                    </Button>
+                                <div className="flex-1 min-w-0">
+                                    <h1 className="text-lg font-bold text-foreground leading-tight truncate">{hotel?.name}</h1>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        {roomDisplayName ? (
+                                            <>
+                                                <MapPin className="w-3 h-3 text-gold" />
+                                                <span>Room {roomDisplayName}</span>
+                                            </>
+                                        ) : (
+                                            <span className="italic">Explore our curated selections</span>
+                                        )}
+                                    </p>
+                                </div>
+                                {ENABLE_GUEST_ORDERING && (
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {pastOrders.length > 0 && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setShowHistory(true)}
+                                                className="h-8 rounded-full bg-background border-border text-xs px-3 shadow-sm"
+                                            >
+                                                <Receipt className="w-3.5 h-3.5 mr-1.5" /> Bill
+                                            </Button>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                        )}
+                        </div>
                     </div>
+                    {ENABLE_GUEST_ORDERING && brandingCollapsed && pastOrders.length > 0 && (
+                        <div className="flex justify-end mb-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowHistory(true)}
+                                className="h-8 rounded-full bg-background border-border text-xs px-3 shadow-sm"
+                            >
+                                <Receipt className="w-3.5 h-3.5 mr-1.5" /> Bill
+                            </Button>
+                        </div>
+                    )}
                     <div className="relative mb-3">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                         <input
@@ -484,7 +545,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         key={cat.id}
                         id={`cat-${cat.id}`}
                         data-category-id={cat.id}
-                        className="scroll-mt-[11.5rem] sm:scroll-mt-[12.5rem]"
+                        className={cn(
+                            "transition-[scroll-margin] duration-300 motion-reduce:transition-none",
+                            brandingCollapsed ? "scroll-mt-28 sm:scroll-mt-32" : "scroll-mt-[11.5rem] sm:scroll-mt-[12.5rem]",
+                        )}
                     >
                         <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                             <div className="w-1 h-5 bg-gradient-to-b from-[#d4a853] to-[#c9973a] rounded-full" />
