@@ -58,6 +58,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     /** True while programmatic scroll-to-section is running (ignore scroll-spy updates). */
     const scrollSpySuspended = useRef(false);
+    /** When true, next activeCategory effect must not scroll the chip strip (change came from scroll-spy). */
+    const activeCategoryFromScrollSpy = useRef(false);
     const categoryChipStripRef = useRef<HTMLDivElement>(null);
 
     /** Hide logo + hotel name + room row while scrolling down; show again when scrolling up or near top. */
@@ -151,7 +153,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     const top = el.getBoundingClientRect().top;
                     if (top <= line) currentId = cat.id;
                 }
-                setActiveCategory((prev) => (prev === currentId ? prev : currentId));
+                setActiveCategory((prev) => {
+                    if (prev === currentId) return prev;
+                    activeCategoryFromScrollSpy.current = true;
+                    return currentId;
+                });
             });
         };
 
@@ -164,13 +170,24 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             window.removeEventListener("resize", updateActiveFromScroll);
             cancelAnimationFrame(raf);
         };
-    }, [chipCategoryIdsKey, brandingCollapsed]);
+    }, [chipCategoryIdsKey]);
 
-    /** Keep the active chip in view inside the horizontal strip. */
+    /** Keep the active chip in view inside the horizontal strip (not when scroll-spy updated — avoids scroll fighting / page jitter). */
     useEffect(() => {
         if (!activeCategory || !categoryChipStripRef.current) return;
-        const btn = categoryChipStripRef.current.querySelector<HTMLElement>(`[data-chip-id="${activeCategory}"]`);
-        btn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        if (activeCategoryFromScrollSpy.current) {
+            activeCategoryFromScrollSpy.current = false;
+            return;
+        }
+        const strip = categoryChipStripRef.current;
+        const btn = strip.querySelector<HTMLElement>(`[data-chip-id="${activeCategory}"]`);
+        if (!btn) return;
+        const reduceMotion =
+            typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
+        const btnCenter = btn.offsetLeft + btn.offsetWidth / 2;
+        const targetLeft = Math.max(0, btnCenter - strip.clientWidth / 2);
+        strip.scrollTo({ left: targetLeft, behavior });
     }, [activeCategory]);
 
     useEffect(() => {
@@ -288,10 +305,24 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     function scrollToCategory(categoryId: string) {
         scrollSpySuspended.current = true;
         setActiveCategory(categoryId);
-        document.getElementById(`cat-${categoryId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-        window.setTimeout(() => {
+        const el = document.getElementById(`cat-${categoryId}`);
+        const reduceMotion =
+            typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        const scrollBehavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
+        el?.scrollIntoView({ behavior: scrollBehavior, block: "start" });
+
+        const resumeSpy = () => {
             scrollSpySuspended.current = false;
-        }, 650);
+        };
+        const onScrollEnd = () => {
+            window.removeEventListener("scrollend", onScrollEnd);
+            resumeSpy();
+        };
+        window.addEventListener("scrollend", onScrollEnd, { passive: true });
+        window.setTimeout(() => {
+            window.removeEventListener("scrollend", onScrollEnd);
+            resumeSpy();
+        }, 1200);
     }
 
     if (loading) {
