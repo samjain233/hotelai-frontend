@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { platformApi, PlatformHotelDetail } from "@/lib/platformApi";
 import {
     ArrowLeft,
+    ExternalLink,
     Building2,
     Users,
     BedDouble,
@@ -23,6 +24,8 @@ export default function HotelDetailPage() {
     const router = useRouter();
     const [hotel, setHotel] = useState<PlatformHotelDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [enteringHotel, setEnteringHotel] = useState(false);
+    const [enterError, setEnterError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -79,7 +82,34 @@ export default function HotelDetailPage() {
 
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">{hotel.name}</h1>
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <h1 className="text-2xl font-bold tracking-tight">{hotel.name}</h1>
+                    <button
+                        type="button"
+                        disabled={enteringHotel}
+                        onClick={async () => {
+                            setEnterError(null);
+                            setEnteringHotel(true);
+                            try {
+                                await platformApi.enterHotelAsAdmin(hotel.id);
+                                window.location.href = "/dashboard";
+                            } catch (e) {
+                                setEnterError(e instanceof Error ? e.message : "Could not open hotel dashboard");
+                            } finally {
+                                setEnteringHotel(false);
+                            }
+                        }}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors shrink-0"
+                    >
+                        <ExternalLink className="w-4 h-4" />
+                        {enteringHotel ? "Opening…" : "Open hotel dashboard"}
+                    </button>
+                </div>
+                {enterError && (
+                    <p className="mt-2 text-sm text-destructive" role="alert">
+                        {enterError}
+                    </p>
+                )}
                 <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                     {hotel.address && (
                         <span className="flex items-center gap-1">

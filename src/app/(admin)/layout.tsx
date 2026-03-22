@@ -19,6 +19,7 @@ import {
     Headset,
     Users,
     Settings,
+    ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -41,7 +42,7 @@ const allNavItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
 
-    const { admin, logout, hotel, loading } = useAuth();
+    const { admin, logout, hotel, loading, impersonating } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -92,8 +93,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
     }
 
+    async function exitPlatformView() {
+        await logout();
+        router.push("/superadmin/hotels");
+    }
+
     return (
-        <div className="min-h-screen bg-background text-foreground flex">
+        <div className="min-h-screen bg-background text-foreground flex flex-col">
+            {impersonating && (
+                <div className="shrink-0 z-[60] flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-amber-500/15 border-b border-amber-500/40 text-amber-950 dark:text-amber-100 print:hidden">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                        <ShieldAlert className="w-4 h-4 shrink-0" />
+                        <span>
+                            Platform view: <span className="font-semibold">{hotel?.name ?? "Hotel"}</span>
+                            <span className="font-normal text-amber-900/80 dark:text-amber-200/90">
+                                {" "}
+                                — you are signed in as this hotel&apos;s owner for support.
+                            </span>
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => void exitPlatformView()}
+                        className="text-sm font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                    >
+                        Exit to platform
+                    </button>
+                </div>
+            )}
+            <div className="flex flex-1 min-h-0">
             {/* 
                SIDEBAR - DESKTOP 
                Fixed width 260px, Z-index 40
@@ -242,6 +270,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </>
                 )}
             </AnimatePresence>
+            </div>
         </div>
     );
 }

@@ -136,6 +136,26 @@ export interface PlatformAnalytics {
     topItems: { itemName: string; totalQty: number }[];
 }
 
+/**
+ * Start hotel admin session as OWNER (platform key).
+ * Always uses the Next.js route so `auth_token` is set on the app origin (required on localhost and when API is on another host).
+ */
+export async function enterHotelAsAdmin(hotelId: string): Promise<void> {
+    const res = await fetch("/api/platform/impersonate", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "x-platform-key": getKey(),
+        },
+        credentials: "include",
+        body: JSON.stringify({ hotelId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error((data as { message?: string }).message || `HTTP ${res.status}`);
+    }
+}
+
 export const platformApi = {
     getOverview: () => request<PlatformOverview>("/platform/overview"),
     getHotels: () => request<PlatformHotel[]>("/platform/hotels"),
@@ -145,4 +165,5 @@ export const platformApi = {
         return request<PlatformComplaint[]>(`/platform/complaints${qs}`);
     },
     getAnalytics: () => request<PlatformAnalytics>("/platform/analytics"),
+    enterHotelAsAdmin,
 };

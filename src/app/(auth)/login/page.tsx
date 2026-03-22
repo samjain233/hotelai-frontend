@@ -126,8 +126,14 @@ export default function LoginPage() {
                     </form>
                 </div>
 
-                <p className="text-center text-sm text-zinc-600 mt-5">
-                    Don't have an account?{" "}
+                <p className="text-center text-sm text-zinc-600 mt-3">
+                    Staff with an access key?{" "}
+                    <Link href="/staff/access" className="font-medium text-indigo-400 transition-colors hover:text-indigo-300">
+                        Enter key
+                    </Link>
+                </p>
+                <p className="mt-2 text-center text-sm text-zinc-600">
+                    Don&apos;t have an account?{" "}
                     <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
                         Register
                     </Link>

@@ -1,14 +1,17 @@
 "use client";
 
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
-import { Admin, Hotel } from '@/lib/types';
+import { Admin, AuthMeProfile, Hotel } from '@/lib/types';
 import { api } from '@/lib/api';
 
 interface AuthContextType {
     admin: Admin | null;
     hotel: Hotel | null;
+    /** True when platform superadmin is acting as this hotel (JWT `imp`) */
+    impersonating: boolean;
     loading: boolean;
     login: (email: string, password: string) => Promise<Admin>;
+    staffAccessWithKey: (key: string) => Promise<Admin>;
     register: (data: {
         hotelName: string;
         hotelPhone?: string;
@@ -25,9 +28,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [admin, setAdmin] = useState<Admin | null>(null);
     const [hotel, setHotel] = useState<Hotel | null>(null);
+    const [impersonating, setImpersonating] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const applyProfile = useCallback((profile: Awaited<ReturnType<typeof api.getProfile>>) => {
+    const applyProfile = useCallback((profile: AuthMeProfile) => {
         setAdmin({
             id: profile.id,
             email: profile.email,
@@ -35,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: profile.role,
         });
         setHotel(profile.hotel);
+        setImpersonating(profile.impersonating === true);
     }, []);
 
     useEffect(() => {
@@ -43,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .catch(() => {
                 setAdmin(null);
                 setHotel(null);
+                setImpersonating(false);
             })
             .finally(() => setLoading(false));
     }, [applyProfile]);
@@ -57,6 +63,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             applyProfile(profile);
         } catch {
             // Keep login response if profile fetch fails
+        }
+        return res.admin;
+    }
+
+    async function staffAccessWithKey(key: string) {
+        const res = await api.staffAccessWithKey(key);
+        setAdmin(res.admin);
+        setHotel(res.hotel);
+        try {
+            const profile = await api.getProfile();
+            applyProfile(profile);
+        } catch {
+            // keep response
         }
         return res.admin;
     }
@@ -78,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } finally {
             setAdmin(null);
             setHotel(null);
+            setImpersonating(false);
         }
     }
 
@@ -85,13 +105,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             const profile = await api.getProfile();
             setHotel(profile.hotel);
+            setImpersonating(profile.impersonating === true);
         } catch {
             // Leave hotel state unchanged on refresh failure
         }
     }
 
     return (
-        <AuthContext.Provider value={{ admin, hotel, loading, login, register, logout, refreshHotel }}>
+        <AuthContext.Provider
+            value={{
+                admin,
+                hotel,
+                impersonating,
+                loading,
+                login,
+                staffAccessWithKey,
+                register,
+                logout,
+                refreshHotel,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );

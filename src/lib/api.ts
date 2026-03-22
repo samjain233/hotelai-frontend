@@ -1,7 +1,9 @@
 import {
     Admin,
+    AuthMeProfile,
     AuthResponse,
     Hotel,
+    StaffListMember,
     MenuCategory,
     MenuItem,
     Room,
@@ -15,7 +17,7 @@ import {
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 /** Use same-origin /api proxy when not on localhost (e.g. Vercel) so cookies work for SSE */
-function useProxy(): boolean {
+function shouldUseSameOriginApiProxy(): boolean {
     if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_USE_PROXY === 'true';
     const host = window.location.hostname;
     const isLocal = host === 'localhost' || host === '127.0.0.1';
@@ -29,7 +31,9 @@ class ApiClient {
             ...(options.headers as Record<string, string>),
         };
 
-        const url = useProxy() ? `/api${path.startsWith('/') ? path : '/' + path}` : `${API_URL}${path}`;
+        const url = shouldUseSameOriginApiProxy()
+            ? `/api${path.startsWith('/') ? path : '/' + path}`
+            : `${API_URL}${path}`;
         const res = await fetch(url, {
             ...options,
             headers,
@@ -52,6 +56,7 @@ class ApiClient {
                         path === '/verify-email' ||
                         path === '/verify-email/pending' ||
                         path === '/' ||
+                        path === '/staff/access' ||
                         path.startsWith('/menu/') ||
                         path.startsWith('/services/') ||
                         // Platform admin uses sessionStorage + x-platform-key, not hotel JWT
@@ -114,6 +119,31 @@ class ApiClient {
         });
     }
 
+    /**
+     * Staff access key (no email/password). Uses dedicated Next route when proxied so httpOnly cookie is set.
+     * Does not use request() — wrong keys return 401 and must not trigger a redirect to /login.
+     */
+    async staffAccessWithKey(key: string): Promise<AuthResponse> {
+        const url = shouldUseSameOriginApiProxy()
+            ? '/api/auth/staff-access'
+            : `${API_URL}/auth/staff/access`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ key: key.trim() }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error((data as { message?: string }).message || 'Invalid or expired access key');
+        }
+        return {
+            admin: (data as AuthResponse).admin,
+            hotel: (data as AuthResponse).hotel,
+            token: (data as AuthResponse).token,
+        };
+    }
+
     async forgotPassword(email: string): Promise<{ message: string }> {
         return this.request('/auth/forgot-password', {
             method: 'POST',
@@ -128,7 +158,7 @@ class ApiClient {
         });
     }
 
-    async getProfile(): Promise<Admin & { hotel: Hotel }> {
+    async getProfile(): Promise<AuthMeProfile> {
         return this.request('/auth/me');
     }
 
@@ -341,19 +371,34 @@ class ApiClient {
 
     // ─── Staff Management ─────────────────────────────────
 
-    async getStaff(): Promise<any[]> {
-        return this.request<any[]>('/auth/staff');
+    async getStaff(): Promise<StaffListMember[]> {
+        return this.request<StaffListMember[]>('/auth/staff');
     }
 
-    async inviteStaff(data: { email: string; name: string; password: string; role: string }): Promise<any> {
-        return this.request<any>('/auth/staff', {
+    async getPendingStaffInvitations(): Promise<
+        { id: string; name: string; role: string; expiresAt: string; createdAt: string }[]
+    > {
+        return this.request('/auth/staff/invitations');
+    }
+
+    async inviteStaff(data: { name: string; role: string }): Promise<{
+        inviteKey: string;
+        expiresAt: string;
+        name: string;
+        role: string;
+    }> {
+        return this.request('/auth/staff', {
             method: 'POST',
             body: JSON.stringify(data),
         });
     }
 
-    async removeStaff(id: string): Promise<any> {
-        return this.request<any>(`/auth/staff/${id}`, {
+    async cancelStaffInvitation(id: string): Promise<{ message: string }> {
+        return this.request(`/auth/staff/invitations/${id}`, { method: 'DELETE' });
+    }
+
+    async removeStaff(id: string): Promise<{ message: string }> {
+        return this.request<{ message: string }>(`/auth/staff/${id}`, {
             method: 'DELETE',
         });
     }

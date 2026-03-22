@@ -18,6 +18,22 @@ export interface Admin {
     role: 'OWNER' | 'MANAGER' | 'KITCHEN' | 'FRONT_DESK';
 }
 
+/** GET /auth/me (hotel session; may include platform impersonation flag) */
+export interface AuthMeProfile extends Admin {
+    hotel: Hotel;
+    createdAt?: string;
+    impersonating?: boolean;
+}
+
+/** Row from GET /auth/staff (hotel team list) */
+export interface StaffListMember {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    createdAt: string;
+}
+
 export interface AuthResponse {
     token?: string;
     admin: Admin;
