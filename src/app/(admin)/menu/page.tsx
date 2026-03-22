@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { api } from "@/lib/api";
-import { MenuItem } from "@/lib/types";
+import { BulkMenuImportRow, MenuItem } from "@/lib/types";
 import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwrApi";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
@@ -32,9 +32,36 @@ import {
     Egg,
     Check,
     Loader2,
+    FileJson2,
+    ChevronDown,
+    ChevronUp,
+    Download,
 } from "lucide-react";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const SAMPLE_BULK_JSON = JSON.stringify(
+    {
+        items: [
+            {
+                name: "Paneer Tikka",
+                price: 280,
+                categoryName: "Starters",
+                description: "Grilled cottage cheese",
+                dietaryPreference: "VEG",
+                available: true,
+            },
+            {
+                name: "Chicken Biryani",
+                price: 420,
+                categoryName: "Main Course",
+                dietaryPreference: "NON_VEG",
+            },
+        ],
+    },
+    null,
+    2,
+);
 
 export default function MenuPage() {
     const { data: categories = [], isLoading: categoriesLoading } = useCategories();
@@ -59,6 +86,11 @@ export default function MenuPage() {
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const bulkFileInputRef = useRef<HTMLInputElement>(null);
+    const [bulkImportOpen, setBulkImportOpen] = useState(false);
+    const [bulkJsonText, setBulkJsonText] = useState("");
+    const [bulkImporting, setBulkImporting] = useState(false);
+    const [bulkImportError, setBulkImportError] = useState<string | null>(null);
     /** When true, next successful category create selects that category in the item form */
     const selectNewCategoryInItemForm = useRef(false);
 
@@ -257,6 +289,154 @@ export default function MenuPage() {
                     </div>
                 )}
             </div>
+
+            {/* Bulk JSON import (items tab) */}
+            {activeTab === "items" && (
+                <div className="dashboard-card border border-border overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => setBulkImportOpen((o) => !o)}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-secondary/40 transition-colors"
+                    >
+                        <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            <FileJson2 className="w-4 h-4 text-primary shrink-0" />
+                            Import from JSON (bulk)
+                        </span>
+                        {bulkImportOpen ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                    </button>
+                    {bulkImportOpen && (
+                        <div className="px-4 pb-4 pt-0 space-y-3 border-t border-border/60">
+                            <p className="text-xs text-muted-foreground pt-3">
+                                Paste JSON or choose a file. Each row needs <code className="text-foreground">name</code>,{" "}
+                                <code className="text-foreground">price</code>, and either{" "}
+                                <code className="text-foreground">categoryName</code> (auto-creates category if new) or{" "}
+                                <code className="text-foreground">categoryId</code>. Optional:{" "}
+                                <code className="text-foreground">description</code>, <code className="text-foreground">imageUrl</code>,{" "}
+                                <code className="text-foreground">dietaryPreference</code> (VEG | NON_VEG | EGGITARIAN | NONE),{" "}
+                                <code className="text-foreground">available</code>. Max 500 items per import. Category names are
+                                case-sensitive.
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => {
+                                        const blob = new Blob([SAMPLE_BULK_JSON], { type: "application/json" });
+                                        const a = document.createElement("a");
+                                        a.href = URL.createObjectURL(blob);
+                                        a.download = "dreamcanvas-menu-sample.json";
+                                        a.click();
+                                        URL.revokeObjectURL(a.href);
+                                    }}
+                                >
+                                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                                    Sample JSON
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => bulkFileInputRef.current?.click()}
+                                >
+                                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                                    Choose file
+                                </Button>
+                                <input
+                                    ref={bulkFileInputRef}
+                                    type="file"
+                                    accept="application/json,.json"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        e.target.value = "";
+                                        if (!f) return;
+                                        const r = new FileReader();
+                                        r.onload = () => {
+                                            if (typeof r.result === "string") setBulkJsonText(r.result);
+                                        };
+                                        r.readAsText(f);
+                                    }}
+                                />
+                            </div>
+                            <textarea
+                                value={bulkJsonText}
+                                onChange={(e) => setBulkJsonText(e.target.value)}
+                                placeholder='{ "items": [ { "name": "...", "price": 99, "categoryName": "..." } ] }'
+                                className="w-full min-h-[160px] rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                spellCheck={false}
+                            />
+                            {bulkImportError && (
+                                <p className="text-sm text-destructive whitespace-pre-wrap" role="alert">
+                                    {bulkImportError}
+                                </p>
+                            )}
+                            <Button
+                                type="button"
+                                disabled={bulkImporting || !bulkJsonText.trim()}
+                                onClick={async () => {
+                                    setBulkImportError(null);
+                                    let parsed: unknown;
+                                    try {
+                                        parsed = JSON.parse(bulkJsonText);
+                                    } catch {
+                                        setBulkImportError("Invalid JSON — check commas and quotes.");
+                                        return;
+                                    }
+                                    if (
+                                        typeof parsed !== "object" ||
+                                        parsed === null ||
+                                        !Array.isArray((parsed as { items?: unknown }).items)
+                                    ) {
+                                        setBulkImportError('JSON must be an object with an "items" array.');
+                                        return;
+                                    }
+                                    const items = (parsed as { items: unknown[] }).items;
+                                    if (items.length === 0) {
+                                        setBulkImportError("items array is empty.");
+                                        return;
+                                    }
+                                    setBulkImporting(true);
+                                    try {
+                                        const result = await api.bulkImportMenuItems({ items: items as BulkMenuImportRow[] });
+                                        await invalidateMenuCache();
+                                        setBulkJsonText("");
+                                        alert(
+                                            `Imported ${result.created} item(s)` +
+                                                (result.categoriesCreated
+                                                    ? ` (${result.categoriesCreated} new categor${result.categoriesCreated === 1 ? "y" : "ies"})`
+                                                    : "") +
+                                                ".",
+                                        );
+                                    } catch (err) {
+                                        setBulkImportError(err instanceof Error ? err.message : "Import failed");
+                                    } finally {
+                                        setBulkImporting(false);
+                                    }
+                                }}
+                            >
+                                {bulkImporting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Importing…
+                                    </>
+                                ) : (
+                                    <>
+                                        <FileJson2 className="w-4 h-4 mr-2" />
+                                        Import items
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Content Key-based Animation */}
             <AnimatePresence mode="wait">

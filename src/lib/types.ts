@@ -58,6 +58,23 @@ export interface MenuCategory {
     items?: MenuItem[];
 }
 
+/** One row for POST /admin/menu/bulk */
+export interface BulkMenuImportRow {
+    name: string;
+    price: number;
+    categoryId?: string;
+    categoryName?: string;
+    description?: string;
+    imageUrl?: string;
+    dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
+    available?: boolean;
+}
+
+export interface BulkMenuImportErrorRow {
+    index: number;
+    message: string;
+}
+
 export interface MenuItem {
     id: string;
     name: string;

@@ -5,6 +5,8 @@ import {
     Hotel,
     StaffListMember,
     MenuCategory,
+    BulkMenuImportErrorRow,
+    BulkMenuImportRow,
     MenuItem,
     Room,
     RoomQr,
@@ -234,6 +236,47 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify(data),
         });
+    }
+
+    /**
+     * Bulk create menu items from JSON. Categories are created when categoryName is used and missing.
+     * Parses Nest `errors[]` on 400 for readable messages.
+     */
+    async bulkImportMenuItems(payload: { items: BulkMenuImportRow[] }): Promise<{
+        created: number;
+        categoriesCreated: number;
+    }> {
+        const url = shouldUseSameOriginApiProxy()
+            ? `/api/admin/menu/bulk`
+            : `${API_URL}/admin/menu/bulk`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            if (res.status === 401 && typeof window !== 'undefined') {
+                const path = window.location.pathname;
+                const isPublicRoute =
+                    path === '/login' ||
+                    path === '/register' ||
+                    path.startsWith('/superadmin');
+                if (!isPublicRoute) window.location.href = '/login';
+            }
+            const d = data as { message?: string; errors?: BulkMenuImportErrorRow[] };
+            let msg = d.message || `HTTP ${res.status}`;
+            if (Array.isArray(d.errors) && d.errors.length) {
+                msg +=
+                    ' — ' +
+                    d.errors.map((e) => `row ${e.index + 1}: ${e.message}`).join('; ');
+            }
+            throw new Error(msg);
+        }
+
+        return data as { created: number; categoriesCreated: number };
     }
 
     async updateMenuItem(id: string, data: Partial<MenuItem>): Promise<MenuItem> {
