@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { MenuItem, CartItem, Hotel, Order } from "@/lib/types";
+import { MenuItem, CartItem, Order } from "@/lib/types";
 import type { PublicMenuFullData } from "@/lib/types";
 import { api } from "@/lib/api";
 import { usePublicMenuFull } from "@/hooks/useSwrApi";
@@ -35,7 +35,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const menuRes = usePublicMenuFull(hotelSlug, { fallbackData: initialData || undefined });
 
     const hotel = menuRes.data?.hotel ?? null;
-    const categories = menuRes.data?.categories ?? [];
+    const categories = useMemo(() => menuRes.data?.categories ?? [], [menuRes.data]);
     const availableRooms = menuRes.data?.rooms ?? [];
     const isOpen = menuRes.data ? menuRes.data.isOpen !== false : true;
     const loading = menuRes.isLoading && !initialData;
@@ -56,6 +56,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const [showHistory, setShowHistory] = useState(false);
     const [guestLogoFailed, setGuestLogoFailed] = useState(false);
 
+    /** True while programmatic scroll-to-section is running (ignore scroll-spy updates). */
+    const scrollSpySuspended = useRef(false);
+    const categoryChipStripRef = useRef<HTMLDivElement>(null);
+
     const searchParams = useSearchParams();
     const roomId = searchParams.get("room") || selectedRoomId;
     const currentRoom = availableRooms.find((r) => r.id === roomId);
@@ -64,6 +68,80 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     useEffect(() => {
         if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0].id);
     }, [categories, activeCategory]);
+
+    const filteredCategories = useMemo(() => {
+        if (!searchQuery.trim()) return categories;
+        return categories
+            .map((cat) => ({
+                ...cat,
+                items: cat.items.filter(
+                    (item) =>
+                        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        item.description?.toLowerCase().includes(searchQuery.toLowerCase()),
+                ),
+            }))
+            .filter((cat) => cat.items.length > 0);
+    }, [categories, searchQuery]);
+
+    /** Chips match visible sections: all categories, or only those with search hits. */
+    const chipCategories = filteredCategories;
+
+    useEffect(() => {
+        if (!searchQuery.trim()) return;
+        if (filteredCategories.length === 0) return;
+        if (!filteredCategories.some((c) => c.id === activeCategory)) {
+            setActiveCategory(filteredCategories[0].id);
+        }
+    }, [searchQuery, filteredCategories, activeCategory]);
+
+    const chipCategoryIdsKey = useMemo(() => chipCategories.map((c) => c.id).join("|"), [chipCategories]);
+
+    const chipCategoriesRef = useRef(chipCategories);
+    chipCategoriesRef.current = chipCategories;
+
+    /** Scroll-spy: active chip = last category section whose heading is at/above the sticky header line. */
+    useEffect(() => {
+        if (!chipCategoryIdsKey) return;
+
+        const HEADER_LINE_PX = 172;
+        let raf = 0;
+
+        const updateActiveFromScroll = () => {
+            if (scrollSpySuspended.current) return;
+            const list = chipCategoriesRef.current;
+            if (list.length === 0) return;
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(() => {
+                const cats = chipCategoriesRef.current;
+                if (cats.length === 0) return;
+                let currentId = cats[0].id;
+                for (const cat of cats) {
+                    const el = document.getElementById(`cat-${cat.id}`);
+                    if (!el) continue;
+                    const top = el.getBoundingClientRect().top;
+                    if (top <= HEADER_LINE_PX) currentId = cat.id;
+                }
+                setActiveCategory((prev) => (prev === currentId ? prev : currentId));
+            });
+        };
+
+        updateActiveFromScroll();
+        window.addEventListener("scroll", updateActiveFromScroll, { passive: true });
+        window.addEventListener("resize", updateActiveFromScroll, { passive: true });
+
+        return () => {
+            window.removeEventListener("scroll", updateActiveFromScroll);
+            window.removeEventListener("resize", updateActiveFromScroll);
+            cancelAnimationFrame(raf);
+        };
+    }, [chipCategoryIdsKey]);
+
+    /** Keep the active chip in view inside the horizontal strip. */
+    useEffect(() => {
+        if (!activeCategory || !categoryChipStripRef.current) return;
+        const btn = categoryChipStripRef.current.querySelector<HTMLElement>(`[data-chip-id="${activeCategory}"]`);
+        btn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }, [activeCategory]);
 
     useEffect(() => {
         setGuestLogoFailed(false);
@@ -170,25 +248,21 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             setShowCart(false);
             setShowRoomModal(false);
             loadPastOrders();
-        } catch (err: any) {
-            alert(err.message || "Failed to place order");
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Failed to place order");
         } finally {
             setPlacing(false);
         }
     }
 
-    const filteredCategories = searchQuery.trim()
-        ? categories
-              .map((cat) => ({
-                  ...cat,
-                  items: cat.items.filter(
-                      (item) =>
-                          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-                  ),
-              }))
-              .filter((cat) => cat.items.length > 0)
-        : categories;
+    function scrollToCategory(categoryId: string) {
+        scrollSpySuspended.current = true;
+        setActiveCategory(categoryId);
+        document.getElementById(`cat-${categoryId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.setTimeout(() => {
+            scrollSpySuspended.current = false;
+        }, 650);
+    }
 
     if (loading) {
         return (
@@ -354,18 +428,27 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             </button>
                         )}
                     </div>
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-5 px-5 mask-fade-right">
-                        {categories.map((cat) => (
+                    {chipCategories.length > 0 ? (
+                    <div
+                        ref={categoryChipStripRef}
+                        role="tablist"
+                        aria-label="Menu categories"
+                        className="flex gap-2 overflow-x-auto no-scrollbar pb-1 pt-0.5 -mx-5 px-5 mask-fade-right snap-x snap-mandatory scroll-pl-5"
+                    >
+                        {chipCategories.map((cat) => (
                             <button
                                 key={cat.id}
-                                onClick={() => {
-                                    setActiveCategory(cat.id);
-                                    setSearchQuery("");
-                                    document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                                }}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeCategory === cat.id}
+                                data-chip-id={cat.id}
+                                id={`chip-${cat.id}`}
+                                onClick={() => scrollToCategory(cat.id)}
                                 className={cn(
-                                    "inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
-                                    activeCategory === cat.id ? "bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white border-transparent shadow-sm shadow-[#d4a853]/20" : "bg-secondary/50 text-muted-foreground border-transparent hover:bg-secondary hover:border-border"
+                                    "snap-start shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
+                                    activeCategory === cat.id
+                                        ? "bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white border-transparent shadow-sm shadow-[#d4a853]/20 ring-2 ring-[#d4a853]/25 ring-offset-2 ring-offset-background"
+                                        : "bg-secondary/50 text-muted-foreground border-transparent hover:bg-secondary hover:border-border",
                                 )}
                             >
                                 <CategoryIconDisplay
@@ -377,6 +460,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             </button>
                         ))}
                     </div>
+                    ) : null}
                 </div>
             </header>
 
@@ -396,7 +480,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     </div>
                 )}
                 {filteredCategories.map((cat) => (
-                    <div key={cat.id} id={`cat-${cat.id}`} className="scroll-mt-48">
+                    <div
+                        key={cat.id}
+                        id={`cat-${cat.id}`}
+                        data-category-id={cat.id}
+                        className="scroll-mt-[11.5rem] sm:scroll-mt-[12.5rem]"
+                    >
                         <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                             <div className="w-1 h-5 bg-gradient-to-b from-[#d4a853] to-[#c9973a] rounded-full" />
                             <CategoryIconDisplay icon={cat.icon} size="md" className="text-[#d4a853]" />
