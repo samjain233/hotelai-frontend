@@ -400,11 +400,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }
 
     return (
-        <div className="min-h-screen pb-32 bg-background font-sans page-transition">
-            <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border supports-[backdrop-filter]:bg-background/70">
+        <div className="min-h-screen pb-32 bg-background font-sans page-transition overflow-x-hidden">
+            <header className="sticky top-0 z-30 w-full min-w-0 max-w-full overflow-x-hidden bg-background/80 backdrop-blur-xl border-b border-border supports-[backdrop-filter]:bg-background/70">
                 <div
                     className={cn(
-                        "px-5 max-w-md mx-auto transition-[padding] duration-300 ease-out motion-reduce:transition-none",
+                        "w-full min-w-0 max-w-md mx-auto px-5 transition-[padding] duration-300 ease-out motion-reduce:transition-none",
                         brandingCollapsed ? "py-2.5" : "py-4",
                     )}
                 >
@@ -494,7 +494,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         ref={categoryChipStripRef}
                         role="tablist"
                         aria-label="Menu categories"
-                        className="flex gap-2 overflow-x-auto no-scrollbar pb-1 pt-0.5 -mx-5 px-5 mask-fade-right snap-x snap-mandatory scroll-pl-5"
+                        className="flex w-full min-w-0 gap-2 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 -mx-5 px-5 mask-fade-right snap-x snap-mandatory scroll-pl-5"
                     >
                         {chipCategories.map((cat) => (
                             <button
@@ -508,7 +508,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 className={cn(
                                     "snap-start shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
                                     activeCategory === cat.id
-                                        ? "bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white border-transparent shadow-sm shadow-[#d4a853]/20 ring-2 ring-[#d4a853]/25 ring-offset-2 ring-offset-background"
+                                        ? "bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white border-transparent shadow-sm shadow-[#d4a853]/20 ring-2 ring-white/35 ring-inset"
                                         : "bg-secondary/50 text-muted-foreground border-transparent hover:bg-secondary hover:border-border",
                                 )}
                             >
@@ -525,7 +525,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 </div>
             </header>
 
-            <main className="max-w-md mx-auto px-5 py-6 space-y-10">
+            <main className="w-full min-w-0 max-w-md mx-auto px-5 py-6 space-y-10">
                 {ENABLE_GUEST_ORDERING && !isOpen && (
                     <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
                         <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
