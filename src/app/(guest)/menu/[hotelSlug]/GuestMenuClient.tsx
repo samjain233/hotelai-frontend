@@ -11,10 +11,20 @@ import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock } from "lucide-react";
+import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, ArrowUpDown, Leaf, Beef, Egg } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
 import { ENABLE_GUEST_ORDERING } from "@/lib/guestMenuConfig";
+import {
+    type GuestDietFilterKey,
+    type GuestMenuSort,
+    normalizeSearchText,
+    filterCategoriesByDiet,
+    filterCategoriesBySearch,
+    applySortToCategories,
+    flattenMenuItems,
+    findDidYouMeanItem,
+} from "@/lib/guestMenuSearch";
 
 // Lazy-load framer-motion overlays (cart, drawers, modals) - only when user interacts
 const AnimatedOverlays = dynamic(
@@ -50,6 +60,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const [notes, setNotes] = useState("");
     const [selectedRoomId, setSelectedRoomId] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+    const [dietFilters, setDietFilters] = useState<GuestDietFilterKey[]>([]);
+    const [sortBy, setSortBy] = useState<GuestMenuSort>("default");
     const [cartAnimKey, setCartAnimKey] = useState(0);
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [pastOrders, setPastOrders] = useState<Order[]>([]);
@@ -75,30 +87,45 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0].id);
     }, [categories, activeCategory]);
 
-    const filteredCategories = useMemo(() => {
-        if (!searchQuery.trim()) return categories;
-        return categories
-            .map((cat) => ({
-                ...cat,
-                items: cat.items.filter(
-                    (item) =>
-                        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        item.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-                ),
-            }))
-            .filter((cat) => cat.items.length > 0);
-    }, [categories, searchQuery]);
+    const dietFilterSet = useMemo(() => new Set(dietFilters), [dietFilters]);
+    const searchNormalized = normalizeSearchText(searchQuery);
 
-    /** Chips match visible sections: all categories, or only those with search hits. */
+    const dietFilteredCategories = useMemo(
+        () => filterCategoriesByDiet(categories, dietFilterSet),
+        [categories, dietFilterSet],
+    );
+
+    const filteredCategories = useMemo(() => {
+        const afterSearch = searchNormalized
+            ? filterCategoriesBySearch(dietFilteredCategories, searchQuery)
+            : dietFilteredCategories.map((c) => ({ ...c, items: [...(c.items ?? [])] }));
+        return applySortToCategories(afterSearch, sortBy);
+    }, [dietFilteredCategories, searchQuery, searchNormalized, sortBy]);
+
+    const didYouMeanItem = useMemo(() => {
+        if (searchNormalized.length < 3) return null;
+        if (flattenMenuItems(filteredCategories).length > 0) return null;
+        const pool = flattenMenuItems(dietFilteredCategories);
+        return findDidYouMeanItem(searchQuery, pool);
+    }, [searchQuery, searchNormalized, filteredCategories, dietFilteredCategories]);
+
+    /** Chips match visible sections: all categories, or only those with search/diet hits. */
     const chipCategories = filteredCategories;
 
     useEffect(() => {
-        if (!searchQuery.trim()) return;
         if (filteredCategories.length === 0) return;
         if (!filteredCategories.some((c) => c.id === activeCategory)) {
             setActiveCategory(filteredCategories[0].id);
         }
-    }, [searchQuery, filteredCategories, activeCategory]);
+    }, [filteredCategories, activeCategory]);
+
+    function toggleDietFilter(key: GuestDietFilterKey) {
+        setDietFilters((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    }
+
+    const resultCount = useMemo(() => flattenMenuItems(filteredCategories).length, [filteredCategories]);
+    const hasActiveFilters = searchNormalized.length > 0 || dietFilters.length > 0;
+    const showNoResultsPanel = !loading && !error && categories.length > 0 && resultCount === 0;
 
     const chipCategoryIdsKey = useMemo(() => chipCategories.map((c) => c.id).join("|"), [chipCategories]);
 
@@ -515,10 +542,79 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             className="w-full bg-secondary/50 border border-border rounded-full pl-10 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#d4a853]/50 focus:border-[#d4a853]/30 transition-all"
                         />
                         {searchQuery && (
-                            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <button
+                                type="button"
+                                aria-label="Clear search"
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
                                 <X className="w-4 h-4" />
                             </button>
                         )}
+                    </div>
+                    <div className="flex flex-col gap-2.5 mb-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0 w-8">Diet</span>
+                            <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0 pb-0.5 mask-fade-right">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleDietFilter("VEG")}
+                                    aria-pressed={dietFilters.includes("VEG")}
+                                    className={cn(
+                                        "inline-flex items-center gap-1.5 shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                                        dietFilters.includes("VEG")
+                                            ? "border-green-600/50 bg-green-500/15 text-green-800 dark:text-green-200"
+                                            : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary",
+                                    )}
+                                >
+                                    <Leaf className="w-3.5 h-3.5" />
+                                    Veg
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleDietFilter("NON_VEG")}
+                                    aria-pressed={dietFilters.includes("NON_VEG")}
+                                    className={cn(
+                                        "inline-flex items-center gap-1.5 shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                                        dietFilters.includes("NON_VEG")
+                                            ? "border-red-600/50 bg-red-500/15 text-red-800 dark:text-red-200"
+                                            : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary",
+                                    )}
+                                >
+                                    <Beef className="w-3.5 h-3.5" />
+                                    Non-veg
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleDietFilter("EGGITARIAN")}
+                                    aria-pressed={dietFilters.includes("EGGITARIAN")}
+                                    className={cn(
+                                        "inline-flex items-center gap-1.5 shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                                        dietFilters.includes("EGGITARIAN")
+                                            ? "border-amber-600/50 bg-amber-500/15 text-amber-900 dark:text-amber-100"
+                                            : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary",
+                                    )}
+                                >
+                                    <Egg className="w-3.5 h-3.5" />
+                                    Egg
+                                </button>
+                            </div>
+                        </div>
+                        <label className="flex items-center gap-2 min-w-0">
+                            <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0 w-8">Sort</span>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value as GuestMenuSort)}
+                                className="min-w-0 flex-1 rounded-full border border-border bg-secondary/50 py-1.5 pl-3 pr-8 text-xs font-medium text-foreground focus:border-[#d4a853]/40 focus:outline-none focus:ring-1 focus:ring-[#d4a853]/30"
+                            >
+                                <option value="default">Menu order</option>
+                                <option value="name-asc">Name (A–Z)</option>
+                                <option value="name-desc">Name (Z–A)</option>
+                                <option value="price-asc">Price (low to high)</option>
+                                <option value="price-desc">Price (high to low)</option>
+                            </select>
+                        </label>
                     </div>
                     {chipCategories.length > 0 ? (
                     <div
@@ -566,9 +662,19 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         </div>
                     </div>
                 )}
-                {searchQuery && (
+                {hasActiveFilters && resultCount > 0 && (
                     <div className="text-sm text-muted-foreground">
-                        {filteredCategories.reduce((sum, cat) => sum + cat.items.length, 0)} results for &ldquo;<span className="text-gold font-medium">{searchQuery}</span>&rdquo;
+                        <span className="font-medium text-foreground">{resultCount}</span>{" "}
+                        {resultCount === 1 ? "dish" : "dishes"}
+                        {searchNormalized ? (
+                            <>
+                                {" "}
+                                matching &ldquo;<span className="text-gold font-medium">{searchQuery.trim()}</span>&rdquo;
+                            </>
+                        ) : null}
+                        {dietFilters.length > 0 ? (
+                            <span className="text-muted-foreground/80"> · filtered by diet</span>
+                        ) : null}
                     </div>
                 )}
                 {filteredCategories.map((cat) => (
@@ -587,7 +693,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             {cat.name}
                         </h2>
                         <div className="space-y-4">
-                            {cat.items.map((item, itemIndex) => {
+                            {(cat.items ?? []).map((item, itemIndex) => {
                                 const qty = ENABLE_GUEST_ORDERING ? getCartQuantity(item.id) : 0;
                                 return (
                                     <div
@@ -665,11 +771,54 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         </div>
                     </div>
                 ))}
-                {searchQuery && filteredCategories.length === 0 && (
-                    <div className="text-center py-16">
-                        <Search className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-20" />
-                        <p className="text-muted-foreground">No dishes found</p>
-                        <button onClick={() => setSearchQuery("")} className="text-sm text-gold mt-2 hover:underline">Clear search</button>
+                {showNoResultsPanel && (
+                    <div className="rounded-2xl border border-border bg-card/80 px-5 py-10 text-center shadow-sm">
+                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-secondary/80">
+                            <Search className="h-7 w-7 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-base font-semibold text-foreground">No dishes match</h3>
+                        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                            {searchNormalized
+                                ? "Try a shorter search, check spelling, or clear filters. We also match close names and extra spaces."
+                                : "No items match the diet filters you selected. Turn off a filter or pick another type."}
+                        </p>
+                        {didYouMeanItem && (
+                            <div className="mt-5 rounded-xl border border-[#d4a853]/25 bg-[#d4a853]/5 px-4 py-3">
+                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Did you mean</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery(didYouMeanItem.name)}
+                                    className="mt-1 text-base font-semibold text-[#b8860b] hover:underline dark:text-[#d4a853]"
+                                >
+                                    {didYouMeanItem.name}
+                                </button>
+                            </div>
+                        )}
+                        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                            {searchNormalized ? (
+                                <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setSearchQuery("")}>
+                                    Clear search
+                                </Button>
+                            ) : null}
+                            {dietFilters.length > 0 ? (
+                                <Button type="button" variant="outline" className="w-full sm:w-auto border-border" onClick={() => setDietFilters([])}>
+                                    Clear diet filters
+                                </Button>
+                            ) : null}
+                            {searchNormalized && dietFilters.length > 0 ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full sm:w-auto border-border"
+                                    onClick={() => {
+                                        setSearchQuery("");
+                                        setDietFilters([]);
+                                    }}
+                                >
+                                    Reset all
+                                </Button>
+                            ) : null}
+                        </div>
                     </div>
                 )}
             </main>

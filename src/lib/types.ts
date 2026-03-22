@@ -66,6 +66,8 @@ export interface BulkMenuImportRow {
     categoryName?: string;
     description?: string;
     imageUrl?: string;
+    /** Optional aliases for guest search (e.g. Hindi + Latin); API may ignore until supported. */
+    searchAliases?: string[];
     dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
     available?: boolean;
 }
@@ -79,6 +81,8 @@ export interface MenuItem {
     id: string;
     name: string;
     description?: string;
+    /** Optional Hindi/Latin aliases for guest search when hotels provide them (API may omit until supported). */
+    searchAliases?: string[];
     price: number;
     imageUrl?: string;
     available: boolean;
