@@ -357,12 +357,17 @@ export default function MenuDesignPage() {
                         </div>
 
                         {menuUrl ? (
-                            <Button variant="secondary" className="w-full gap-2" asChild>
-                                <Link href={menuUrl} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="h-4 w-4 shrink-0" />
-                                    Open real guest menu
-                                </Link>
-                            </Button>
+                            <Link
+                                href={menuUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={cn(
+                                    "inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/5 bg-secondary px-4 text-sm font-medium text-secondary-foreground transition-all duration-200 hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]",
+                                )}
+                            >
+                                <ExternalLink className="h-4 w-4 shrink-0" />
+                                Open real guest menu
+                            </Link>
                         ) : null}
                     </aside>
                 </div>
