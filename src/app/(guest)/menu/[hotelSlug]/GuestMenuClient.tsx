@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { MenuItem, CartItem, Order } from "@/lib/types";
 import type { PublicMenuFullData } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -11,7 +11,7 @@ import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, ArrowUpDown, Leaf, Beef, Egg } from "lucide-react";
+import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, SlidersHorizontal, ChevronLeft, Share2, Bookmark, Egg } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
 import { ENABLE_GUEST_ORDERING } from "@/lib/guestMenuConfig";
@@ -25,6 +25,15 @@ import {
     flattenMenuItems,
     findDidYouMeanItem,
 } from "@/lib/guestMenuSearch";
+import { IndianVegMark, IndianNonVegMark } from "./GuestMenuDietIcons";
+
+const SORT_CHIP_LABELS: Record<GuestMenuSort, string> = {
+    default: "Default",
+    "name-asc": "A → Z",
+    "name-desc": "Z → A",
+    "price-asc": "₹ Low → High",
+    "price-desc": "₹ High → Low",
+};
 
 // Lazy-load framer-motion overlays (cart, drawers, modals) - only when user interacts
 const AnimatedOverlays = dynamic(
@@ -42,6 +51,7 @@ interface Props {
 }
 
 export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
+    const router = useRouter();
     const menuRes = usePublicMenuFull(hotelSlug, { fallbackData: initialData || undefined });
 
     const hotel = menuRes.data?.hotel ?? null;
@@ -67,6 +77,9 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const [pastOrders, setPastOrders] = useState<Order[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [guestLogoFailed, setGuestLogoFailed] = useState(false);
+    const [showCategoryNav, setShowCategoryNav] = useState(false);
+    const [expandedDescId, setExpandedDescId] = useState<string | null>(null);
+    const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
     /** True while programmatic scroll-to-section is running (ignore scroll-spy updates). */
     const scrollSpySuspended = useRef(false);
@@ -172,7 +185,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             raf = requestAnimationFrame(() => {
                 const cats = chipCategoriesRef.current;
                 if (cats.length === 0) return;
-                const line = brandingCollapsedRef.current ? 120 : 188;
+                const line = brandingCollapsedRef.current ? 148 : 228;
                 let currentId = cats[0].id;
                 for (const cat of cats) {
                     const el = document.getElementById(`cat-${cat.id}`);
@@ -354,50 +367,44 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background page-transition">
-                <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
-                    <div className="px-5 py-4 max-w-md mx-auto">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-11 h-11 rounded-xl animate-shimmer flex-shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                                <div className="h-5 w-28 animate-shimmer rounded" />
-                                <div className="h-3 w-20 animate-shimmer rounded" />
-                            </div>
-                            <div className="h-8 w-14 animate-shimmer rounded-full" />
+            <div className="min-h-screen bg-zinc-950 page-transition text-zinc-100">
+                <div className="sticky top-0 z-30 border-b border-white/10 bg-zinc-950/90 backdrop-blur-xl">
+                    <div className="max-w-md mx-auto px-4 py-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
+                            <div className="h-10 flex-1 animate-shimmer rounded-full bg-zinc-800/80" />
+                            <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
                         </div>
-                        <div className="h-9 w-full animate-shimmer rounded-full mb-3" />
-                        <div className="flex gap-2">
-                            {Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="h-8 animate-shimmer rounded-full flex-shrink-0" style={{ width: `${60 + i * 12}px` }} />
+                        <div className="flex gap-2 overflow-hidden">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <div key={i} className="h-9 shrink-0 animate-shimmer rounded-full bg-zinc-800/80" style={{ width: `${72 + i * 8}px` }} />
                             ))}
                         </div>
                     </div>
                 </div>
-                <div className="max-w-md mx-auto px-5 py-6 space-y-8">
-                    <div className="text-center py-2 space-y-2">
-                        <div className="h-7 w-32 animate-shimmer rounded mx-auto" />
-                        <div className="h-0.5 w-12 animate-shimmer rounded mx-auto" />
-                        <div className="h-3 w-48 animate-shimmer rounded mx-auto" />
-                    </div>
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <div className="w-1 h-5 animate-shimmer rounded-full" />
-                            <div className="h-5 w-20 animate-shimmer rounded" />
+                <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+                    {Array.from({ length: 3 }).map((_, s) => (
+                        <div key={s} className="space-y-3">
+                            <div className="h-5 w-32 animate-shimmer rounded bg-zinc-800/80" />
+                            {Array.from({ length: 3 }).map((_, i) => (
+                                <div
+                                    key={`${s}-${i}`}
+                                    className="flex gap-3 border-b border-dashed border-white/10 pb-4"
+                                    style={{ animationDelay: `${i * 0.1}s` }}
+                                >
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-4 w-[70%] animate-shimmer rounded bg-zinc-800/80" />
+                                        <div className="h-3 w-16 animate-shimmer rounded bg-zinc-800/80" />
+                                        <div className="h-3 w-full animate-shimmer rounded bg-zinc-800/80" />
+                                    </div>
+                                    <div className="w-[108px] shrink-0 space-y-2">
+                                        <div className="aspect-[4/3] w-full animate-shimmer rounded-lg bg-zinc-800/80" />
+                                        <div className="h-9 w-full animate-shimmer rounded-md bg-zinc-800/80" />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={`a-${i}`} className="skeleton-card bg-card rounded-xl p-4 border border-border" style={{ animationDelay: `${i * 0.2}s` }}>
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="h-5 animate-shimmer rounded" style={{ width: `${100 + i * 20}px` }} />
-                                    <div className="h-4 w-12 animate-shimmer rounded" />
-                                </div>
-                                <div className="h-3 w-full animate-shimmer rounded mb-1.5" />
-                                <div className="h-3 animate-shimmer rounded mb-4" style={{ width: `${60 + i * 8}%` }} />
-                                <div className="flex justify-end">
-                                    <div className="h-8 w-16 animate-shimmer rounded-lg" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    ))}
                 </div>
             </div>
         );
@@ -405,13 +412,13 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center px-4 bg-background text-center">
+            <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 text-center text-zinc-100">
                 <div>
-                    <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-4">
-                        <UtensilsCrossed className="w-8 h-8" />
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15 text-rose-400">
+                        <UtensilsCrossed className="h-8 w-8" />
                     </div>
-                    <h2 className="text-xl font-bold text-foreground mb-2">Menu Unavailable</h2>
-                    <p className="text-sm text-muted-foreground">{error}</p>
+                    <h2 className="mb-2 text-xl font-bold text-white">Menu unavailable</h2>
+                    <p className="text-sm text-zinc-500">{error}</p>
                 </div>
             </div>
         );
@@ -419,38 +426,38 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     if (ENABLE_GUEST_ORDERING && order) {
         return (
-            <div className="min-h-screen flex items-center justify-center px-6 bg-background">
-                <div className="w-full max-w-sm text-center animate-scale-in">
-                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6 text-primary ring-4 ring-primary/5">
-                        <CheckCircle2 className="w-10 h-10" />
+            <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-zinc-100">
+                <div className="animate-scale-in w-full max-w-sm text-center">
+                    <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 ring-4 ring-emerald-500/10">
+                        <CheckCircle2 className="h-10 w-10" />
                     </div>
-                    <h1 className="text-2xl font-bold text-foreground mb-2">Order Confirmed!</h1>
-                    <p className="text-muted-foreground mb-8">
-                        Order <span className="font-mono font-medium text-foreground">#{order.orderNumber}</span> has been sent to the kitchen.
+                    <h1 className="mb-2 text-2xl font-bold text-white">Order confirmed</h1>
+                    <p className="mb-8 text-zinc-500">
+                        Order <span className="font-mono font-medium text-white">#{order.orderNumber}</span> has been sent to the kitchen.
                     </p>
-                    <div className="dashboard-card bg-card p-0 overflow-hidden text-left mb-6">
-                        <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Receipt</span>
+                    <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 text-left">
+                        <div className="flex items-center justify-between border-b border-white/10 bg-zinc-800/50 px-4 py-3">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Receipt</span>
                             <Badge variant={order.status === "DELIVERED" ? "success" : order.status === "CANCELLED" ? "danger" : "warning"}>{order.status}</Badge>
                         </div>
-                        <div className="p-4 space-y-3">
+                        <div className="space-y-3 p-4">
                             {order.items.map((oi) => (
                                 <div key={oi.id} className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">
-                                        <span className="font-semibold text-foreground mr-2">{oi.quantity}x</span>
+                                    <span className="text-zinc-500">
+                                        <span className="mr-2 font-semibold text-white">{oi.quantity}x</span>
                                         {oi.itemName}
                                     </span>
-                                    <span className="text-foreground font-medium">{formatPrice(oi.price * oi.quantity)}</span>
+                                    <span className="font-medium text-white">{formatPrice(oi.price * oi.quantity)}</span>
                                 </div>
                             ))}
                         </div>
-                        <div className="p-4 bg-muted/20 border-t border-border flex justify-between items-center">
-                            <span className="font-semibold text-foreground">Total</span>
-                            <span className="text-lg font-bold text-primary">{formatPrice(order.totalAmount)}</span>
+                        <div className="flex items-center justify-between border-t border-white/10 bg-zinc-800/50 px-4 py-4">
+                            <span className="font-semibold text-white">Total</span>
+                            <span className="text-lg font-bold text-rose-400">{formatPrice(order.totalAmount)}</span>
                         </div>
                     </div>
-                    <Button variant="secondary" className="w-full" onClick={() => setOrder(null)}>
-                        Back to Menu
+                    <Button className="w-full border-white/10 bg-zinc-800 text-white hover:bg-zinc-700" variant="secondary" onClick={() => setOrder(null)}>
+                        Back to menu
                     </Button>
                 </div>
             </div>
@@ -458,155 +465,141 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }
 
     return (
-        <div className="min-h-screen pb-32 bg-background font-sans page-transition overflow-x-hidden">
-            <header className="sticky top-0 z-30 w-full min-w-0 max-w-full overflow-x-hidden bg-background/80 backdrop-blur-xl border-b border-border supports-[backdrop-filter]:bg-background/70">
+        <div className="min-h-screen bg-zinc-950 pb-28 font-sans text-zinc-100 page-transition overflow-x-hidden">
+            <header className="sticky top-0 z-30 w-full min-w-0 max-w-full overflow-x-hidden border-b border-white/[0.08] bg-zinc-950/90 backdrop-blur-xl">
                 <div
                     className={cn(
-                        "w-full min-w-0 max-w-md mx-auto px-5 transition-[padding] duration-300 ease-out motion-reduce:transition-none",
-                        brandingCollapsed ? "py-2.5" : "py-4",
+                        "w-full min-w-0 max-w-md mx-auto px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none",
+                        brandingCollapsed ? "pt-2 pb-2" : "pt-3 pb-2",
                     )}
                 >
                     <div
                         className={cn(
-                            "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+                            "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none overflow-hidden",
                             brandingCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
                         )}
                     >
-                        <div className="min-h-0 overflow-hidden">
-                            <div className="flex items-center gap-3 mb-3">
+                        <div className="min-h-0">
+                            <div className="flex items-center gap-2.5 pb-2.5">
                                 {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
                                     <Image
                                         src={hotel.logoUrl.trim()}
                                         alt=""
-                                        width={44}
-                                        height={44}
-                                        sizes="44px"
+                                        width={36}
+                                        height={36}
+                                        sizes="36px"
                                         priority
-                                        className="w-11 h-11 rounded-xl object-cover shadow-lg shadow-[#d4a853]/20 ring-1 ring-border/60 bg-card shrink-0"
+                                        className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/10 bg-zinc-900 shrink-0"
                                         onError={() => setGuestLogoFailed(true)}
                                     />
                                 ) : (
-                                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#d4a853] to-[#c9973a] flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-[#d4a853]/20 shrink-0">
+                                    <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-rose-600 to-rose-800 flex items-center justify-center text-white text-sm font-bold shrink-0 ring-1 ring-white/10">
                                         {hotel?.name?.charAt(0) || "H"}
                                     </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                    <h1 className="text-lg font-bold text-foreground leading-tight truncate">{hotel?.name}</h1>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <h1 className="text-sm font-bold text-white leading-tight truncate">{hotel?.name}</h1>
+                                    <p className="text-[11px] text-zinc-500 flex items-center gap-1">
                                         {roomDisplayName ? (
                                             <>
-                                                <MapPin className="w-3 h-3 text-gold" />
+                                                <MapPin className="w-3 h-3 text-rose-400/90" />
                                                 <span>Room {roomDisplayName}</span>
                                             </>
                                         ) : (
-                                            <span className="italic">Explore our curated selections</span>
+                                            <span className="italic text-zinc-600">Digital menu</span>
                                         )}
                                     </p>
                                 </div>
-                                {ENABLE_GUEST_ORDERING && (
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        {pastOrders.length > 0 && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setShowHistory(true)}
-                                                className="h-8 rounded-full bg-background border-border text-xs px-3 shadow-sm"
-                                            >
-                                                <Receipt className="w-3.5 h-3.5 mr-1.5" /> Bill
-                                            </Button>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
-                    {ENABLE_GUEST_ORDERING && brandingCollapsed && pastOrders.length > 0 && (
-                        <div className="flex justify-end mb-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowHistory(true)}
-                                className="h-8 rounded-full bg-background border-border text-xs px-3 shadow-sm"
-                            >
-                                <Receipt className="w-3.5 h-3.5 mr-1.5" /> Bill
-                            </Button>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => router.back()}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-zinc-300 ring-1 ring-white/10 hover:bg-zinc-800 hover:text-white active:scale-95 transition-transform"
+                            aria-label="Go back"
+                        >
+                            <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <div className="relative flex-1 min-w-0">
+                            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                            <input
+                                type="search"
+                                enterKeyHint="search"
+                                placeholder='Search "biryani", "coffee"...'
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full rounded-full border border-white/10 bg-zinc-900 py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-zinc-500 focus:border-rose-500/40 focus:outline-none focus:ring-1 focus:ring-rose-500/30"
+                            />
+                            {searchQuery ? (
+                                <button
+                                    type="button"
+                                    aria-label="Clear search"
+                                    onClick={() => setSearchQuery("")}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            ) : null}
                         </div>
-                    )}
-                    <div className="relative mb-3">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <input
-                            type="text"
-                            placeholder="Search dishes..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-secondary/50 border border-border rounded-full pl-10 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#d4a853]/50 focus:border-[#d4a853]/30 transition-all"
-                        />
-                        {searchQuery && (
+                        <div className="relative shrink-0">
                             <button
                                 type="button"
-                                aria-label="Clear search"
-                                onClick={() => setSearchQuery("")}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                onClick={() => setShowHeaderMenu((v) => !v)}
+                                className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-zinc-300 ring-1 ring-white/10 hover:bg-zinc-800 hover:text-white"
+                                aria-expanded={showHeaderMenu}
+                                aria-haspopup="menu"
+                                aria-label="Menu"
                             >
-                                <X className="w-4 h-4" />
+                                <span className="flex flex-col gap-1">
+                                    <span className="block h-0.5 w-4 rounded-full bg-current" />
+                                    <span className="block h-0.5 w-4 rounded-full bg-current" />
+                                    <span className="block h-0.5 w-4 rounded-full bg-current" />
+                                </span>
                             </button>
-                        )}
-                    </div>
-                    <div className="flex flex-col gap-2.5 mb-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0 w-8">Diet</span>
-                            <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0 pb-0.5 mask-fade-right">
-                                <button
-                                    type="button"
-                                    onClick={() => toggleDietFilter("VEG")}
-                                    aria-pressed={dietFilters.includes("VEG")}
-                                    className={cn(
-                                        "inline-flex items-center gap-1.5 shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                                        dietFilters.includes("VEG")
-                                            ? "border-green-600/50 bg-green-500/15 text-green-800 dark:text-green-200"
-                                            : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary",
-                                    )}
-                                >
-                                    <Leaf className="w-3.5 h-3.5" />
-                                    Veg
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => toggleDietFilter("NON_VEG")}
-                                    aria-pressed={dietFilters.includes("NON_VEG")}
-                                    className={cn(
-                                        "inline-flex items-center gap-1.5 shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                                        dietFilters.includes("NON_VEG")
-                                            ? "border-red-600/50 bg-red-500/15 text-red-800 dark:text-red-200"
-                                            : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary",
-                                    )}
-                                >
-                                    <Beef className="w-3.5 h-3.5" />
-                                    Non-veg
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => toggleDietFilter("EGGITARIAN")}
-                                    aria-pressed={dietFilters.includes("EGGITARIAN")}
-                                    className={cn(
-                                        "inline-flex items-center gap-1.5 shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                                        dietFilters.includes("EGGITARIAN")
-                                            ? "border-amber-600/50 bg-amber-500/15 text-amber-900 dark:text-amber-100"
-                                            : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary",
-                                    )}
-                                >
-                                    <Egg className="w-3.5 h-3.5" />
-                                    Egg
-                                </button>
-                            </div>
+                            {showHeaderMenu ? (
+                                <>
+                                    <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="Close menu" onClick={() => setShowHeaderMenu(false)} />
+                                    <div
+                                        role="menu"
+                                        className="absolute right-0 top-12 z-50 min-w-[160px] rounded-xl border border-white/10 bg-zinc-900 py-1 shadow-xl shadow-black/50"
+                                    >
+                                        {ENABLE_GUEST_ORDERING && pastOrders.length > 0 ? (
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+                                                onClick={() => {
+                                                    setShowHeaderMenu(false);
+                                                    setShowHistory(true);
+                                                }}
+                                            >
+                                                <Receipt className="h-4 w-4 text-rose-400" />
+                                                Bills &amp; history
+                                            </button>
+                                        ) : (
+                                            <p className="px-4 py-3 text-xs text-zinc-500">No actions</p>
+                                        )}
+                                    </div>
+                                </>
+                            ) : null}
                         </div>
-                        <label className="flex items-center gap-2 min-w-0">
-                            <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />
-                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0 w-8">Sort</span>
+                    </div>
+
+                    <div
+                        id="guest-menu-filters"
+                        className="mt-3 flex w-full min-w-0 gap-2 overflow-x-auto no-scrollbar pb-1 pt-0.5 -mx-4 px-4 mask-fade-right"
+                    >
+                        <label className="relative flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-zinc-900 py-2 pl-2.5 pr-3 text-xs font-semibold text-zinc-200 ring-1 ring-white/5 hover:border-white/15">
+                            <SlidersHorizontal className="h-3.5 w-3.5 text-zinc-400" aria-hidden />
+                            <span className="max-w-[100px] truncate">{SORT_CHIP_LABELS[sortBy]}</span>
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value as GuestMenuSort)}
-                                className="min-w-0 flex-1 rounded-full border border-border bg-secondary/50 py-1.5 pl-3 pr-8 text-xs font-medium text-foreground focus:border-[#d4a853]/40 focus:outline-none focus:ring-1 focus:ring-[#d4a853]/30"
+                                className="absolute inset-0 cursor-pointer opacity-0"
+                                aria-label="Sort menu"
                             >
                                 <option value="default">Menu order</option>
                                 <option value="name-asc">Name (A–Z)</option>
@@ -615,66 +608,107 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 <option value="price-desc">Price (high to low)</option>
                             </select>
                         </label>
+                        <button
+                            type="button"
+                            onClick={() => toggleDietFilter("VEG")}
+                            aria-pressed={dietFilters.includes("VEG")}
+                            className={cn(
+                                "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
+                                dietFilters.includes("VEG")
+                                    ? "border-green-500/50 bg-green-500/15 text-green-300"
+                                    : "border-white/10 bg-zinc-900 text-zinc-400 hover:border-white/20 hover:text-zinc-200",
+                            )}
+                        >
+                            <IndianVegMark className="h-[16px] w-[16px]" />
+                            Veg
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => toggleDietFilter("NON_VEG")}
+                            aria-pressed={dietFilters.includes("NON_VEG")}
+                            className={cn(
+                                "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
+                                dietFilters.includes("NON_VEG")
+                                    ? "border-orange-500/50 bg-orange-500/15 text-orange-200"
+                                    : "border-white/10 bg-zinc-900 text-zinc-400 hover:border-white/20 hover:text-zinc-200",
+                            )}
+                        >
+                            <IndianNonVegMark className="h-[16px] w-[16px]" />
+                            Non-veg
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => toggleDietFilter("EGGITARIAN")}
+                            aria-pressed={dietFilters.includes("EGGITARIAN")}
+                            className={cn(
+                                "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
+                                dietFilters.includes("EGGITARIAN")
+                                    ? "border-amber-500/50 bg-amber-500/15 text-amber-200"
+                                    : "border-white/10 bg-zinc-900 text-zinc-400 hover:border-white/20 hover:text-zinc-200",
+                            )}
+                        >
+                            <Egg className="h-3.5 w-3.5 text-amber-400/90" />
+                            Egg
+                        </button>
                     </div>
+
                     {chipCategories.length > 0 ? (
-                    <div
-                        ref={categoryChipStripRef}
-                        role="tablist"
-                        aria-label="Menu categories"
-                        className="flex w-full min-w-0 gap-2 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 -mx-5 px-5 mask-fade-right snap-x snap-mandatory scroll-pl-5"
-                    >
-                        {chipCategories.map((cat) => (
-                            <button
-                                key={cat.id}
-                                type="button"
-                                role="tab"
-                                aria-selected={activeCategory === cat.id}
-                                data-chip-id={cat.id}
-                                id={`chip-${cat.id}`}
-                                onClick={() => scrollToCategory(cat.id)}
-                                className={cn(
-                                    "snap-start shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
-                                    activeCategory === cat.id
-                                        ? "bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white border-transparent shadow-sm shadow-[#d4a853]/20 ring-2 ring-white/35 ring-inset"
-                                        : "bg-secondary/50 text-muted-foreground border-transparent hover:bg-secondary hover:border-border",
-                                )}
-                            >
-                                <CategoryIconDisplay
-                                    icon={cat.icon}
-                                    size="sm"
-                                    className={activeCategory === cat.id ? "text-white" : "text-muted-foreground"}
-                                />
-                                {cat.name}
-                            </button>
-                        ))}
-                    </div>
+                        <div
+                            ref={categoryChipStripRef}
+                            role="tablist"
+                            aria-label="Menu categories"
+                            className="flex w-full min-w-0 gap-2 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-4 px-4 mask-fade-right snap-x snap-mandatory scroll-pl-4"
+                        >
+                            {chipCategories.map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={activeCategory === cat.id}
+                                    data-chip-id={cat.id}
+                                    id={`chip-${cat.id}`}
+                                    onClick={() => scrollToCategory(cat.id)}
+                                    className={cn(
+                                        "snap-start shrink-0 inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
+                                        activeCategory === cat.id
+                                            ? "border-rose-500/50 bg-rose-500/20 text-rose-100 shadow-[0_0_20px_-8px_rgba(244,63,94,0.5)]"
+                                            : "border-white/10 bg-zinc-900 text-zinc-400 hover:border-white/20 hover:text-zinc-200",
+                                    )}
+                                >
+                                    <CategoryIconDisplay
+                                        icon={cat.icon}
+                                        size="sm"
+                                        className={activeCategory === cat.id ? "text-rose-300" : "text-zinc-500"}
+                                    />
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
                     ) : null}
                 </div>
             </header>
 
-            <main className="w-full min-w-0 max-w-md mx-auto px-5 py-6 space-y-10">
+            <main className="w-full min-w-0 max-w-md mx-auto px-4 py-5 space-y-8">
                 {ENABLE_GUEST_ORDERING && !isOpen && (
-                    <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
-                        <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                    <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
+                        <Clock className="w-5 h-5 text-amber-400 flex-shrink-0" />
                         <div>
-                            <p className="font-semibold text-foreground text-sm">Room service is currently closed</p>
-                            <p className="text-xs text-muted-foreground">Orders can be placed during operating hours.</p>
+                            <p className="font-semibold text-white text-sm">Room service is currently closed</p>
+                            <p className="text-xs text-zinc-400">Orders can be placed during operating hours.</p>
                         </div>
                     </div>
                 )}
                 {hasActiveFilters && resultCount > 0 && (
-                    <div className="text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">{resultCount}</span>{" "}
+                    <div className="text-xs text-zinc-500">
+                        <span className="font-semibold text-zinc-300">{resultCount}</span>{" "}
                         {resultCount === 1 ? "dish" : "dishes"}
                         {searchNormalized ? (
                             <>
                                 {" "}
-                                matching &ldquo;<span className="text-gold font-medium">{searchQuery.trim()}</span>&rdquo;
+                                for &ldquo;<span className="text-rose-300/90">{searchQuery.trim()}</span>&rdquo;
                             </>
                         ) : null}
-                        {dietFilters.length > 0 ? (
-                            <span className="text-muted-foreground/80"> · filtered by diet</span>
-                        ) : null}
+                        {dietFilters.length > 0 ? <span> · diet filter on</span> : null}
                     </div>
                 )}
                 {filteredCategories.map((cat) => (
@@ -684,111 +718,146 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         data-category-id={cat.id}
                         className={cn(
                             "transition-[scroll-margin] duration-300 motion-reduce:transition-none",
-                            brandingCollapsed ? "scroll-mt-28 sm:scroll-mt-32" : "scroll-mt-[11.5rem] sm:scroll-mt-[12.5rem]",
+                            brandingCollapsed ? "scroll-mt-40 sm:scroll-mt-44" : "scroll-mt-[15rem] sm:scroll-mt-[16rem]",
                         )}
                     >
-                        <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                            <div className="w-1 h-5 bg-gradient-to-b from-[#d4a853] to-[#c9973a] rounded-full" />
-                            <CategoryIconDisplay icon={cat.icon} size="md" className="text-[#d4a853]" />
+                        <h2 className="mb-4 flex items-center gap-2 text-base font-bold tracking-tight text-white">
+                            <CategoryIconDisplay icon={cat.icon} size="md" className="text-rose-400" />
                             {cat.name}
                         </h2>
-                        <div className="space-y-4">
+                        <ul className="divide-y divide-dashed divide-white/10">
                             {(cat.items ?? []).map((item, itemIndex) => {
                                 const qty = ENABLE_GUEST_ORDERING ? getCartQuantity(item.id) : 0;
+                                const desc = item.description?.trim() ?? "";
+                                const descLong = desc.length > 72;
+                                const descOpen = expandedDescId === item.id;
                                 return (
-                                    <div
+                                    <li
                                         key={item.id}
-                                        className="menu-card bg-card rounded-xl p-4 flex gap-4 shadow-sm animate-fade-in-up"
-                                        style={{ animationDelay: `${itemIndex * 50}ms` }}
+                                        className="flex gap-3 py-4 first:pt-0 animate-fade-in-up"
+                                        style={{ animationDelay: `${itemIndex * 40}ms` }}
                                     >
-                                        {item.imageUrl && (
-                                            <div className="w-20 h-20 rounded-lg bg-secondary flex-shrink-0 overflow-hidden">
-                                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                            </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="mb-1 flex items-start justify-between gap-3">
-                                                <h3
-                                                    className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground line-clamp-2 break-words"
-                                                    title={item.name}
-                                                >
-                                                    {item.name}
-                                                </h3>
-                                                <div className="flex shrink-0 flex-col items-end gap-1">
-                                                    {item.dietaryPreference === "VEG" && (
-                                                        <div
-                                                            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border border-green-500"
-                                                            title="Vegetarian"
-                                                        >
-                                                            <div className="h-2 w-2 rounded-full bg-green-500" />
-                                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex gap-2">
+                                                <div className="mt-0.5 shrink-0">
+                                                    {item.dietaryPreference === "VEG" ? (
+                                                        <IndianVegMark />
+                                                    ) : item.dietaryPreference === "NON_VEG" ? (
+                                                        <IndianNonVegMark />
+                                                    ) : item.dietaryPreference === "EGGITARIAN" ? (
+                                                        <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded border border-amber-500/60" title="Contains egg">
+                                                            <Egg className="h-3 w-3 text-amber-400" />
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-block h-[18px] w-[18px]" aria-hidden />
                                                     )}
-                                                    {item.dietaryPreference === "NON_VEG" && (
-                                                        <div
-                                                            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border border-red-500"
-                                                            title="Non-Vegetarian"
-                                                        >
-                                                            <div className="h-2 w-2 rounded-full bg-red-500" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="text-[15px] font-bold leading-snug text-white" title={item.name}>
+                                                        {item.name}
+                                                    </h3>
+                                                    <p className="mt-1 text-sm font-semibold text-white">{formatPrice(item.price)}</p>
+                                                    {desc ? (
+                                                        <div className="mt-1.5">
+                                                            <p
+                                                                className={cn(
+                                                                    "text-[13px] leading-relaxed text-zinc-500",
+                                                                    !descOpen && descLong && "line-clamp-2",
+                                                                )}
+                                                            >
+                                                                {desc}
+                                                            </p>
+                                                            {descLong ? (
+                                                                <button
+                                                                    type="button"
+                                                                    className="mt-0.5 text-xs font-medium text-rose-400/90 hover:text-rose-300"
+                                                                    onClick={() => setExpandedDescId((id) => (id === item.id ? null : item.id))}
+                                                                >
+                                                                    {descOpen ? "less" : "…more"}
+                                                                </button>
+                                                            ) : null}
                                                         </div>
-                                                    )}
-                                                    {item.dietaryPreference === "EGGITARIAN" && (
-                                                        <div
-                                                            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border border-yellow-500"
-                                                            title="Contains Egg"
-                                                        >
-                                                            <div className="h-2 w-2 rounded-full bg-yellow-500" />
-                                                        </div>
-                                                    )}
-                                                    <span className="text-sm font-bold whitespace-nowrap text-gold">{formatPrice(item.price)}</span>
+                                                    ) : null}
+                                                    <div className="mt-3 flex items-center gap-4 text-zinc-600 opacity-50" aria-hidden>
+                                                        <Bookmark className="h-4 w-4" />
+                                                        <Share2 className="h-4 w-4" />
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
-                                            <div className="flex justify-end min-h-[32px] items-center">
-                                                {!ENABLE_GUEST_ORDERING ? (
-                                                    !item.available ? (
-                                                        <span className="text-xs text-muted-foreground font-medium">Unavailable</span>
-                                                    ) : null
-                                                ) : qty === 0 ? (
-                                                    <Button size="sm" onClick={() => addToCart(item)} disabled={!item.available || !isOpen} variant={item.available && isOpen ? "secondary" : "ghost"} className={cn("h-8 text-xs", (!item.available || !isOpen) && "opacity-50")}>
-                                                        {!isOpen ? "Closed" : item.available ? <><Plus className="w-3.5 h-3.5 mr-1.5" /> Add</> : "Sold Out"}
-                                                    </Button>
-                                                ) : (
-                                                    <div className="flex items-center gap-3 bg-secondary rounded-lg p-1">
-                                                        <button type="button" onClick={() => removeFromCart(item.id)} className="w-7 h-7 flex items-center justify-center rounded-md bg-white hover:bg-zinc-200 text-black transition-colors">
-                                                            <Minus className="w-4 h-4" />
-                                                        </button>
-                                                        <span className="font-bold text-foreground w-4 text-center text-sm">{qty}</span>
-                                                        <button type="button" onClick={() => addToCart(item)} disabled={!isOpen} className={cn("w-7 h-7 flex items-center justify-center rounded-md bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white transition-opacity", isOpen ? "hover:opacity-90" : "opacity-50 cursor-not-allowed")}>
-                                                            <Plus className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
                                         </div>
-                                    </div>
+                                        <div className="flex w-[108px] shrink-0 flex-col items-stretch gap-2">
+                                            {item.imageUrl ? (
+                                                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10">
+                                                    {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                                                </div>
+                                            ) : (
+                                                <div className="aspect-[4/3] w-full rounded-lg bg-zinc-900 ring-1 ring-white/5" aria-hidden />
+                                            )}
+                                            {!ENABLE_GUEST_ORDERING ? (
+                                                !item.available ? (
+                                                    <span className="text-center text-[10px] font-medium text-zinc-500">Unavailable</span>
+                                                ) : null
+                                            ) : qty === 0 ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addToCart(item)}
+                                                    disabled={!item.available || !isOpen}
+                                                    className={cn(
+                                                        "rounded-md border-2 border-rose-500/70 bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-rose-400 transition-colors hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40",
+                                                    )}
+                                                >
+                                                    {!isOpen ? "Closed" : item.available ? "Add +" : "Sold out"}
+                                                </button>
+                                            ) : (
+                                                <div className="flex items-center justify-between gap-1 rounded-md border border-rose-500/40 bg-zinc-900/80 px-1 py-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFromCart(item.id)}
+                                                        className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-800 text-white hover:bg-zinc-700"
+                                                    >
+                                                        <Minus className="h-3.5 w-3.5" />
+                                                    </button>
+                                                    <span className="min-w-[1.25rem] text-center text-sm font-bold text-white">{qty}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addToCart(item)}
+                                                        disabled={!isOpen}
+                                                        className={cn(
+                                                            "flex h-8 w-8 items-center justify-center rounded-md bg-rose-600 text-white hover:bg-rose-500",
+                                                            !isOpen && "opacity-40",
+                                                        )}
+                                                    >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </li>
                                 );
                             })}
-                        </div>
+                        </ul>
                     </div>
                 ))}
                 {showNoResultsPanel && (
-                    <div className="rounded-2xl border border-border bg-card/80 px-5 py-10 text-center shadow-sm">
-                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-secondary/80">
-                            <Search className="h-7 w-7 text-muted-foreground" />
+                    <div className="rounded-2xl border border-white/10 bg-zinc-900/60 px-5 py-10 text-center">
+                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-800">
+                            <Search className="h-7 w-7 text-zinc-500" />
                         </div>
-                        <h3 className="text-base font-semibold text-foreground">No dishes match</h3>
-                        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                        <h3 className="text-base font-semibold text-white">No dishes match</h3>
+                        <p className="mt-2 text-sm text-zinc-500 leading-relaxed">
                             {searchNormalized
-                                ? "Try a shorter search, check spelling, or clear filters. We also match close names and extra spaces."
-                                : "No items match the diet filters you selected. Turn off a filter or pick another type."}
+                                ? "Try a shorter search or clear filters — we also forgive small typos and extra spaces."
+                                : "Nothing in this menu matches the diet filters. Turn one off to see more."}
                         </p>
                         {didYouMeanItem && (
-                            <div className="mt-5 rounded-xl border border-[#d4a853]/25 bg-[#d4a853]/5 px-4 py-3">
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Did you mean</p>
+                            <div className="mt-5 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Did you mean</p>
                                 <button
                                     type="button"
                                     onClick={() => setSearchQuery(didYouMeanItem.name)}
-                                    className="mt-1 text-base font-semibold text-[#b8860b] hover:underline dark:text-[#d4a853]"
+                                    className="mt-1 text-base font-semibold text-rose-400 hover:underline"
                                 >
                                     {didYouMeanItem.name}
                                 </button>
@@ -796,12 +865,22 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         )}
                         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
                             {searchNormalized ? (
-                                <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setSearchQuery("")}>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    className="w-full border-white/10 bg-zinc-800 text-white hover:bg-zinc-700 sm:w-auto"
+                                    onClick={() => setSearchQuery("")}
+                                >
                                     Clear search
                                 </Button>
                             ) : null}
                             {dietFilters.length > 0 ? (
-                                <Button type="button" variant="outline" className="w-full sm:w-auto border-border" onClick={() => setDietFilters([])}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full border-white/15 bg-transparent text-zinc-200 hover:bg-white/5 sm:w-auto"
+                                    onClick={() => setDietFilters([])}
+                                >
                                     Clear diet filters
                                 </Button>
                             ) : null}
@@ -809,7 +888,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-full sm:w-auto border-border"
+                                    className="w-full border-white/15 bg-transparent text-zinc-200 hover:bg-white/5 sm:w-auto"
                                     onClick={() => {
                                         setSearchQuery("");
                                         setDietFilters([]);
@@ -853,16 +932,60 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 />
             )}
 
-            {(!ENABLE_GUEST_ORDERING || (!showCart && !showHistory && !showRoomModal)) && (
-                <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border">
-                    <div className="max-w-md mx-auto flex justify-center">
-                        <div className="flex flex-col items-center gap-0.5 py-3 text-primary cursor-default">
-                            <Utensils className="w-5 h-5" />
-                            <span className="text-[10px] font-semibold">Food Menu</span>
+            {showCategoryNav && chipCategories.length > 0 ? (
+                <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="guest-cat-nav-title">
+                    <button type="button" className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-label="Close" onClick={() => setShowCategoryNav(false)} />
+                    <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-white/10 bg-zinc-900 shadow-2xl sm:rounded-2xl">
+                        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                            <h2 id="guest-cat-nav-title" className="text-base font-bold text-white">
+                                Jump to section
+                            </h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowCategoryNav(false)}
+                                className="rounded-full p-2 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                                aria-label="Close"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
+                        <ul className="max-h-[min(70vh,420px)] overflow-y-auto px-3 py-2">
+                            {chipCategories.map((cat) => (
+                                <li key={cat.id}>
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition-colors",
+                                            activeCategory === cat.id ? "bg-rose-500/15 text-rose-200" : "text-zinc-300 hover:bg-zinc-800/80",
+                                        )}
+                                        onClick={() => {
+                                            scrollToCategory(cat.id);
+                                            setShowCategoryNav(false);
+                                        }}
+                                    >
+                                        <CategoryIconDisplay icon={cat.icon} size="sm" className={activeCategory === cat.id ? "text-rose-400" : "text-zinc-500"} />
+                                        {cat.name}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
-            )}
+            ) : null}
+
+            {(!ENABLE_GUEST_ORDERING || (!showCart && !showHistory && !showRoomModal)) && chipCategories.length > 0 ? (
+                <button
+                    type="button"
+                    onClick={() => setShowCategoryNav(true)}
+                    className={cn(
+                        "fixed z-40 flex items-center gap-2 rounded-full border border-white/10 bg-zinc-800/95 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-black/40 backdrop-blur-md hover:bg-zinc-700 active:scale-[0.98] transition-transform",
+                        ENABLE_GUEST_ORDERING && cartCount > 0 ? "bottom-[7.25rem] right-4" : "bottom-6 right-4",
+                    )}
+                >
+                    <Utensils className="h-4 w-4 text-rose-400" />
+                    Menu
+                </button>
+            ) : null}
         </div>
     );
 }

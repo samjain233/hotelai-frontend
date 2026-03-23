@@ -24,7 +24,7 @@ export function CartBar({ cartCount, cartTotal, cartAnimKey, onShowCart }: CartB
             <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} className="fixed bottom-24 left-5 right-5 z-50 max-w-md mx-auto">
                 <button
                     onClick={onShowCart}
-                    className="w-full h-14 rounded-full bg-gradient-to-r from-[#d4a853] to-[#c9973a] text-white shadow-xl shadow-[#d4a853]/25 flex items-center justify-between px-6 text-base font-medium hover:opacity-95 active:scale-[0.98] transition-all"
+                    className="w-full h-14 rounded-full border border-rose-500/30 bg-gradient-to-r from-rose-600 to-rose-700 text-white shadow-xl shadow-rose-900/40 flex items-center justify-between px-6 text-base font-semibold hover:opacity-95 active:scale-[0.98] transition-all"
                 >
                     <div className="flex items-center gap-3">
                         <div key={cartAnimKey} className="bg-white/20 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold cart-pulse">{cartCount}</div>
@@ -80,7 +80,7 @@ export function AnimatedOverlays({
                 {showCart && (
                     <CartDrawer
                         cart={cart} guestName={guestName} notes={notes} cartTotal={cartTotal} placing={placing} isOpen={isOpen}
-                        onClose={onCloseCart} onPlaceOrder={onPlaceOrder} onInitiateOrder={onInitiateOrder}
+                        onClose={onCloseCart} onInitiateOrder={onInitiateOrder}
                         onRemoveFromCart={onRemoveFromCart} onAddToCart={onAddToCart}
                         setGuestName={setGuestName} setNotes={setNotes} formatPrice={formatPrice}
                     />
@@ -109,7 +109,6 @@ interface CartDrawerProps {
     placing: boolean;
     isOpen?: boolean;
     onClose: () => void;
-    onPlaceOrder: () => void;
     onInitiateOrder: () => void;
     onRemoveFromCart: (itemId: string) => void;
     onAddToCart: (item: CartItem["item"]) => void;
@@ -117,7 +116,7 @@ interface CartDrawerProps {
     setNotes: (v: string) => void;
     formatPrice: (p: number) => string;
 }
-export function CartDrawer({ cart, guestName, notes, cartTotal, placing, isOpen = true, onClose, onPlaceOrder, onInitiateOrder, onRemoveFromCart, onAddToCart, setGuestName, setNotes, formatPrice }: CartDrawerProps) {
+export function CartDrawer({ cart, guestName, notes, cartTotal, placing, isOpen = true, onClose, onInitiateOrder, onRemoveFromCart, onAddToCart, setGuestName, setNotes, formatPrice }: CartDrawerProps) {
     return (
         <motion.div
             key="cart-drawer"
