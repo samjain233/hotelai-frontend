@@ -8,6 +8,10 @@ export interface Hotel {
     logoUrl?: string;
     openTime?: string;
     closeTime?: string;
+    /** #RRGGBB — guest digital menu page background (omit/null = platform default) */
+    guestMenuBackgroundHex?: string | null;
+    /** #RRGGBB — primary text / emphasis on guest menu */
+    guestMenuTextHex?: string | null;
 }
 
 // ─── Admin ────────────────────────────────────────────────

@@ -24,10 +24,10 @@ export function CartBar({ cartCount, cartTotal, cartAnimKey, onShowCart }: CartB
             <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} className="fixed bottom-24 left-5 right-5 z-50 max-w-md mx-auto">
                 <button
                     onClick={onShowCart}
-                    className="w-full h-14 rounded-full border border-rose-500/30 bg-gradient-to-r from-rose-600 to-rose-700 text-white shadow-xl shadow-rose-900/40 flex items-center justify-between px-6 text-base font-semibold hover:opacity-95 active:scale-[0.98] transition-all"
+                    className="w-full h-14 rounded-full border border-[var(--guest-text-30)] bg-gradient-to-r from-[var(--guest-cta)] to-[var(--guest-cta-hover)] text-[var(--guest-on-cta)] shadow-xl shadow-black/35 flex items-center justify-between px-6 text-base font-semibold hover:opacity-95 active:scale-[0.98] transition-all"
                 >
                     <div className="flex items-center gap-3">
-                        <div key={cartAnimKey} className="bg-white/20 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold cart-pulse">{cartCount}</div>
+                        <div key={cartAnimKey} className="bg-[var(--guest-text-25)] text-[var(--guest-on-cta)] w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold cart-pulse">{cartCount}</div>
                         <span>View Order</span>
                     </div>
                     <span className="font-bold">{formatPrice(cartTotal)}</span>

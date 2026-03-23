@@ -171,6 +171,14 @@ class ApiClient {
         });
     }
 
+    /** OWNER or MANAGER — set hex like #RRGGBB, or "" to clear one field */
+    async updateGuestMenuTheme(data: { guestMenuBackgroundHex?: string; guestMenuTextHex?: string }) {
+        return this.request<Hotel>('/auth/hotel/guest-menu-theme', {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
     async getHotelLogoUploadPathname(token: string): Promise<{ pathname: string }> {
         return this.request('/admin/hotel/upload-token/pathname', {
             method: 'POST',

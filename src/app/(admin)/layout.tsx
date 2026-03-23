@@ -20,6 +20,7 @@ import {
     Users,
     Settings,
     ShieldAlert,
+    Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,7 @@ const allNavItems = [
     { name: "Orders", href: "/orders", icon: ClipboardList, roles: ["OWNER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
     { name: "Services", href: "/services", icon: Headset, roles: ["OWNER", "MANAGER", "FRONT_DESK"] },
     { name: "Menu", href: "/menu", icon: UtensilsCrossed, roles: ["OWNER", "MANAGER"] },
+    { name: "Menu design", href: "/menu-design", icon: Palette, roles: ["OWNER", "MANAGER"] },
     { name: "Rooms & QR", href: "/rooms", icon: BedDouble, roles: ["OWNER", "MANAGER", "FRONT_DESK"] },
     { name: "Kitchen", href: "/kitchen", icon: ChefHat, roles: ["OWNER", "MANAGER", "KITCHEN"] },
     { name: "Staff", href: "/staff", icon: Users, roles: ["OWNER"] },

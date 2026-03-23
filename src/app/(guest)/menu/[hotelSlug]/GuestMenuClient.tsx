@@ -26,6 +26,7 @@ import {
     findDidYouMeanItem,
 } from "@/lib/guestMenuSearch";
 import { IndianVegMark, IndianNonVegMark } from "./GuestMenuDietIcons";
+import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 
 const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
     { value: "default", label: "Menu order" },
@@ -54,6 +55,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const menuRes = usePublicMenuFull(hotelSlug, { fallbackData: initialData || undefined });
 
     const hotel = menuRes.data?.hotel ?? null;
+    const themeHotel = hotel ?? initialData?.hotel ?? null;
+    const themeStyle = useMemo(() => buildGuestMenuThemeStyle(themeHotel), [themeHotel]);
     const categories = useMemo(() => menuRes.data?.categories ?? [], [menuRes.data]);
     const availableRooms = menuRes.data?.rooms ?? [];
     const isOpen = menuRes.data ? menuRes.data.isOpen !== false : true;
@@ -385,40 +388,40 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-zinc-950 page-transition text-zinc-100">
-                <div className="sticky top-0 z-30 border-b border-white/10 bg-zinc-950/90 backdrop-blur-xl">
+            <div className="min-h-screen bg-[var(--guest-bg)] page-transition text-[var(--guest-text)]" style={themeStyle}>
+                <div className="sticky top-0 z-30 border-b border-[var(--guest-line)] bg-[var(--guest-bg)] backdrop-blur-xl">
                     <div className="max-w-md mx-auto px-4 py-4 space-y-3">
                         <div className="flex items-center gap-2 pb-2">
-                            <div className="h-9 w-9 shrink-0 rounded-lg animate-shimmer bg-zinc-800/80" />
+                            <div className="h-9 w-9 shrink-0 rounded-lg animate-shimmer bg-[var(--guest-shimmer)]/80" />
                             <div className="min-w-0 flex-1 space-y-1.5">
-                                <div className="h-3.5 w-28 animate-shimmer rounded bg-zinc-800/80" />
-                                <div className="h-2.5 w-20 animate-shimmer rounded bg-zinc-800/80" />
+                                <div className="h-3.5 w-28 animate-shimmer rounded bg-[var(--guest-shimmer)]/80" />
+                                <div className="h-2.5 w-20 animate-shimmer rounded bg-[var(--guest-shimmer)]/80" />
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="h-10 min-w-0 flex-1 animate-shimmer rounded-full bg-zinc-800/80" />
-                            <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
+                            <div className="h-10 min-w-0 flex-1 animate-shimmer rounded-full bg-[var(--guest-shimmer)]/80" />
+                            <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-[var(--guest-shimmer)]/80" />
                         </div>
                     </div>
                 </div>
                 <div className="max-w-md mx-auto px-4 py-6 space-y-6">
                     {Array.from({ length: 3 }).map((_, s) => (
                         <div key={s} className="space-y-3">
-                            <div className="h-5 w-32 animate-shimmer rounded bg-zinc-800/80" />
+                            <div className="h-5 w-32 animate-shimmer rounded bg-[var(--guest-shimmer)]/80" />
                             {Array.from({ length: 3 }).map((_, i) => (
                                 <div
                                     key={`${s}-${i}`}
-                                    className="flex gap-3 border-b border-dashed border-white/10 pb-4"
+                                    className="flex gap-3 border-b border-dashed border-[var(--guest-line)] pb-4"
                                     style={{ animationDelay: `${i * 0.1}s` }}
                                 >
                                     <div className="flex-1 space-y-2">
-                                        <div className="h-4 w-[70%] animate-shimmer rounded bg-zinc-800/80" />
-                                        <div className="h-3 w-16 animate-shimmer rounded bg-zinc-800/80" />
-                                        <div className="h-3 w-full animate-shimmer rounded bg-zinc-800/80" />
+                                        <div className="h-4 w-[70%] animate-shimmer rounded bg-[var(--guest-shimmer)]/80" />
+                                        <div className="h-3 w-16 animate-shimmer rounded bg-[var(--guest-shimmer)]/80" />
+                                        <div className="h-3 w-full animate-shimmer rounded bg-[var(--guest-shimmer)]/80" />
                                     </div>
                                     <div className="w-[108px] shrink-0 space-y-2">
-                                        <div className="aspect-[4/3] w-full animate-shimmer rounded-lg bg-zinc-800/80" />
-                                        <div className="h-9 w-full animate-shimmer rounded-md bg-zinc-800/80" />
+                                        <div className="aspect-[4/3] w-full animate-shimmer rounded-lg bg-[var(--guest-shimmer)]/80" />
+                                        <div className="h-9 w-full animate-shimmer rounded-md bg-[var(--guest-shimmer)]/80" />
                                     </div>
                                 </div>
                             ))}
@@ -431,13 +434,13 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 text-center text-zinc-100">
+            <div className="min-h-screen flex items-center justify-center bg-[var(--guest-bg)] px-4 text-center text-[var(--guest-text)]" style={themeStyle}>
                 <div>
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15 text-rose-400">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--guest-text-15)] text-[var(--guest-text)]">
                         <UtensilsCrossed className="h-8 w-8" />
                     </div>
-                    <h2 className="mb-2 text-xl font-bold text-white">Menu unavailable</h2>
-                    <p className="text-sm text-zinc-500">{error}</p>
+                    <h2 className="mb-2 text-xl font-bold text-[var(--guest-text)]">Menu unavailable</h2>
+                    <p className="text-sm text-[var(--guest-muted)]">{error}</p>
                 </div>
             </div>
         );
@@ -445,37 +448,37 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     if (ENABLE_GUEST_ORDERING && order) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-zinc-100">
+            <div className="flex min-h-screen items-center justify-center bg-[var(--guest-bg)] px-6 text-[var(--guest-text)]" style={themeStyle}>
                 <div className="animate-scale-in w-full max-w-sm text-center">
                     <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 ring-4 ring-emerald-500/10">
                         <CheckCircle2 className="h-10 w-10" />
                     </div>
-                    <h1 className="mb-2 text-2xl font-bold text-white">Order confirmed</h1>
-                    <p className="mb-8 text-zinc-500">
-                        Order <span className="font-mono font-medium text-white">#{order.orderNumber}</span> has been sent to the kitchen.
+                    <h1 className="mb-2 text-2xl font-bold text-[var(--guest-text)]">Order confirmed</h1>
+                    <p className="mb-8 text-[var(--guest-muted)]">
+                        Order <span className="font-mono font-medium text-[var(--guest-text)]">#{order.orderNumber}</span> has been sent to the kitchen.
                     </p>
-                    <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 text-left">
-                        <div className="flex items-center justify-between border-b border-white/10 bg-zinc-800/50 px-4 py-3">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Receipt</span>
+                    <div className="mb-6 overflow-hidden rounded-2xl border border-[var(--guest-line)] bg-[var(--guest-surface)] text-left">
+                        <div className="flex items-center justify-between border-b border-[var(--guest-line)] bg-[var(--guest-text-12)] px-4 py-3">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--guest-muted)]">Receipt</span>
                             <Badge variant={order.status === "DELIVERED" ? "success" : order.status === "CANCELLED" ? "danger" : "warning"}>{order.status}</Badge>
                         </div>
                         <div className="space-y-3 p-4">
                             {order.items.map((oi) => (
                                 <div key={oi.id} className="flex justify-between text-sm">
-                                    <span className="text-zinc-500">
-                                        <span className="mr-2 font-semibold text-white">{oi.quantity}x</span>
+                                    <span className="text-[var(--guest-muted)]">
+                                        <span className="mr-2 font-semibold text-[var(--guest-text)]">{oi.quantity}x</span>
                                         {oi.itemName}
                                     </span>
-                                    <span className="font-medium text-white">{formatPrice(oi.price * oi.quantity)}</span>
+                                    <span className="font-medium text-[var(--guest-text)]">{formatPrice(oi.price * oi.quantity)}</span>
                                 </div>
                             ))}
                         </div>
-                        <div className="flex items-center justify-between border-t border-white/10 bg-zinc-800/50 px-4 py-4">
-                            <span className="font-semibold text-white">Total</span>
-                            <span className="text-lg font-bold text-rose-400">{formatPrice(order.totalAmount)}</span>
+                        <div className="flex items-center justify-between border-t border-[var(--guest-line)] bg-[var(--guest-text-12)] px-4 py-4">
+                            <span className="font-semibold text-[var(--guest-text)]">Total</span>
+                            <span className="text-lg font-bold text-[var(--guest-text)]">{formatPrice(order.totalAmount)}</span>
                         </div>
                     </div>
-                    <Button className="w-full border-white/10 bg-zinc-800 text-white hover:bg-zinc-700" variant="secondary" onClick={() => setOrder(null)}>
+                    <Button className="w-full border-[var(--guest-line)] bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90" variant="secondary" onClick={() => setOrder(null)}>
                         Back to menu
                     </Button>
                 </div>
@@ -484,10 +487,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }
 
     return (
-        <div className="min-h-screen bg-zinc-950 pb-28 font-sans text-zinc-100 page-transition">
+        <div className="min-h-screen bg-[var(--guest-bg)] pb-28 font-sans text-[var(--guest-text)] page-transition" style={themeStyle}>
             <header
                 ref={guestHeaderRef}
-                className="sticky top-0 z-50 w-full min-w-0 max-w-full border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-xl supports-[backdrop-filter]:bg-zinc-950/85"
+                className="sticky top-0 z-50 w-full min-w-0 max-w-full border-b border-[var(--guest-line)] bg-[var(--guest-bg)] backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--guest-bg)]"
             >
                 <div
                     className={cn(
@@ -511,24 +514,24 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         height={36}
                                         sizes="36px"
                                         priority
-                                        className="h-9 w-9 shrink-0 rounded-lg bg-zinc-900 object-cover ring-1 ring-white/10"
+                                        className="h-9 w-9 shrink-0 rounded-lg bg-[var(--guest-surface)] object-cover ring-1 ring-[var(--guest-line)]"
                                         onError={() => setGuestLogoFailed(true)}
                                     />
                                 ) : (
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-rose-600 to-rose-800 text-sm font-bold text-white ring-1 ring-white/10">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--guest-cta)] to-[var(--guest-cta-hover)] text-sm font-bold text-[var(--guest-on-cta)] ring-1 ring-[var(--guest-line)]">
                                         {hotel?.name?.charAt(0) || "H"}
                                     </div>
                                 )}
                                 <div className="min-w-0 flex-1">
-                                    <h1 className="truncate text-sm font-bold leading-tight text-white">{hotel?.name}</h1>
-                                    <p className="flex items-center gap-1 text-[11px] text-zinc-500">
+                                    <h1 className="truncate text-sm font-bold leading-tight text-[var(--guest-text)]">{hotel?.name}</h1>
+                                    <p className="flex items-center gap-1 text-[11px] text-[var(--guest-muted)]">
                                         {roomDisplayName ? (
                                             <>
-                                                <MapPin className="h-3 w-3 text-rose-400/90" />
+                                                <MapPin className="h-3 w-3 text-[var(--guest-text-90)]" />
                                                 <span>Room {roomDisplayName}</span>
                                             </>
                                         ) : (
-                                            <span className="italic text-zinc-600">Digital menu</span>
+                                            <span className="italic text-[var(--guest-subtle)]">Digital menu</span>
                                         )}
                                     </p>
                                 </div>
@@ -538,21 +541,21 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
                     <div className="flex items-center gap-2">
                         <div className="relative min-w-0 flex-1">
-                            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--guest-muted)]" />
                             <input
                                 type="search"
                                 enterKeyHint="search"
                                 placeholder='Search "biryani", "coffee"...'
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full rounded-full border border-white/10 bg-zinc-900 py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-zinc-500 focus:border-rose-500/40 focus:outline-none focus:ring-1 focus:ring-rose-500/30"
+                                className="w-full rounded-full border border-[var(--guest-line)] bg-[var(--guest-surface)] py-2.5 pl-10 pr-10 text-sm text-[var(--guest-text)] placeholder:text-[var(--guest-muted)] focus:border-[var(--guest-text-40)] focus:outline-none focus:ring-1 focus:ring-[var(--guest-text-30)]"
                             />
                             {searchQuery ? (
                                 <button
                                     type="button"
                                     aria-label="Clear search"
                                     onClick={() => setSearchQuery("")}
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)] hover:text-[var(--guest-text-70)]"
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
@@ -562,7 +565,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             <button
                                 type="button"
                                 onClick={() => setShowHeaderMenu((v) => !v)}
-                                className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-zinc-300 ring-1 ring-white/10 hover:bg-zinc-800 hover:text-white"
+                                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--guest-surface)] text-[var(--guest-muted)] ring-1 ring-[var(--guest-line)] hover:bg-[var(--guest-surface-2)] hover:text-[var(--guest-text)]"
                                 aria-expanded={showHeaderMenu}
                                 aria-haspopup="menu"
                                 aria-label={showHeaderMenu ? "Close menu" : "Menu, sort and filters"}
@@ -572,10 +575,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             {showHeaderMenu ? (
                                 <div
                                     role="menu"
-                                    className="absolute right-0 top-12 z-[60] w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-white/10 bg-zinc-900 py-2 shadow-xl shadow-black/50"
+                                    className="absolute right-0 top-12 z-[60] w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] py-2 shadow-xl shadow-black/50"
                                 >
                                         <div className="px-3 pb-1">
-                                            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                                            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">
                                                 <SlidersHorizontal className="h-3 w-3" aria-hidden />
                                                 Sort
                                             </p>
@@ -589,27 +592,27 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                     aria-checked={sortBy === opt.value}
                                                     className={cn(
                                                         "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors",
-                                                        sortBy === opt.value ? "bg-rose-500/20 text-rose-100" : "text-zinc-300 hover:bg-zinc-800",
+                                                        sortBy === opt.value ? "bg-[var(--guest-text-20)] text-[var(--guest-text-90)]" : "text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)]",
                                                     )}
                                                     onClick={() => setSortBy(opt.value)}
                                                 >
                                                     <span
                                                         className={cn(
                                                             "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                                                            sortBy === opt.value ? "border-rose-400 bg-rose-500/30" : "border-zinc-600",
+                                                            sortBy === opt.value ? "border-[var(--guest-text-40)] bg-[var(--guest-text-30)]" : "border-[var(--guest-border)]",
                                                         )}
                                                         aria-hidden
                                                     >
-                                                        {sortBy === opt.value ? <span className="h-2 w-2 rounded-full bg-rose-400" /> : null}
+                                                        {sortBy === opt.value ? <span className="h-2 w-2 rounded-full bg-[var(--guest-text)]" /> : null}
                                                     </span>
                                                     {opt.label}
                                                 </button>
                                             ))}
                                         </div>
-                                        <div className="mx-2 border-t border-white/10" />
+                                        <div className="mx-2 border-t border-[var(--guest-line)]" />
                                         <div className="px-3 pt-2 pb-1">
-                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Diet filters</p>
-                                            <p className="mt-0.5 text-[11px] text-zinc-600">Tap to show only matching dishes</p>
+                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">Diet filters</p>
+                                            <p className="mt-0.5 text-[11px] text-[var(--guest-subtle)]">Tap to show only matching dishes</p>
                                         </div>
                                         <div className="flex flex-col gap-1.5 px-2 pb-2">
                                             <button
@@ -620,7 +623,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                     "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
                                                     dietFilters.includes("VEG")
                                                         ? "border-green-500/40 bg-green-500/10 text-green-200"
-                                                        : "border-white/10 bg-zinc-800/50 text-zinc-400 hover:border-white/20",
+                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
                                                 )}
                                                 onClick={() => toggleDietFilter("VEG")}
                                             >
@@ -635,7 +638,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                     "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
                                                     dietFilters.includes("NON_VEG")
                                                         ? "border-red-500/40 bg-red-500/10 text-red-200"
-                                                        : "border-white/10 bg-zinc-800/50 text-zinc-400 hover:border-white/20",
+                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
                                                 )}
                                                 onClick={() => toggleDietFilter("NON_VEG")}
                                             >
@@ -650,7 +653,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                     "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
                                                     dietFilters.includes("EGGITARIAN")
                                                         ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                                                        : "border-white/10 bg-zinc-800/50 text-zinc-400 hover:border-white/20",
+                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
                                                 )}
                                                 onClick={() => toggleDietFilter("EGGITARIAN")}
                                             >
@@ -660,18 +663,18 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         </div>
                                         {ENABLE_GUEST_ORDERING && pastOrders.length > 0 ? (
                                             <>
-                                                <div className="mx-2 border-t border-white/10" />
+                                                <div className="mx-2 border-t border-[var(--guest-line)]" />
                                                 <div className="px-2 pt-1">
                                                     <button
                                                         type="button"
                                                         role="menuitem"
-                                                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+                                                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
                                                         onClick={() => {
                                                             setShowHeaderMenu(false);
                                                             setShowHistory(true);
                                                         }}
                                                     >
-                                                        <Receipt className="h-4 w-4 shrink-0 text-rose-400" />
+                                                        <Receipt className="h-4 w-4 shrink-0 text-[var(--guest-text)]" />
                                                         Bills &amp; history
                                                     </button>
                                                 </div>
@@ -683,25 +686,25 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     </div>
 
                     {menuFiltersActive ? (
-                        <div className="mt-2.5 border-t border-white/[0.08] pt-2.5" aria-label="Active filters">
+                        <div className="mt-2.5 border-t border-[var(--guest-line)] pt-2.5" aria-label="Active filters">
                             <div className="mb-1.5 flex items-center justify-between gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Active filters</span>
+                                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">Active filters</span>
                                 <button
                                     type="button"
                                     onClick={clearAllMenuFilters}
-                                    className="shrink-0 text-[11px] font-semibold text-rose-400/90 hover:text-rose-300 hover:underline"
+                                    className="shrink-0 text-[11px] font-semibold text-[var(--guest-text-90)] hover:opacity-80 hover:underline"
                                 >
                                     Clear all
                                 </button>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                                 {sortBy !== "default" ? (
-                                    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-rose-500/35 bg-rose-500/10 py-1 pl-2.5 pr-1 text-xs font-medium text-rose-100">
+                                    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-[var(--guest-text-35)] bg-[var(--guest-text-12)] py-1 pl-2.5 pr-1 text-xs font-medium text-[var(--guest-text-90)]">
                                         <SlidersHorizontal className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
                                         <span className="min-w-0 truncate">{activeSortLabel}</span>
                                         <button
                                             type="button"
-                                            className="rounded-full p-1 text-rose-200/90 hover:bg-rose-500/25 hover:text-white"
+                                            className="rounded-full p-1 text-[var(--guest-text-70)] hover:bg-[var(--guest-text-25)] hover:text-[var(--guest-text)]"
                                             aria-label={`Remove sort: ${activeSortLabel}`}
                                             onClick={() => setSortBy("default")}
                                         >
@@ -715,7 +718,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         Veg
                                         <button
                                             type="button"
-                                            className="rounded-full p-1 text-green-200/90 hover:bg-green-500/20 hover:text-white"
+                                            className="rounded-full p-1 text-green-200/90 hover:bg-green-500/20 hover:text-[var(--guest-text)]"
                                             aria-label="Remove vegetarian filter"
                                             onClick={() => removeDietFilter("VEG")}
                                         >
@@ -729,7 +732,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         Non-veg
                                         <button
                                             type="button"
-                                            className="rounded-full p-1 text-red-200/90 hover:bg-red-500/20 hover:text-white"
+                                            className="rounded-full p-1 text-red-200/90 hover:bg-red-500/20 hover:text-[var(--guest-text)]"
                                             aria-label="Remove non-vegetarian filter"
                                             onClick={() => removeDietFilter("NON_VEG")}
                                         >
@@ -743,7 +746,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         Egg
                                         <button
                                             type="button"
-                                            className="rounded-full p-1 text-amber-200/90 hover:bg-amber-500/20 hover:text-white"
+                                            className="rounded-full p-1 text-amber-200/90 hover:bg-amber-500/20 hover:text-[var(--guest-text)]"
                                             aria-label="Remove egg filter"
                                             onClick={() => removeDietFilter("EGGITARIAN")}
                                         >
@@ -771,19 +774,19 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
                         <Clock className="w-5 h-5 text-amber-400 flex-shrink-0" />
                         <div>
-                            <p className="font-semibold text-white text-sm">Room service is currently closed</p>
-                            <p className="text-xs text-zinc-400">Orders can be placed during operating hours.</p>
+                            <p className="font-semibold text-[var(--guest-text)] text-sm">Room service is currently closed</p>
+                            <p className="text-xs text-[var(--guest-muted)]">Orders can be placed during operating hours.</p>
                         </div>
                     </div>
                 )}
                 {hasActiveFilters && resultCount > 0 && (
-                    <div className="text-xs text-zinc-500">
-                        <span className="font-semibold text-zinc-300">{resultCount}</span>{" "}
+                    <div className="text-xs text-[var(--guest-muted)]">
+                        <span className="font-semibold text-[var(--guest-muted)]">{resultCount}</span>{" "}
                         {resultCount === 1 ? "dish" : "dishes"}
                         {searchNormalized ? (
                             <>
                                 {" "}
-                                for &ldquo;<span className="text-rose-300/90">{searchQuery.trim()}</span>&rdquo;
+                                for &ldquo;<span className="text-[var(--guest-text-70)]">{searchQuery.trim()}</span>&rdquo;
                             </>
                         ) : null}
                         {dietFilters.length > 0 ? <span> · diet filter on</span> : null}
@@ -808,15 +811,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                           Guest header stays z-50; category bar z-[41] so it sits above ul (z-0) but below modals.
                         */}
                         <div
-                            className="sticky z-[41] -mx-4 mb-4 border-b border-white/[0.08] bg-zinc-950 px-4 py-2.5 shadow-[0_1px_0_rgba(0,0,0,0.4)] backdrop-blur-md supports-[backdrop-filter]:bg-zinc-950/98"
+                            className="sticky z-[41] -mx-4 mb-4 border-b border-[var(--guest-line)] bg-[var(--guest-bg)] px-4 py-2.5 shadow-[0_1px_0_rgba(0,0,0,0.4)] backdrop-blur-md supports-[backdrop-filter]:bg-[var(--guest-bg)]"
                             style={{ top: "var(--guest-menu-sticky-top, 7rem)" }}
                         >
-                            <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-white">
-                                <CategoryIconDisplay icon={cat.icon} size="md" className="text-rose-400" />
+                            <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-[var(--guest-text)]">
+                                <CategoryIconDisplay icon={cat.icon} size="md" className="text-[var(--guest-text)]" />
                                 {cat.name}
                             </h2>
                         </div>
-                        <ul className="relative z-0 divide-y divide-dashed divide-white/10">
+                        <ul className="relative z-0 divide-y divide-dashed divide-[var(--guest-line)]">
                             {(cat.items ?? []).map((item, itemIndex) => {
                                 const qty = ENABLE_GUEST_ORDERING ? getCartQuantity(item.id) : 0;
                                 const desc = item.description?.trim() ?? "";
@@ -829,7 +832,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 if (!ENABLE_GUEST_ORDERING) {
                                     if (!item.available) {
                                         actionBlock = (
-                                            <span className="text-center text-[10px] font-medium text-zinc-500 sm:text-left">Unavailable</span>
+                                            <span className="text-center text-[10px] font-medium text-[var(--guest-muted)] sm:text-left">Unavailable</span>
                                         );
                                     }
                                 } else if (qty === 0) {
@@ -839,7 +842,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             onClick={() => addToCart(item)}
                                             disabled={!item.available || !isOpen}
                                             className={cn(
-                                                "w-full rounded-md border-2 border-rose-500/70 bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-rose-400 transition-colors hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40 sm:w-[108px]",
+                                                "w-full rounded-md border-2 border-[var(--guest-text-70)] bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-[var(--guest-text)] transition-colors hover:bg-[var(--guest-text-12)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-[108px]",
                                             )}
                                         >
                                             {!isOpen ? "Closed" : item.available ? "Add +" : "Sold out"}
@@ -847,21 +850,21 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     );
                                 } else {
                                     actionBlock = (
-                                        <div className="flex w-full items-center justify-between gap-1 rounded-md border border-rose-500/40 bg-zinc-900/80 px-1 py-1 sm:w-[108px]">
+                                        <div className="flex w-full items-center justify-between gap-1 rounded-md border border-[var(--guest-text-40)] bg-[color-mix(in_srgb,var(--guest-surface)_85%,var(--guest-bg))] px-1 py-1 sm:w-[108px]">
                                             <button
                                                 type="button"
                                                 onClick={() => removeFromCart(item.id)}
-                                                className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-800 text-white hover:bg-zinc-700"
+                                                className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90"
                                             >
                                                 <Minus className="h-3.5 w-3.5" />
                                             </button>
-                                            <span className="min-w-[1.25rem] text-center text-sm font-bold text-white">{qty}</span>
+                                            <span className="min-w-[1.25rem] text-center text-sm font-bold text-[var(--guest-text)]">{qty}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => addToCart(item)}
                                                 disabled={!isOpen}
                                                 className={cn(
-                                                    "flex h-8 w-8 items-center justify-center rounded-md bg-rose-600 text-white hover:bg-rose-500",
+                                                    "flex h-8 w-8 items-center justify-center rounded-md bg-[var(--guest-cta)] text-[var(--guest-on-cta)] hover:bg-[var(--guest-cta-hover)]",
                                                     !isOpen && "opacity-40",
                                                 )}
                                             >
@@ -893,15 +896,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                     )}
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    <h3 className="text-[15px] font-bold leading-snug text-white" title={item.name}>
+                                                    <h3 className="text-[15px] font-bold leading-snug text-[var(--guest-text)]" title={item.name}>
                                                         {item.name}
                                                     </h3>
-                                                    <p className="mt-1 text-sm font-semibold text-white">{formatPrice(item.price)}</p>
+                                                    <p className="mt-1 text-sm font-semibold text-[var(--guest-text)]">{formatPrice(item.price)}</p>
                                                     {desc ? (
                                                         <div className="mt-1.5">
                                                             <p
                                                                 className={cn(
-                                                                    "text-[13px] leading-relaxed text-zinc-500",
+                                                                    "text-[13px] leading-relaxed text-[var(--guest-muted)]",
                                                                     !descOpen && descLong && "line-clamp-2",
                                                                 )}
                                                             >
@@ -910,7 +913,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                             {descLong ? (
                                                                 <button
                                                                     type="button"
-                                                                    className="mt-0.5 text-xs font-medium text-rose-400/90 hover:text-rose-300"
+                                                                    className="mt-0.5 text-xs font-medium text-[var(--guest-text-90)] hover:opacity-80"
                                                                     onClick={() => setExpandedDescId((id) => (id === item.id ? null : item.id))}
                                                                 >
                                                                     {descOpen ? "less" : "…more"}
@@ -926,7 +929,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         </div>
                                         {hasImage ? (
                                             <div className="flex w-[108px] shrink-0 flex-col items-stretch gap-2">
-                                                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10">
+                                                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)]">
                                                     {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                                     <img src={imageSrc} alt="" className="h-full w-full object-cover" />
@@ -941,23 +944,23 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     </div>
                 ))}
                 {showNoResultsPanel && (
-                    <div className="rounded-2xl border border-white/10 bg-zinc-900/60 px-5 py-10 text-center">
-                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-800">
-                            <Search className="h-7 w-7 text-zinc-500" />
+                    <div className="rounded-2xl border border-[var(--guest-line)] bg-[color-mix(in_srgb,var(--guest-surface)_60%,var(--guest-bg))] px-5 py-10 text-center">
+                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--guest-surface-2)]">
+                            <Search className="h-7 w-7 text-[var(--guest-muted)]" />
                         </div>
-                        <h3 className="text-base font-semibold text-white">No dishes match</h3>
-                        <p className="mt-2 text-sm text-zinc-500 leading-relaxed">
+                        <h3 className="text-base font-semibold text-[var(--guest-text)]">No dishes match</h3>
+                        <p className="mt-2 text-sm text-[var(--guest-muted)] leading-relaxed">
                             {searchNormalized
                                 ? "Try a shorter search or clear filters — we also forgive small typos and extra spaces."
                                 : "Nothing in this menu matches the diet filters. Turn one off to see more."}
                         </p>
                         {didYouMeanItem && (
-                            <div className="mt-5 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Did you mean</p>
+                            <div className="mt-5 rounded-xl border border-[var(--guest-text-20)] bg-[var(--guest-text-12)] px-4 py-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--guest-muted)]">Did you mean</p>
                                 <button
                                     type="button"
                                     onClick={() => setSearchQuery(didYouMeanItem.name)}
-                                    className="mt-1 text-base font-semibold text-rose-400 hover:underline"
+                                    className="mt-1 text-base font-semibold text-[var(--guest-text)] hover:underline"
                                 >
                                     {didYouMeanItem.name}
                                 </button>
@@ -968,7 +971,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 <Button
                                     type="button"
                                     variant="secondary"
-                                    className="w-full border-white/10 bg-zinc-800 text-white hover:bg-zinc-700 sm:w-auto"
+                                    className="w-full border-[var(--guest-line)] bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90 sm:w-auto"
                                     onClick={() => setSearchQuery("")}
                                 >
                                     Clear search
@@ -978,7 +981,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-full border-white/15 bg-transparent text-zinc-200 hover:bg-white/5 sm:w-auto"
+                                    className="w-full border-[var(--guest-line)] bg-transparent text-[var(--guest-text-70)] hover:bg-[var(--guest-text-12)] sm:w-auto"
                                     onClick={() => setDietFilters([])}
                                 >
                                     Clear diet filters
@@ -988,7 +991,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-full border-white/15 bg-transparent text-zinc-200 hover:bg-white/5 sm:w-auto"
+                                    className="w-full border-[var(--guest-line)] bg-transparent text-[var(--guest-text-70)] hover:bg-[var(--guest-text-12)] sm:w-auto"
                                     onClick={() => {
                                         setSearchQuery("");
                                         setDietFilters([]);
@@ -1035,15 +1038,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             {showCategoryNav && chipCategories.length > 0 ? (
                 <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="guest-cat-nav-title">
                     <button type="button" className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-label="Close" onClick={() => setShowCategoryNav(false)} />
-                    <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-white/10 bg-zinc-900 shadow-2xl sm:rounded-2xl">
-                        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                            <h2 id="guest-cat-nav-title" className="text-base font-bold text-white">
+                    <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-[var(--guest-line)] bg-[var(--guest-surface)] shadow-2xl sm:rounded-2xl">
+                        <div className="flex items-center justify-between border-b border-[var(--guest-line)] px-5 py-4">
+                            <h2 id="guest-cat-nav-title" className="text-base font-bold text-[var(--guest-text)]">
                                 Jump to section
                             </h2>
                             <button
                                 type="button"
                                 onClick={() => setShowCategoryNav(false)}
-                                className="rounded-full p-2 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                                className="rounded-full p-2 text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)] hover:text-[var(--guest-text)]"
                                 aria-label="Close"
                             >
                                 <X className="h-5 w-5" />
@@ -1056,14 +1059,14 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         type="button"
                                         className={cn(
                                             "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition-colors",
-                                            activeCategory === cat.id ? "bg-rose-500/15 text-rose-200" : "text-zinc-300 hover:bg-zinc-800/80",
+                                            activeCategory === cat.id ? "bg-[var(--guest-text-15)] text-[var(--guest-text-70)]" : "text-[var(--guest-muted)] hover:bg-[var(--guest-shimmer)]/80",
                                         )}
                                         onClick={() => {
                                             scrollToCategory(cat.id);
                                             setShowCategoryNav(false);
                                         }}
                                     >
-                                        <CategoryIconDisplay icon={cat.icon} size="sm" className={activeCategory === cat.id ? "text-rose-400" : "text-zinc-500"} />
+                                        <CategoryIconDisplay icon={cat.icon} size="sm" className={activeCategory === cat.id ? "text-[var(--guest-text)]" : "text-[var(--guest-muted)]"} />
                                         {cat.name}
                                     </button>
                                 </li>
@@ -1078,11 +1081,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     type="button"
                     onClick={() => setShowCategoryNav(true)}
                     className={cn(
-                        "fixed z-40 flex items-center gap-2 rounded-full border border-white/10 bg-zinc-800/95 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-black/40 backdrop-blur-md hover:bg-zinc-700 active:scale-[0.98] transition-transform",
+                        "fixed z-40 flex items-center gap-2 rounded-full border border-[var(--guest-line)] bg-[color-mix(in_srgb,var(--guest-surface-2)_92%,var(--guest-bg))] px-4 py-2.5 text-sm font-semibold text-[var(--guest-text)] shadow-lg shadow-black/40 backdrop-blur-md hover:opacity-90 active:scale-[0.98] transition-transform",
                         ENABLE_GUEST_ORDERING && cartCount > 0 ? "bottom-[7.25rem] right-4" : "bottom-6 right-4",
                     )}
                 >
-                    <Utensils className="h-4 w-4 text-rose-400" />
+                    <Utensils className="h-4 w-4 text-[var(--guest-text)]" />
                     Menu
                 </button>
             ) : null}
