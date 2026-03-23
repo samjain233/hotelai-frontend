@@ -27,13 +27,13 @@ import {
 } from "@/lib/guestMenuSearch";
 import { IndianVegMark, IndianNonVegMark } from "./GuestMenuDietIcons";
 
-const SORT_CHIP_LABELS: Record<GuestMenuSort, string> = {
-    default: "Default",
-    "name-asc": "A → Z",
-    "name-desc": "Z → A",
-    "price-asc": "₹ Low → High",
-    "price-desc": "₹ High → Low",
-};
+const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
+    { value: "default", label: "Menu order" },
+    { value: "name-asc", label: "Name (A–Z)" },
+    { value: "name-desc", label: "Name (Z–A)" },
+    { value: "price-asc", label: "Price (low to high)" },
+    { value: "price-desc", label: "Price (high to low)" },
+];
 
 // Lazy-load framer-motion overlays (cart, drawers, modals) - only when user interacts
 const AnimatedOverlays = dynamic(
@@ -133,7 +133,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }
 
     const resultCount = useMemo(() => flattenMenuItems(filteredCategories).length, [filteredCategories]);
-    const hasActiveFilters = searchNormalized.length > 0 || dietFilters.length > 0;
+    const hasActiveFilters = searchNormalized.length > 0 || dietFilters.length > 0 || sortBy !== "default";
     const showNoResultsPanel = !loading && !error && categories.length > 0 && resultCount === 0;
 
     const chipCategoryIdsKey = useMemo(() => chipCategories.map((c) => c.id).join("|"), [chipCategories]);
@@ -141,8 +141,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const chipCategoriesRef = useRef(chipCategories);
     chipCategoriesRef.current = chipCategories;
 
-    /** Sticky header is always full height; spy line ≈ distance from viewport top to category content. */
-    const SCROLL_SPY_HEADER_LINE_PX = 232;
+    /** Sticky header (branding + search + category chips); spy line ≈ px from top. */
+    const SCROLL_SPY_HEADER_LINE_PX = 180;
 
     /** Scroll-spy: active chip = last category section whose heading is at/above the sticky header line. */
     useEffect(() => {
@@ -520,95 +520,119 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             </button>
                             {showHeaderMenu ? (
                                 <>
-                                    <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="Close menu" onClick={() => setShowHeaderMenu(false)} />
+                                    <button type="button" className="fixed inset-0 z-40 cursor-default bg-black/40" aria-label="Close menu" onClick={() => setShowHeaderMenu(false)} />
                                     <div
                                         role="menu"
-                                        className="absolute right-0 top-12 z-50 min-w-[160px] rounded-xl border border-white/10 bg-zinc-900 py-1 shadow-xl shadow-black/50"
+                                        className="absolute right-0 top-12 z-50 w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-white/10 bg-zinc-900 py-2 shadow-xl shadow-black/50"
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        {ENABLE_GUEST_ORDERING && pastOrders.length > 0 ? (
+                                        <div className="px-3 pb-1">
+                                            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                                                <SlidersHorizontal className="h-3 w-3" aria-hidden />
+                                                Sort
+                                            </p>
+                                        </div>
+                                        <div className="px-2 pb-2">
+                                            {SORT_MENU_OPTIONS.map((opt) => (
+                                                <button
+                                                    key={opt.value}
+                                                    type="button"
+                                                    role="menuitemradio"
+                                                    aria-checked={sortBy === opt.value}
+                                                    className={cn(
+                                                        "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors",
+                                                        sortBy === opt.value ? "bg-rose-500/20 text-rose-100" : "text-zinc-300 hover:bg-zinc-800",
+                                                    )}
+                                                    onClick={() => setSortBy(opt.value)}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                                                            sortBy === opt.value ? "border-rose-400 bg-rose-500/30" : "border-zinc-600",
+                                                        )}
+                                                        aria-hidden
+                                                    >
+                                                        {sortBy === opt.value ? <span className="h-2 w-2 rounded-full bg-rose-400" /> : null}
+                                                    </span>
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="mx-2 border-t border-white/10" />
+                                        <div className="px-3 pt-2 pb-1">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Diet filters</p>
+                                            <p className="mt-0.5 text-[11px] text-zinc-600">Tap to show only matching dishes</p>
+                                        </div>
+                                        <div className="flex flex-col gap-1.5 px-2 pb-2">
                                             <button
                                                 type="button"
-                                                role="menuitem"
-                                                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
-                                                onClick={() => {
-                                                    setShowHeaderMenu(false);
-                                                    setShowHistory(true);
-                                                }}
+                                                role="menuitemcheckbox"
+                                                aria-checked={dietFilters.includes("VEG")}
+                                                className={cn(
+                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                    dietFilters.includes("VEG")
+                                                        ? "border-green-500/40 bg-green-500/10 text-green-200"
+                                                        : "border-white/10 bg-zinc-800/50 text-zinc-400 hover:border-white/20",
+                                                )}
+                                                onClick={() => toggleDietFilter("VEG")}
                                             >
-                                                <Receipt className="h-4 w-4 text-rose-400" />
-                                                Bills &amp; history
+                                                <IndianVegMark className="h-4 w-4 shrink-0" />
+                                                Vegetarian
                                             </button>
-                                        ) : (
-                                            <p className="px-4 py-3 text-xs text-zinc-500">No actions</p>
-                                        )}
+                                            <button
+                                                type="button"
+                                                role="menuitemcheckbox"
+                                                aria-checked={dietFilters.includes("NON_VEG")}
+                                                className={cn(
+                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                    dietFilters.includes("NON_VEG")
+                                                        ? "border-orange-500/40 bg-orange-500/10 text-orange-200"
+                                                        : "border-white/10 bg-zinc-800/50 text-zinc-400 hover:border-white/20",
+                                                )}
+                                                onClick={() => toggleDietFilter("NON_VEG")}
+                                            >
+                                                <IndianNonVegMark className="h-4 w-4 shrink-0" />
+                                                Non-vegetarian
+                                            </button>
+                                            <button
+                                                type="button"
+                                                role="menuitemcheckbox"
+                                                aria-checked={dietFilters.includes("EGGITARIAN")}
+                                                className={cn(
+                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                    dietFilters.includes("EGGITARIAN")
+                                                        ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                                                        : "border-white/10 bg-zinc-800/50 text-zinc-400 hover:border-white/20",
+                                                )}
+                                                onClick={() => toggleDietFilter("EGGITARIAN")}
+                                            >
+                                                <Egg className="h-4 w-4 shrink-0 text-amber-400" />
+                                                Egg
+                                            </button>
+                                        </div>
+                                        {ENABLE_GUEST_ORDERING && pastOrders.length > 0 ? (
+                                            <>
+                                                <div className="mx-2 border-t border-white/10" />
+                                                <div className="px-2 pt-1">
+                                                    <button
+                                                        type="button"
+                                                        role="menuitem"
+                                                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+                                                        onClick={() => {
+                                                            setShowHeaderMenu(false);
+                                                            setShowHistory(true);
+                                                        }}
+                                                    >
+                                                        <Receipt className="h-4 w-4 shrink-0 text-rose-400" />
+                                                        Bills &amp; history
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : null}
                                     </div>
                                 </>
                             ) : null}
                         </div>
-                    </div>
-
-                    <div
-                        id="guest-menu-filters"
-                        className="mt-3 flex w-full min-w-0 gap-2 overflow-x-auto no-scrollbar pb-1 pt-0.5 -mx-4 px-4 mask-fade-right"
-                    >
-                        <label className="relative flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-zinc-900 py-2 pl-2.5 pr-3 text-xs font-semibold text-zinc-200 ring-1 ring-white/5 hover:border-white/15">
-                            <SlidersHorizontal className="h-3.5 w-3.5 text-zinc-400" aria-hidden />
-                            <span className="max-w-[100px] truncate">{SORT_CHIP_LABELS[sortBy]}</span>
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value as GuestMenuSort)}
-                                className="absolute inset-0 cursor-pointer opacity-0"
-                                aria-label="Sort menu"
-                            >
-                                <option value="default">Menu order</option>
-                                <option value="name-asc">Name (A–Z)</option>
-                                <option value="name-desc">Name (Z–A)</option>
-                                <option value="price-asc">Price (low to high)</option>
-                                <option value="price-desc">Price (high to low)</option>
-                            </select>
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => toggleDietFilter("VEG")}
-                            aria-pressed={dietFilters.includes("VEG")}
-                            className={cn(
-                                "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
-                                dietFilters.includes("VEG")
-                                    ? "border-green-500/50 bg-green-500/15 text-green-300"
-                                    : "border-white/10 bg-zinc-900 text-zinc-400 hover:border-white/20 hover:text-zinc-200",
-                            )}
-                        >
-                            <IndianVegMark className="h-[16px] w-[16px]" />
-                            Veg
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => toggleDietFilter("NON_VEG")}
-                            aria-pressed={dietFilters.includes("NON_VEG")}
-                            className={cn(
-                                "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
-                                dietFilters.includes("NON_VEG")
-                                    ? "border-orange-500/50 bg-orange-500/15 text-orange-200"
-                                    : "border-white/10 bg-zinc-900 text-zinc-400 hover:border-white/20 hover:text-zinc-200",
-                            )}
-                        >
-                            <IndianNonVegMark className="h-[16px] w-[16px]" />
-                            Non-veg
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => toggleDietFilter("EGGITARIAN")}
-                            aria-pressed={dietFilters.includes("EGGITARIAN")}
-                            className={cn(
-                                "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
-                                dietFilters.includes("EGGITARIAN")
-                                    ? "border-amber-500/50 bg-amber-500/15 text-amber-200"
-                                    : "border-white/10 bg-zinc-900 text-zinc-400 hover:border-white/20 hover:text-zinc-200",
-                            )}
-                        >
-                            <Egg className="h-3.5 w-3.5 text-amber-400/90" />
-                            Egg
-                        </button>
                     </div>
 
                     {chipCategories.length > 0 ? (
@@ -616,7 +640,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             ref={categoryChipStripRef}
                             role="tablist"
                             aria-label="Menu categories"
-                            className="flex w-full min-w-0 gap-2 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-4 px-4 mask-fade-right snap-x snap-mandatory scroll-pl-4"
+                            className="-mx-4 mt-3 flex w-full min-w-0 gap-2 overflow-x-auto pb-2 pt-0.5 px-4 no-scrollbar mask-fade-right snap-x snap-mandatory scroll-pl-4"
                         >
                             {chipCategories.map((cat) => (
                                 <button
@@ -668,6 +692,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             </>
                         ) : null}
                         {dietFilters.length > 0 ? <span> · diet filter on</span> : null}
+                        {sortBy !== "default" ? <span> · sorted</span> : null}
                     </div>
                 )}
                 {filteredCategories.map((cat) => (
@@ -675,7 +700,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         key={cat.id}
                         id={`cat-${cat.id}`}
                         data-category-id={cat.id}
-                        className="scroll-mt-[16.5rem] sm:scroll-mt-[17.5rem] motion-reduce:transition-none"
+                        className="scroll-mt-[13.25rem] sm:scroll-mt-[14rem] motion-reduce:transition-none"
                     >
                         <h2 className="mb-4 flex items-center gap-2 text-base font-bold tracking-tight text-white">
                             <CategoryIconDisplay icon={cat.icon} size="md" className="text-rose-400" />
