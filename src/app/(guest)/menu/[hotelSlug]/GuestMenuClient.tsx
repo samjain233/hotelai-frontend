@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { MenuItem, CartItem, Order } from "@/lib/types";
 import type { PublicMenuFullData } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -11,7 +11,7 @@ import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, SlidersHorizontal, ChevronLeft, Egg } from "lucide-react";
+import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, SlidersHorizontal, Egg, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
 import { ENABLE_GUEST_ORDERING } from "@/lib/guestMenuConfig";
@@ -51,7 +51,6 @@ interface Props {
 }
 
 export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
-    const router = useRouter();
     const menuRes = usePublicMenuFull(hotelSlug, { fallbackData: initialData || undefined });
 
     const hotel = menuRes.data?.hotel ?? null;
@@ -206,6 +205,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     useEffect(() => {
         setGuestLogoFailed(false);
     }, [hotel?.logoUrl, hotel?.id]);
+
+    useEffect(() => {
+        if (!showHeaderMenu) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setShowHeaderMenu(false);
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [showHeaderMenu]);
 
     const MENU_TITLE_BRAND = "Dream Canvas";
 
@@ -474,15 +482,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => router.back()}
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-zinc-300 ring-1 ring-white/10 hover:bg-zinc-800 hover:text-white active:scale-95 transition-transform"
-                            aria-label="Go back"
-                        >
-                            <ChevronLeft className="h-5 w-5" />
-                        </button>
-                        <div className="relative flex-1 min-w-0">
+                        <div className="relative min-w-0 flex-1">
                             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                             <input
                                 type="search"
@@ -510,22 +510,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-zinc-300 ring-1 ring-white/10 hover:bg-zinc-800 hover:text-white"
                                 aria-expanded={showHeaderMenu}
                                 aria-haspopup="menu"
-                                aria-label="Menu"
+                                aria-label={showHeaderMenu ? "Close menu" : "Menu, sort and filters"}
                             >
-                                <span className="flex flex-col gap-1">
-                                    <span className="block h-0.5 w-4 rounded-full bg-current" />
-                                    <span className="block h-0.5 w-4 rounded-full bg-current" />
-                                    <span className="block h-0.5 w-4 rounded-full bg-current" />
-                                </span>
+                                {showHeaderMenu ? <X className="h-5 w-5" strokeWidth={2.25} /> : <Menu className="h-5 w-5" strokeWidth={2} />}
                             </button>
                             {showHeaderMenu ? (
-                                <>
-                                    <button type="button" className="fixed inset-0 z-40 cursor-default bg-black/40" aria-label="Close menu" onClick={() => setShowHeaderMenu(false)} />
-                                    <div
-                                        role="menu"
-                                        className="absolute right-0 top-12 z-50 w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-white/10 bg-zinc-900 py-2 shadow-xl shadow-black/50"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
+                                <div
+                                    role="menu"
+                                    className="absolute right-0 top-12 z-[60] w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-white/10 bg-zinc-900 py-2 shadow-xl shadow-black/50"
+                                >
                                         <div className="px-3 pb-1">
                                             <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
                                                 <SlidersHorizontal className="h-3 w-3" aria-hidden />
@@ -629,8 +622,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                 </div>
                                             </>
                                         ) : null}
-                                    </div>
-                                </>
+                                </div>
                             ) : null}
                         </div>
                     </div>
@@ -670,6 +662,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     ) : null}
                 </div>
             </header>
+
+            {showHeaderMenu ? (
+                <button
+                    type="button"
+                    className="fixed inset-0 z-[45] cursor-default bg-black/50"
+                    aria-label="Close menu"
+                    onClick={() => setShowHeaderMenu(false)}
+                />
+            ) : null}
 
             <main className="mx-auto w-full min-w-0 max-w-md space-y-8 overflow-x-hidden px-4 py-5">
                 {ENABLE_GUEST_ORDERING && !isOpen && (
