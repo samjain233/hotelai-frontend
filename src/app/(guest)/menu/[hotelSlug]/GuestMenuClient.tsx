@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -11,7 +11,7 @@ import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, SlidersHorizontal, ChevronLeft, Share2, Bookmark, Egg } from "lucide-react";
+import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, SlidersHorizontal, ChevronLeft, Egg } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
 import { ENABLE_GUEST_ORDERING } from "@/lib/guestMenuConfig";
@@ -731,6 +731,55 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 const desc = item.description?.trim() ?? "";
                                 const descLong = desc.length > 72;
                                 const descOpen = expandedDescId === item.id;
+                                const imageSrc = item.imageUrl?.trim() ?? "";
+                                const hasImage = imageSrc.length > 0;
+
+                                let actionBlock: ReactNode = null;
+                                if (!ENABLE_GUEST_ORDERING) {
+                                    if (!item.available) {
+                                        actionBlock = (
+                                            <span className="text-center text-[10px] font-medium text-zinc-500 sm:text-left">Unavailable</span>
+                                        );
+                                    }
+                                } else if (qty === 0) {
+                                    actionBlock = (
+                                        <button
+                                            type="button"
+                                            onClick={() => addToCart(item)}
+                                            disabled={!item.available || !isOpen}
+                                            className={cn(
+                                                "w-full rounded-md border-2 border-rose-500/70 bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-rose-400 transition-colors hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40 sm:w-[108px]",
+                                            )}
+                                        >
+                                            {!isOpen ? "Closed" : item.available ? "Add +" : "Sold out"}
+                                        </button>
+                                    );
+                                } else {
+                                    actionBlock = (
+                                        <div className="flex w-full items-center justify-between gap-1 rounded-md border border-rose-500/40 bg-zinc-900/80 px-1 py-1 sm:w-[108px]">
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFromCart(item.id)}
+                                                className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-800 text-white hover:bg-zinc-700"
+                                            >
+                                                <Minus className="h-3.5 w-3.5" />
+                                            </button>
+                                            <span className="min-w-[1.25rem] text-center text-sm font-bold text-white">{qty}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => addToCart(item)}
+                                                disabled={!isOpen}
+                                                className={cn(
+                                                    "flex h-8 w-8 items-center justify-center rounded-md bg-rose-600 text-white hover:bg-rose-500",
+                                                    !isOpen && "opacity-40",
+                                                )}
+                                            >
+                                                <Plus className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    );
+                                }
+
                                 return (
                                     <li
                                         key={item.id}
@@ -778,62 +827,22 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                             ) : null}
                                                         </div>
                                                     ) : null}
-                                                    <div className="mt-3 flex items-center gap-4 text-zinc-600 opacity-50" aria-hidden>
-                                                        <Bookmark className="h-4 w-4" />
-                                                        <Share2 className="h-4 w-4" />
-                                                    </div>
+                                                    {!hasImage && actionBlock ? (
+                                                        <div className="mt-3 flex justify-end">{actionBlock}</div>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex w-[108px] shrink-0 flex-col items-stretch gap-2">
-                                            {item.imageUrl ? (
+                                        {hasImage ? (
+                                            <div className="flex w-[108px] shrink-0 flex-col items-stretch gap-2">
                                                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10">
                                                     {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                                                    <img src={imageSrc} alt="" className="h-full w-full object-cover" />
                                                 </div>
-                                            ) : (
-                                                <div className="aspect-[4/3] w-full rounded-lg bg-zinc-900 ring-1 ring-white/5" aria-hidden />
-                                            )}
-                                            {!ENABLE_GUEST_ORDERING ? (
-                                                !item.available ? (
-                                                    <span className="text-center text-[10px] font-medium text-zinc-500">Unavailable</span>
-                                                ) : null
-                                            ) : qty === 0 ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => addToCart(item)}
-                                                    disabled={!item.available || !isOpen}
-                                                    className={cn(
-                                                        "rounded-md border-2 border-rose-500/70 bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-rose-400 transition-colors hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40",
-                                                    )}
-                                                >
-                                                    {!isOpen ? "Closed" : item.available ? "Add +" : "Sold out"}
-                                                </button>
-                                            ) : (
-                                                <div className="flex items-center justify-between gap-1 rounded-md border border-rose-500/40 bg-zinc-900/80 px-1 py-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeFromCart(item.id)}
-                                                        className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-800 text-white hover:bg-zinc-700"
-                                                    >
-                                                        <Minus className="h-3.5 w-3.5" />
-                                                    </button>
-                                                    <span className="min-w-[1.25rem] text-center text-sm font-bold text-white">{qty}</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => addToCart(item)}
-                                                        disabled={!isOpen}
-                                                        className={cn(
-                                                            "flex h-8 w-8 items-center justify-center rounded-md bg-rose-600 text-white hover:bg-rose-500",
-                                                            !isOpen && "opacity-40",
-                                                        )}
-                                                    >
-                                                        <Plus className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                                {actionBlock}
+                                            </div>
+                                        ) : null}
                                     </li>
                                 );
                             })}
