@@ -162,24 +162,31 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     /** Collapse branding row based on scroll direction (search + filters stay visible). */
     useEffect(() => {
         lastScrollYForBranding.current = typeof window !== "undefined" ? window.scrollY : 0;
+        let raf = 0;
         const onScroll = () => {
-            const y = window.scrollY;
-            const last = lastScrollYForBranding.current;
-            const delta = y - last;
-            lastScrollYForBranding.current = y;
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(() => {
+                const y = window.scrollY;
+                const last = lastScrollYForBranding.current;
+                const delta = y - last;
+                lastScrollYForBranding.current = y;
 
-            if (y < 24) {
-                setBrandingBarHidden(false);
-                return;
-            }
-            if (delta > 10 && y > 56) {
-                setBrandingBarHidden(true);
-            } else if (delta < -14) {
-                setBrandingBarHidden(false);
-            }
+                if (y < 20) {
+                    setBrandingBarHidden(false);
+                    return;
+                }
+                if (delta > 6 && y > 44) {
+                    setBrandingBarHidden(true);
+                } else if (delta < -8) {
+                    setBrandingBarHidden(false);
+                }
+            });
         };
         window.addEventListener("scroll", onScroll, { passive: true });
-        return () => window.removeEventListener("scroll", onScroll);
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener("scroll", onScroll);
+        };
     }, []);
 
     /** Scroll-spy: active section for bottom Menu sheet highlight. */
@@ -494,18 +501,22 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             >
                 <div
                     className={cn(
-                        "mx-auto w-full min-w-0 max-w-md px-4 pb-2 transition-[padding] duration-300 ease-out motion-reduce:transition-none",
+                        "mx-auto w-full min-w-0 max-w-md px-4 pb-2 transition-[padding] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
                         brandingBarHidden ? "pt-2" : "pt-3",
                     )}
                 >
+                    {/*
+                      max-height + opacity animates more smoothly than grid-template-rows 0fr/1fr
+                      across browsers when collapsing the hotel row above search.
+                    */}
                     <div
                         className={cn(
-                            "grid overflow-hidden transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
-                            brandingBarHidden ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
+                            "overflow-hidden transition-[max-height,opacity] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
+                            brandingBarHidden ? "pointer-events-none max-h-0 opacity-0" : "max-h-[5.5rem] opacity-100",
                         )}
+                        aria-hidden={brandingBarHidden}
                     >
-                        <div className="min-h-0">
-                            <div className="flex items-center gap-2.5 pb-2.5">
+                        <div className="flex items-center gap-2.5 pb-2.5">
                                 {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
                                     <Image
                                         src={hotel.logoUrl.trim()}
@@ -536,7 +547,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     </p>
                                 </div>
                             </div>
-                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">
