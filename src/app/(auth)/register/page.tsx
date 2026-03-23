@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { motion } from "framer-motion";
-import { User, Lock, Mail, Hotel } from "lucide-react";
+import { User, Lock, Mail, Hotel, Eye, EyeOff } from "lucide-react";
 import { GoogleSignInButton, isGoogleSignInEnabled } from "@/components/GoogleSignInButton";
 
 const MIN_PASSWORD = 6;
@@ -22,6 +22,8 @@ export default function RegisterPage() {
     });
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const { admin, register, loading: authLoading } = useAuth();
     const router = useRouter();
 
@@ -138,23 +140,53 @@ export default function RegisterPage() {
                         />
                         <Input
                             icon={<Lock className="w-4 h-4" />}
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             placeholder="Password"
                             value={form.password}
                             onChange={(e) => update("password", e.target.value)}
                             required
                             minLength={MIN_PASSWORD}
                             autoComplete="new-password"
+                            rightElement={
+                                <button
+                                    type="button"
+                                    className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800/80 hover:text-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    aria-pressed={showPassword}
+                                    onClick={() => setShowPassword((v) => !v)}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" aria-hidden />
+                                    ) : (
+                                        <Eye className="h-4 w-4" aria-hidden />
+                                    )}
+                                </button>
+                            }
                         />
                         <Input
                             icon={<Lock className="w-4 h-4" />}
-                            type="password"
+                            type={showConfirmPassword ? "text" : "password"}
                             placeholder="Confirm password"
                             value={form.confirmPassword}
                             onChange={(e) => update("confirmPassword", e.target.value)}
                             required
                             minLength={MIN_PASSWORD}
                             autoComplete="new-password"
+                            rightElement={
+                                <button
+                                    type="button"
+                                    className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800/80 hover:text-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                                    aria-pressed={showConfirmPassword}
+                                    onClick={() => setShowConfirmPassword((v) => !v)}
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOff className="h-4 w-4" aria-hidden />
+                                    ) : (
+                                        <Eye className="h-4 w-4" aria-hidden />
+                                    )}
+                                </button>
+                            }
                         />
                     </div>
 

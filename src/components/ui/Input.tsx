@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
     icon?: React.ReactNode;
+    /** e.g. password visibility toggle — absolutely positioned on the right */
+    rightElement?: React.ReactNode;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-    ({ className, icon, ...props }, ref) => {
+    ({ className, icon, rightElement, ...props }, ref) => {
         return (
             <div className="relative w-full">
                 {icon && (
@@ -21,10 +23,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                     className={cn(
                         "w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all font-sans shadow-sm disabled:opacity-50 disabled:cursor-not-allowed",
                         icon && "pl-10",
+                        rightElement && "pr-10",
                         className
                     )}
                     {...props}
                 />
+                {rightElement ? (
+                    <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center">{rightElement}</div>
+                ) : null}
             </div>
         );
     }

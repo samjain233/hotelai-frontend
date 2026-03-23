@@ -6,13 +6,14 @@ import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { LegalFooter } from "@/components/LegalFooter";
 import { GoogleSignInButton, isGoogleSignInEnabled } from "@/components/GoogleSignInButton";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const { admin, login, loading: authLoading } = useAuth();
@@ -103,11 +104,27 @@ export default function LoginPage() {
                                 <label className="block text-xs font-medium text-zinc-400 mb-1.5">Password</label>
                                 <Input
                                     icon={<Lock className="w-4 h-4" />}
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     required
+                                    autoComplete="current-password"
+                                    rightElement={
+                                        <button
+                                            type="button"
+                                            className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800/80 hover:text-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                            aria-label={showPassword ? "Hide password" : "Show password"}
+                                            aria-pressed={showPassword}
+                                            onClick={() => setShowPassword((v) => !v)}
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="h-4 w-4" aria-hidden />
+                                            ) : (
+                                                <Eye className="h-4 w-4" aria-hidden />
+                                            )}
+                                        </button>
+                                    }
                                 />
                                 <div className="flex justify-end mt-1.5">
                                     <Link
