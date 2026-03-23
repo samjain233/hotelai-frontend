@@ -14,10 +14,14 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 
-function normalizePickerValue(hex: string | null | undefined): string {
-    if (!hex?.trim()) return "#09090b";
+const PICKER_FALLBACK_BG = "#09090b";
+const PICKER_FALLBACK_TEXT = "#fafafa";
+const PICKER_FALLBACK_ACCENT = "#fb7185";
+
+function normalizePickerValue(hex: string | null | undefined, emptyFallback: string): string {
+    if (!hex?.trim()) return emptyFallback;
     const h = hex.trim().startsWith("#") ? hex.trim() : `#${hex.trim()}`;
-    return /^#[0-9A-Fa-f]{6}$/.test(h) || /^#[0-9A-Fa-f]{3}$/.test(h) ? h : "#09090b";
+    return /^#[0-9A-Fa-f]{6}$/.test(h) || /^#[0-9A-Fa-f]{3}$/.test(h) ? h : emptyFallback;
 }
 
 export default function MenuDesignPage() {
@@ -25,6 +29,7 @@ export default function MenuDesignPage() {
     const router = useRouter();
     const [bgHex, setBgHex] = useState("");
     const [textHex, setTextHex] = useState("");
+    const [accentHex, setAccentHex] = useState("");
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -36,11 +41,13 @@ export default function MenuDesignPage() {
     useEffect(() => {
         setBgHex(hotel?.guestMenuBackgroundHex?.trim() ?? "");
         setTextHex(hotel?.guestMenuTextHex?.trim() ?? "");
-    }, [hotel?.guestMenuBackgroundHex, hotel?.guestMenuTextHex]);
+        setAccentHex(hotel?.guestMenuAccentHex?.trim() ?? "");
+    }, [hotel?.guestMenuBackgroundHex, hotel?.guestMenuTextHex, hotel?.guestMenuAccentHex]);
 
     const previewStyle = buildGuestMenuThemeStyle({
         guestMenuBackgroundHex: bgHex || null,
         guestMenuTextHex: textHex || null,
+        guestMenuAccentHex: accentHex || null,
     });
 
     const menuUrl =
@@ -58,6 +65,7 @@ export default function MenuDesignPage() {
             await api.updateGuestMenuTheme({
                 guestMenuBackgroundHex: bgHex.trim(),
                 guestMenuTextHex: textHex.trim(),
+                guestMenuAccentHex: accentHex.trim(),
             });
             await refreshHotel();
             toast.success("Guest menu appearance saved.");
@@ -75,9 +83,11 @@ export default function MenuDesignPage() {
             await api.updateGuestMenuTheme({
                 guestMenuBackgroundHex: "",
                 guestMenuTextHex: "",
+                guestMenuAccentHex: "",
             });
             setBgHex("");
             setTextHex("");
+            setAccentHex("");
             await refreshHotel();
             toast.success("Reset to default guest menu theme.");
         } catch (err: unknown) {
@@ -103,9 +113,9 @@ export default function MenuDesignPage() {
                     Menu design
                 </h1>
                 <p className="text-muted-foreground mt-1 max-w-2xl">
-                    Customise background and text colours for your{" "}
-                    <strong className="text-foreground">guest-facing digital menu</strong> (QR / room link). Leave blank to use the
-                    platform default look.
+                    Customise colours for your <strong className="text-foreground">guest-facing digital menu</strong> (QR / room link).
+                    Leave <strong className="text-foreground">all</strong> fields empty to restore the original dark theme with rose/crimson
+                    accents.
                 </p>
             </div>
 
@@ -113,17 +123,18 @@ export default function MenuDesignPage() {
                 <section className="rounded-xl border border-border bg-card p-6">
                     <h2 className="text-lg font-semibold text-foreground mb-1">Colours</h2>
                     <p className="text-sm text-muted-foreground mb-6">
-                        Use hex values (e.g. <code className="text-xs bg-secondary px-1 rounded">#fdf6e3</code> and{" "}
-                        <code className="text-xs bg-secondary px-1 rounded">#5c4033</code>). Borders and panels are derived automatically.
+                        Hex values only (e.g. <code className="text-xs bg-secondary px-1 rounded">#fdf6e3</code>).{" "}
+                        <strong className="text-foreground">Accent</strong> controls prices, category icons, links, and primary buttons.
+                        If you set background or text but leave accent empty, the default rose accent is used.
                     </p>
                     <form onSubmit={handleSave} className="space-y-6">
-                        <div className="grid gap-6 sm:grid-cols-2">
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             <div>
                                 <label className="block text-sm font-medium text-foreground mb-2">Background</label>
                                 <div className="flex items-center gap-3">
                                     <input
                                         type="color"
-                                        value={normalizePickerValue(bgHex || null)}
+                                        value={normalizePickerValue(bgHex || null, PICKER_FALLBACK_BG)}
                                         onChange={(e) => setBgHex(e.target.value)}
                                         className="h-11 w-14 cursor-pointer rounded-lg border border-border bg-secondary p-1"
                                         aria-label="Background colour"
@@ -137,11 +148,11 @@ export default function MenuDesignPage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-foreground mb-2">Text &amp; accents</label>
+                                <label className="block text-sm font-medium text-foreground mb-2">Text</label>
                                 <div className="flex items-center gap-3">
                                     <input
                                         type="color"
-                                        value={normalizePickerValue(textHex || null)}
+                                        value={normalizePickerValue(textHex || null, PICKER_FALLBACK_TEXT)}
                                         onChange={(e) => setTextHex(e.target.value)}
                                         className="h-11 w-14 cursor-pointer rounded-lg border border-border bg-secondary p-1"
                                         aria-label="Text colour"
@@ -150,6 +161,24 @@ export default function MenuDesignPage() {
                                         value={textHex}
                                         onChange={(e) => setTextHex(e.target.value)}
                                         placeholder="e.g. #fafafa (empty = default)"
+                                        className="bg-secondary/50 font-mono text-sm flex-1"
+                                    />
+                                </div>
+                            </div>
+                            <div className="sm:col-span-2 lg:col-span-1">
+                                <label className="block text-sm font-medium text-foreground mb-2">Accent</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="color"
+                                        value={normalizePickerValue(accentHex || null, PICKER_FALLBACK_ACCENT)}
+                                        onChange={(e) => setAccentHex(e.target.value)}
+                                        className="h-11 w-14 cursor-pointer rounded-lg border border-border bg-secondary p-1"
+                                        aria-label="Accent colour"
+                                    />
+                                    <Input
+                                        value={accentHex}
+                                        onChange={(e) => setAccentHex(e.target.value)}
+                                        placeholder="e.g. #fb7185 (empty = default)"
                                         className="bg-secondary/50 font-mono text-sm flex-1"
                                     />
                                 </div>
@@ -183,7 +212,7 @@ export default function MenuDesignPage() {
                             <div className="h-3 w-32 rounded bg-[var(--guest-shimmer)]/80" />
                             <p className="text-sm font-semibold text-[var(--guest-text)]">Sample dish name</p>
                             <p className="text-xs text-[var(--guest-muted)]">Description line uses muted tone.</p>
-                            <p className="text-sm font-bold text-[var(--guest-text)]">₹499</p>
+                            <p className="text-sm font-bold text-[var(--guest-accent)]">₹499</p>
                         </div>
                     </div>
                     {menuUrl ? (

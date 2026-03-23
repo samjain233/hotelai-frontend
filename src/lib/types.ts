@@ -12,6 +12,8 @@ export interface Hotel {
     guestMenuBackgroundHex?: string | null;
     /** #RRGGBB — primary text / emphasis on guest menu */
     guestMenuTextHex?: string | null;
+    /** #RRGGBB — accent (links, prices, category icons, CTAs); null = default rose/crimson */
+    guestMenuAccentHex?: string | null;
 }
 
 // ─── Admin ────────────────────────────────────────────────
