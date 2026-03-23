@@ -87,10 +87,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const activeCategoryFromScrollSpy = useRef(false);
     const categoryChipStripRef = useRef<HTMLDivElement>(null);
 
-    /** Hide logo + hotel name + room row while scrolling down; show again when scrolling up or near top. */
-    const [brandingCollapsed, setBrandingCollapsed] = useState(false);
-    const lastScrollYForHeader = useRef(0);
-
     const searchParams = useSearchParams();
     const roomId = searchParams.get("room") || selectedRoomId;
     const currentRoom = availableRooms.find((r) => r.id === roomId);
@@ -145,31 +141,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const chipCategoriesRef = useRef(chipCategories);
     chipCategoriesRef.current = chipCategories;
 
-    const brandingCollapsedRef = useRef(brandingCollapsed);
-    brandingCollapsedRef.current = brandingCollapsed;
-
-    /** Collapse / expand hotel branding row based on scroll direction. */
-    useEffect(() => {
-        lastScrollYForHeader.current = typeof window !== "undefined" ? window.scrollY : 0;
-        const onScroll = () => {
-            const y = window.scrollY;
-            const last = lastScrollYForHeader.current;
-            const delta = y - last;
-            lastScrollYForHeader.current = y;
-
-            if (y < 20) {
-                setBrandingCollapsed(false);
-                return;
-            }
-            if (delta > 8 && y > 48) {
-                setBrandingCollapsed(true);
-            } else if (delta < -12) {
-                setBrandingCollapsed(false);
-            }
-        };
-        window.addEventListener("scroll", onScroll, { passive: true });
-        return () => window.removeEventListener("scroll", onScroll);
-    }, []);
+    /** Sticky header is always full height; spy line ≈ distance from viewport top to category content. */
+    const SCROLL_SPY_HEADER_LINE_PX = 232;
 
     /** Scroll-spy: active chip = last category section whose heading is at/above the sticky header line. */
     useEffect(() => {
@@ -185,7 +158,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             raf = requestAnimationFrame(() => {
                 const cats = chipCategoriesRef.current;
                 if (cats.length === 0) return;
-                const line = brandingCollapsedRef.current ? 148 : 228;
+                const line = SCROLL_SPY_HEADER_LINE_PX;
                 let currentId = cats[0].id;
                 for (const cat of cats) {
                     const el = document.getElementById(`cat-${cat.id}`);
@@ -465,52 +438,38 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }
 
     return (
-        <div className="min-h-screen bg-zinc-950 pb-28 font-sans text-zinc-100 page-transition overflow-x-hidden">
-            <header className="sticky top-0 z-30 w-full min-w-0 max-w-full overflow-x-hidden border-b border-white/[0.08] bg-zinc-950/90 backdrop-blur-xl">
-                <div
-                    className={cn(
-                        "w-full min-w-0 max-w-md mx-auto px-4 transition-[padding] duration-300 ease-out motion-reduce:transition-none",
-                        brandingCollapsed ? "pt-2 pb-2" : "pt-3 pb-2",
-                    )}
-                >
-                    <div
-                        className={cn(
-                            "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none overflow-hidden",
-                            brandingCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
-                        )}
-                    >
-                        <div className="min-h-0">
-                            <div className="flex items-center gap-2.5 pb-2.5">
-                                {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
-                                    <Image
-                                        src={hotel.logoUrl.trim()}
-                                        alt=""
-                                        width={36}
-                                        height={36}
-                                        sizes="36px"
-                                        priority
-                                        className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/10 bg-zinc-900 shrink-0"
-                                        onError={() => setGuestLogoFailed(true)}
-                                    />
-                                ) : (
-                                    <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-rose-600 to-rose-800 flex items-center justify-center text-white text-sm font-bold shrink-0 ring-1 ring-white/10">
-                                        {hotel?.name?.charAt(0) || "H"}
-                                    </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <h1 className="text-sm font-bold text-white leading-tight truncate">{hotel?.name}</h1>
-                                    <p className="text-[11px] text-zinc-500 flex items-center gap-1">
-                                        {roomDisplayName ? (
-                                            <>
-                                                <MapPin className="w-3 h-3 text-rose-400/90" />
-                                                <span>Room {roomDisplayName}</span>
-                                            </>
-                                        ) : (
-                                            <span className="italic text-zinc-600">Digital menu</span>
-                                        )}
-                                    </p>
-                                </div>
+        <div className="min-h-screen bg-zinc-950 pb-28 font-sans text-zinc-100 page-transition">
+            <header className="sticky top-0 z-50 w-full min-w-0 max-w-full border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-xl supports-[backdrop-filter]:bg-zinc-950/85">
+                <div className="mx-auto w-full min-w-0 max-w-md px-4 pb-2 pt-3">
+                    <div className="flex items-center gap-2.5 pb-2.5">
+                        {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
+                            <Image
+                                src={hotel.logoUrl.trim()}
+                                alt=""
+                                width={36}
+                                height={36}
+                                sizes="36px"
+                                priority
+                                className="h-9 w-9 shrink-0 rounded-lg bg-zinc-900 object-cover ring-1 ring-white/10"
+                                onError={() => setGuestLogoFailed(true)}
+                            />
+                        ) : (
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-rose-600 to-rose-800 text-sm font-bold text-white ring-1 ring-white/10">
+                                {hotel?.name?.charAt(0) || "H"}
                             </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                            <h1 className="truncate text-sm font-bold leading-tight text-white">{hotel?.name}</h1>
+                            <p className="flex items-center gap-1 text-[11px] text-zinc-500">
+                                {roomDisplayName ? (
+                                    <>
+                                        <MapPin className="h-3 w-3 text-rose-400/90" />
+                                        <span>Room {roomDisplayName}</span>
+                                    </>
+                                ) : (
+                                    <span className="italic text-zinc-600">Digital menu</span>
+                                )}
+                            </p>
                         </div>
                     </div>
 
@@ -688,7 +647,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 </div>
             </header>
 
-            <main className="w-full min-w-0 max-w-md mx-auto px-4 py-5 space-y-8">
+            <main className="mx-auto w-full min-w-0 max-w-md space-y-8 overflow-x-hidden px-4 py-5">
                 {ENABLE_GUEST_ORDERING && !isOpen && (
                     <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
                         <Clock className="w-5 h-5 text-amber-400 flex-shrink-0" />
@@ -716,10 +675,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         key={cat.id}
                         id={`cat-${cat.id}`}
                         data-category-id={cat.id}
-                        className={cn(
-                            "transition-[scroll-margin] duration-300 motion-reduce:transition-none",
-                            brandingCollapsed ? "scroll-mt-40 sm:scroll-mt-44" : "scroll-mt-[15rem] sm:scroll-mt-[16rem]",
-                        )}
+                        className="scroll-mt-[16.5rem] sm:scroll-mt-[17.5rem] motion-reduce:transition-none"
                     >
                         <h2 className="mb-4 flex items-center gap-2 text-base font-bold tracking-tight text-white">
                             <CategoryIconDisplay icon={cat.icon} size="md" className="text-rose-400" />
