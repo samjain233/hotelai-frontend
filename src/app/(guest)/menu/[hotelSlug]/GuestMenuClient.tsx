@@ -127,8 +127,21 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         setDietFilters((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
     }
 
+    function removeDietFilter(key: GuestDietFilterKey) {
+        setDietFilters((prev) => prev.filter((k) => k !== key));
+    }
+
+    function clearAllMenuFilters() {
+        setSortBy("default");
+        setDietFilters([]);
+    }
+
+    const activeSortLabel = SORT_MENU_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Sort";
+
     const resultCount = useMemo(() => flattenMenuItems(filteredCategories).length, [filteredCategories]);
     const hasActiveFilters = searchNormalized.length > 0 || dietFilters.length > 0 || sortBy !== "default";
+    /** Sort or diet chosen from menu — show strip under search + adjust scroll offsets. */
+    const menuFiltersActive = sortBy !== "default" || dietFilters.length > 0;
     const showNoResultsPanel = !loading && !error && categories.length > 0 && resultCount === 0;
 
     const chipCategoryIdsKey = useMemo(() => chipCategories.map((c) => c.id).join("|"), [chipCategories]);
@@ -136,8 +149,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const chipCategoriesRef = useRef(chipCategories);
     chipCategoriesRef.current = chipCategories;
 
-    /** Sticky header (branding + search only); spy line ≈ px from viewport top. */
-    const SCROLL_SPY_HEADER_LINE_PX = 128;
+    const scrollSpyLinePx = menuFiltersActive ? 182 : 128;
 
     /** Scroll-spy: active section for bottom Menu sheet highlight. */
     useEffect(() => {
@@ -153,7 +165,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             raf = requestAnimationFrame(() => {
                 const cats = chipCategoriesRef.current;
                 if (cats.length === 0) return;
-                const line = SCROLL_SPY_HEADER_LINE_PX;
+                const line = scrollSpyLinePx;
                 let currentId = cats[0].id;
                 for (const cat of cats) {
                     const el = document.getElementById(`cat-${cat.id}`);
@@ -174,7 +186,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             window.removeEventListener("resize", updateActiveFromScroll);
             cancelAnimationFrame(raf);
         };
-    }, [chipCategoryIdsKey]);
+    }, [chipCategoryIdsKey, scrollSpyLinePx]);
 
     useEffect(() => {
         setGuestLogoFailed(false);
@@ -601,6 +613,79 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             ) : null}
                         </div>
                     </div>
+
+                    {menuFiltersActive ? (
+                        <div className="mt-2.5 border-t border-white/[0.08] pt-2.5" aria-label="Active filters">
+                            <div className="mb-1.5 flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Active filters</span>
+                                <button
+                                    type="button"
+                                    onClick={clearAllMenuFilters}
+                                    className="shrink-0 text-[11px] font-semibold text-rose-400/90 hover:text-rose-300 hover:underline"
+                                >
+                                    Clear all
+                                </button>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {sortBy !== "default" ? (
+                                    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-rose-500/35 bg-rose-500/10 py-1 pl-2.5 pr-1 text-xs font-medium text-rose-100">
+                                        <SlidersHorizontal className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
+                                        <span className="min-w-0 truncate">{activeSortLabel}</span>
+                                        <button
+                                            type="button"
+                                            className="rounded-full p-1 text-rose-200/90 hover:bg-rose-500/25 hover:text-white"
+                                            aria-label={`Remove sort: ${activeSortLabel}`}
+                                            onClick={() => setSortBy("default")}
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </span>
+                                ) : null}
+                                {dietFilters.includes("VEG") ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-green-500/40 bg-green-500/10 py-1 pl-2 pr-1 text-xs font-medium text-green-200">
+                                        <IndianVegMark className="h-3.5 w-3.5 shrink-0" />
+                                        Veg
+                                        <button
+                                            type="button"
+                                            className="rounded-full p-1 text-green-200/90 hover:bg-green-500/20 hover:text-white"
+                                            aria-label="Remove vegetarian filter"
+                                            onClick={() => removeDietFilter("VEG")}
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </span>
+                                ) : null}
+                                {dietFilters.includes("NON_VEG") ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 py-1 pl-2 pr-1 text-xs font-medium text-red-200">
+                                        <IndianNonVegMark className="h-3.5 w-3.5 shrink-0" />
+                                        Non-veg
+                                        <button
+                                            type="button"
+                                            className="rounded-full p-1 text-red-200/90 hover:bg-red-500/20 hover:text-white"
+                                            aria-label="Remove non-vegetarian filter"
+                                            onClick={() => removeDietFilter("NON_VEG")}
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </span>
+                                ) : null}
+                                {dietFilters.includes("EGGITARIAN") ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 py-1 pl-2 pr-1 text-xs font-medium text-amber-200">
+                                        <Egg className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                                        Egg
+                                        <button
+                                            type="button"
+                                            className="rounded-full p-1 text-amber-200/90 hover:bg-amber-500/20 hover:text-white"
+                                            aria-label="Remove egg filter"
+                                            onClick={() => removeDietFilter("EGGITARIAN")}
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </span>
+                                ) : null}
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             </header>
 
@@ -642,7 +727,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         key={cat.id}
                         id={`cat-${cat.id}`}
                         data-category-id={cat.id}
-                        className="scroll-mt-[10.25rem] sm:scroll-mt-[11rem] motion-reduce:transition-none"
+                        className={cn(
+                            "motion-reduce:transition-none",
+                            menuFiltersActive ? "scroll-mt-[13.25rem] sm:scroll-mt-[14rem]" : "scroll-mt-[10.25rem] sm:scroll-mt-[11rem]",
+                        )}
                     >
                         <h2 className="mb-4 flex items-center gap-2 text-base font-bold tracking-tight text-white">
                             <CategoryIconDisplay icon={cat.icon} size="md" className="text-rose-400" />
