@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -85,6 +85,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     /** True while programmatic scroll-to-section is running (ignore scroll-spy updates). */
     const scrollSpySuspended = useRef(false);
+    const guestHeaderRef = useRef<HTMLElement | null>(null);
     const searchParams = useSearchParams();
     const roomId = searchParams.get("room") || selectedRoomId;
     const currentRoom = availableRooms.find((r) => r.id === roomId);
@@ -228,6 +229,28 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         document.addEventListener("keydown", onKeyDown);
         return () => document.removeEventListener("keydown", onKeyDown);
     }, [showHeaderMenu]);
+
+    /** Pixel offset for sticky category titles = guest header height (updates when branding/filters change). */
+    useLayoutEffect(() => {
+        const el = guestHeaderRef.current;
+        if (!el) return;
+        const CSS_VAR = "--guest-menu-sticky-top";
+        const update = () => {
+            const h = Math.ceil(el.getBoundingClientRect().height);
+            document.documentElement.style.setProperty(CSS_VAR, `${h}px`);
+        };
+        update();
+        const ro = new ResizeObserver(() => update());
+        ro.observe(el);
+        window.addEventListener("scroll", update, { passive: true });
+        window.addEventListener("resize", update, { passive: true });
+        return () => {
+            ro.disconnect();
+            window.removeEventListener("scroll", update);
+            window.removeEventListener("resize", update);
+            document.documentElement.style.removeProperty(CSS_VAR);
+        };
+    }, []);
 
     const MENU_TITLE_BRAND = "Dream Canvas";
 
@@ -462,7 +485,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     return (
         <div className="min-h-screen bg-zinc-950 pb-28 font-sans text-zinc-100 page-transition">
-            <header className="sticky top-0 z-50 w-full min-w-0 max-w-full border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-xl supports-[backdrop-filter]:bg-zinc-950/85">
+            <header
+                ref={guestHeaderRef}
+                className="sticky top-0 z-50 w-full min-w-0 max-w-full border-b border-white/[0.08] bg-zinc-950/95 backdrop-blur-xl supports-[backdrop-filter]:bg-zinc-950/85"
+            >
                 <div
                     className={cn(
                         "mx-auto w-full min-w-0 max-w-md px-4 pb-2 transition-[padding] duration-300 ease-out motion-reduce:transition-none",
@@ -777,10 +803,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             !brandingBarHidden && !menuFiltersActive && "scroll-mt-[10.25rem] sm:scroll-mt-[11rem]",
                         )}
                     >
-                        <h2 className="mb-4 flex items-center gap-2 text-base font-bold tracking-tight text-white">
-                            <CategoryIconDisplay icon={cat.icon} size="md" className="text-rose-400" />
-                            {cat.name}
-                        </h2>
+                        <div
+                            className="sticky z-40 -mx-4 mb-4 border-b border-white/[0.06] bg-zinc-950/95 px-4 py-2.5 backdrop-blur-md supports-[backdrop-filter]:bg-zinc-950/85"
+                            style={{ top: "var(--guest-menu-sticky-top, 7rem)" }}
+                        >
+                            <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-white">
+                                <CategoryIconDisplay icon={cat.icon} size="md" className="text-rose-400" />
+                                {cat.name}
+                            </h2>
+                        </div>
                         <ul className="divide-y divide-dashed divide-white/10">
                             {(cat.items ?? []).map((item, itemIndex) => {
                                 const qty = ENABLE_GUEST_ORDERING ? getCartQuantity(item.id) : 0;
