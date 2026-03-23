@@ -766,7 +766,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 />
             ) : null}
 
-            <main className="mx-auto w-full min-w-0 max-w-md space-y-8 overflow-x-hidden px-4 py-5">
+            <main className="mx-auto w-full min-w-0 max-w-md space-y-8 overflow-x-clip px-4 py-5">
                 {ENABLE_GUEST_ORDERING && !isOpen && (
                     <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
                         <Clock className="w-5 h-5 text-amber-400 flex-shrink-0" />
@@ -796,15 +796,19 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         id={`cat-${cat.id}`}
                         data-category-id={cat.id}
                         className={cn(
-                            "motion-reduce:transition-none",
+                            "relative isolate motion-reduce:transition-none",
                             brandingBarHidden && menuFiltersActive && "scroll-mt-[9.75rem] sm:scroll-mt-[10.5rem]",
                             brandingBarHidden && !menuFiltersActive && "scroll-mt-[6.75rem] sm:scroll-mt-[7.25rem]",
                             !brandingBarHidden && menuFiltersActive && "scroll-mt-[13.25rem] sm:scroll-mt-[14rem]",
                             !brandingBarHidden && !menuFiltersActive && "scroll-mt-[10.25rem] sm:scroll-mt-[11rem]",
                         )}
                     >
+                        {/*
+                          Sticky category title must stay above list items in paint order (items use transform animations).
+                          Guest header stays z-50; category bar z-[41] so it sits above ul (z-0) but below modals.
+                        */}
                         <div
-                            className="sticky z-40 -mx-4 mb-4 border-b border-white/[0.06] bg-zinc-950/95 px-4 py-2.5 backdrop-blur-md supports-[backdrop-filter]:bg-zinc-950/85"
+                            className="sticky z-[41] -mx-4 mb-4 border-b border-white/[0.08] bg-zinc-950 px-4 py-2.5 shadow-[0_1px_0_rgba(0,0,0,0.4)] backdrop-blur-md supports-[backdrop-filter]:bg-zinc-950/98"
                             style={{ top: "var(--guest-menu-sticky-top, 7rem)" }}
                         >
                             <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-white">
@@ -812,7 +816,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 {cat.name}
                             </h2>
                         </div>
-                        <ul className="divide-y divide-dashed divide-white/10">
+                        <ul className="relative z-0 divide-y divide-dashed divide-white/10">
                             {(cat.items ?? []).map((item, itemIndex) => {
                                 const qty = ENABLE_GUEST_ORDERING ? getCartQuantity(item.id) : 0;
                                 const desc = item.description?.trim() ?? "";
@@ -870,7 +874,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 return (
                                     <li
                                         key={item.id}
-                                        className="flex gap-3 py-4 first:pt-0 animate-fade-in-up"
+                                        className="relative z-0 flex gap-3 py-4 first:pt-0 animate-fade-in-up"
                                         style={{ animationDelay: `${itemIndex * 40}ms` }}
                                     >
                                         <div className="min-w-0 flex-1">
