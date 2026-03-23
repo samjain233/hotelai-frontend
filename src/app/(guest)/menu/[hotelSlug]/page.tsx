@@ -34,15 +34,16 @@ function MenuSkeleton() {
         <div className="min-h-screen bg-zinc-950">
             <div className="sticky top-0 z-30 border-b border-white/10 bg-zinc-950/90 backdrop-blur-xl">
                 <div className="max-w-md mx-auto space-y-3 px-4 py-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
-                        <div className="h-10 flex-1 animate-shimmer rounded-full bg-zinc-800/80" />
-                        <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
+                    <div className="flex items-center gap-2 pb-2">
+                        <div className="h-9 w-9 shrink-0 rounded-lg animate-shimmer bg-zinc-800/80" />
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                            <div className="h-3.5 w-28 animate-shimmer rounded bg-zinc-800/80" />
+                            <div className="h-2.5 w-20 animate-shimmer rounded bg-zinc-800/80" />
+                        </div>
                     </div>
-                    <div className="flex gap-2">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <div key={i} className="h-9 shrink-0 animate-shimmer rounded-full bg-zinc-800/80" style={{ width: `${72 + i * 8}px` }} />
-                        ))}
+                    <div className="flex items-center gap-2">
+                        <div className="h-10 min-w-0 flex-1 animate-shimmer rounded-full bg-zinc-800/80" />
+                        <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
                     </div>
                 </div>
             </div>

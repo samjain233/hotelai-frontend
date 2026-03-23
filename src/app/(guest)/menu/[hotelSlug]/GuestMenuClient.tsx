@@ -82,10 +82,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     /** True while programmatic scroll-to-section is running (ignore scroll-spy updates). */
     const scrollSpySuspended = useRef(false);
-    /** When true, next activeCategory effect must not scroll the chip strip (change came from scroll-spy). */
-    const activeCategoryFromScrollSpy = useRef(false);
-    const categoryChipStripRef = useRef<HTMLDivElement>(null);
-
     const searchParams = useSearchParams();
     const roomId = searchParams.get("room") || selectedRoomId;
     const currentRoom = availableRooms.find((r) => r.id === roomId);
@@ -117,7 +113,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         return findDidYouMeanItem(searchQuery, pool);
     }, [searchQuery, searchNormalized, filteredCategories, dietFilteredCategories]);
 
-    /** Chips match visible sections: all categories, or only those with search/diet hits. */
+    /** Categories for scroll-spy + bottom “Menu” sheet (same as filtered list). */
     const chipCategories = filteredCategories;
 
     useEffect(() => {
@@ -140,10 +136,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const chipCategoriesRef = useRef(chipCategories);
     chipCategoriesRef.current = chipCategories;
 
-    /** Sticky header (branding + search + category chips); spy line ≈ px from top. */
-    const SCROLL_SPY_HEADER_LINE_PX = 180;
+    /** Sticky header (branding + search only); spy line ≈ px from viewport top. */
+    const SCROLL_SPY_HEADER_LINE_PX = 128;
 
-    /** Scroll-spy: active chip = last category section whose heading is at/above the sticky header line. */
+    /** Scroll-spy: active section for bottom Menu sheet highlight. */
     useEffect(() => {
         if (!chipCategoryIdsKey) return;
 
@@ -165,11 +161,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     const top = el.getBoundingClientRect().top;
                     if (top <= line) currentId = cat.id;
                 }
-                setActiveCategory((prev) => {
-                    if (prev === currentId) return prev;
-                    activeCategoryFromScrollSpy.current = true;
-                    return currentId;
-                });
+                setActiveCategory((prev) => (prev === currentId ? prev : currentId));
             });
         };
 
@@ -183,24 +175,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             cancelAnimationFrame(raf);
         };
     }, [chipCategoryIdsKey]);
-
-    /** Keep the active chip in view inside the horizontal strip (not when scroll-spy updated — avoids scroll fighting / page jitter). */
-    useEffect(() => {
-        if (!activeCategory || !categoryChipStripRef.current) return;
-        if (activeCategoryFromScrollSpy.current) {
-            activeCategoryFromScrollSpy.current = false;
-            return;
-        }
-        const strip = categoryChipStripRef.current;
-        const btn = strip.querySelector<HTMLElement>(`[data-chip-id="${activeCategory}"]`);
-        if (!btn) return;
-        const reduceMotion =
-            typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-        const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
-        const btnCenter = btn.offsetLeft + btn.offsetWidth / 2;
-        const targetLeft = Math.max(0, btnCenter - strip.clientWidth / 2);
-        strip.scrollTo({ left: targetLeft, behavior });
-    }, [activeCategory]);
 
     useEffect(() => {
         setGuestLogoFailed(false);
@@ -351,15 +325,16 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             <div className="min-h-screen bg-zinc-950 page-transition text-zinc-100">
                 <div className="sticky top-0 z-30 border-b border-white/10 bg-zinc-950/90 backdrop-blur-xl">
                     <div className="max-w-md mx-auto px-4 py-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
-                            <div className="h-10 flex-1 animate-shimmer rounded-full bg-zinc-800/80" />
-                            <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
+                        <div className="flex items-center gap-2 pb-2">
+                            <div className="h-9 w-9 shrink-0 rounded-lg animate-shimmer bg-zinc-800/80" />
+                            <div className="min-w-0 flex-1 space-y-1.5">
+                                <div className="h-3.5 w-28 animate-shimmer rounded bg-zinc-800/80" />
+                                <div className="h-2.5 w-20 animate-shimmer rounded bg-zinc-800/80" />
+                            </div>
                         </div>
-                        <div className="flex gap-2 overflow-hidden">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <div key={i} className="h-9 shrink-0 animate-shimmer rounded-full bg-zinc-800/80" style={{ width: `${72 + i * 8}px` }} />
-                            ))}
+                        <div className="flex items-center gap-2">
+                            <div className="h-10 min-w-0 flex-1 animate-shimmer rounded-full bg-zinc-800/80" />
+                            <div className="h-10 w-10 shrink-0 rounded-full animate-shimmer bg-zinc-800/80" />
                         </div>
                     </div>
                 </div>
@@ -579,7 +554,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                 className={cn(
                                                     "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
                                                     dietFilters.includes("NON_VEG")
-                                                        ? "border-orange-500/40 bg-orange-500/10 text-orange-200"
+                                                        ? "border-red-500/40 bg-red-500/10 text-red-200"
                                                         : "border-white/10 bg-zinc-800/50 text-zinc-400 hover:border-white/20",
                                                 )}
                                                 onClick={() => toggleDietFilter("NON_VEG")}
@@ -626,40 +601,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             ) : null}
                         </div>
                     </div>
-
-                    {chipCategories.length > 0 ? (
-                        <div
-                            ref={categoryChipStripRef}
-                            role="tablist"
-                            aria-label="Menu categories"
-                            className="-mx-4 mt-3 flex w-full min-w-0 gap-2 overflow-x-auto pb-2 pt-0.5 px-4 no-scrollbar mask-fade-right snap-x snap-mandatory scroll-pl-4"
-                        >
-                            {chipCategories.map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={activeCategory === cat.id}
-                                    data-chip-id={cat.id}
-                                    id={`chip-${cat.id}`}
-                                    onClick={() => scrollToCategory(cat.id)}
-                                    className={cn(
-                                        "snap-start shrink-0 inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all",
-                                        activeCategory === cat.id
-                                            ? "border-rose-500/50 bg-rose-500/20 text-rose-100 shadow-[0_0_20px_-8px_rgba(244,63,94,0.5)]"
-                                            : "border-white/10 bg-zinc-900 text-zinc-400 hover:border-white/20 hover:text-zinc-200",
-                                    )}
-                                >
-                                    <CategoryIconDisplay
-                                        icon={cat.icon}
-                                        size="sm"
-                                        className={activeCategory === cat.id ? "text-rose-300" : "text-zinc-500"}
-                                    />
-                                    {cat.name}
-                                </button>
-                            ))}
-                        </div>
-                    ) : null}
                 </div>
             </header>
 
@@ -701,7 +642,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         key={cat.id}
                         id={`cat-${cat.id}`}
                         data-category-id={cat.id}
-                        className="scroll-mt-[13.25rem] sm:scroll-mt-[14rem] motion-reduce:transition-none"
+                        className="scroll-mt-[10.25rem] sm:scroll-mt-[11rem] motion-reduce:transition-none"
                     >
                         <h2 className="mb-4 flex items-center gap-2 text-base font-bold tracking-tight text-white">
                             <CategoryIconDisplay icon={cat.icon} size="md" className="text-rose-400" />

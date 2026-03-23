@@ -24,8 +24,8 @@ export function IndianNonVegMark({ className }: { className?: string }) {
             aria-label="Non-vegetarian"
         >
             <svg viewBox="0 0 24 24" className="h-full w-full" fill="none" aria-hidden>
-                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" className="text-[#c45c26]" />
-                <path d="M12 7l6 10H6l6-10z" fill="currentColor" className="text-[#c45c26]" />
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" className="text-red-600" />
+                <circle cx="12" cy="12" r="5" fill="currentColor" className="text-red-600" />
             </svg>
         </span>
     );
