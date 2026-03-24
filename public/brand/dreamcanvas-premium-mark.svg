@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <rect width="64" height="64" rx="16" fill="#14120f"/>
+  <!-- Refined frame + arc suggesting canvas / horizon -->
+  <rect x="14" y="18" width="36" height="30" rx="2" stroke="#c9a962" stroke-width="1.75" fill="none" opacity="0.95"/>
+  <path d="M18 38c6-8 10-8 16-2s12 6 18 2" stroke="#e8e0d5" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="44" cy="26" r="2.25" fill="#c9a962"/>
+</svg>
