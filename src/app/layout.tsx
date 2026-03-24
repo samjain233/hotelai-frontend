@@ -17,6 +17,8 @@ const playfair = Playfair_Display({
 });
 
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Hotel AI | Digital Room Service",
@@ -43,6 +45,8 @@ export default function RootLayout({
           <AuthProvider>{children}</AuthProvider>
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
