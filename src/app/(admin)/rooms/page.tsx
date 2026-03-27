@@ -32,6 +32,21 @@ import { cn } from "@/lib/utils";
 
 type QrLayout = 4 | 6 | 8;
 
+/** Matches server QR `light` colour so the print frame has no white margin around the PNG. */
+function resolveQrPrintFrameBackground(hex: string | null | undefined): string {
+    const raw = hex?.trim();
+    if (!raw) return "#ffffff";
+    const s = raw.startsWith("#") ? raw : `#${raw}`;
+    if (/^#[0-9A-Fa-f]{6}$/.test(s)) return s.toLowerCase();
+    if (/^#[0-9A-Fa-f]{3}$/.test(s)) {
+        const r = s[1];
+        const g = s[2];
+        const b = s[3];
+        return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+    }
+    return "#ffffff";
+}
+
 const LAYOUT_OPTIONS: { value: QrLayout; label: string; cols: string; desc: string }[] = [
     { value: 4, label: "Large", cols: "qr-print-cols-2", desc: "4 / page" },
     { value: 6, label: "Medium", cols: "qr-print-cols-3", desc: "6 / page" },
@@ -40,6 +55,10 @@ const LAYOUT_OPTIONS: { value: QrLayout; label: string; cols: string; desc: stri
 
 export default function RoomsPage() {
     const { hotel } = useAuth();
+    const qrPrintFrameBg = useMemo(
+        () => resolveQrPrintFrameBackground(hotel?.qrCodeBackgroundHex),
+        [hotel?.qrCodeBackgroundHex],
+    );
     const [rooms, setRooms] = useState<Room[]>([]);
     const [qrs, setQrs] = useState<RoomQr[]>([]);
     const [loading, setLoading] = useState(true);
@@ -561,6 +580,7 @@ export default function RoomsPage() {
                                                     wifiPass={qrWifiPass}
                                                     showBranding={qrShowBranding}
                                                     hotelName={hotel?.name}
+                                                    qrFrameBackground={qrPrintFrameBg}
                                                     copiedId={copiedId}
                                                     onDownload={() => downloadQr(qr)}
                                                     onCopy={() => copyUrl(qr)}
@@ -603,8 +623,11 @@ export default function RoomsPage() {
                             {hotel?.name && (
                                 <p className="mb-4 text-center text-sm font-semibold text-foreground print:mb-3 print:text-black">{hotel.name}</p>
                             )}
-                            <div className="w-64 h-64 bg-white p-3 rounded-xl ring-1 ring-black/10 print:w-72 print:h-72 print:mx-auto">
-                                <img src={singleQr.qrCode} alt={`Room ${singleQr.roomNumber}`} className="w-full h-full object-contain" />
+                            <div
+                                className="w-64 h-64 overflow-hidden rounded-xl p-0 ring-1 ring-black/10 print:w-72 print:h-72 print:mx-auto"
+                                style={{ backgroundColor: qrPrintFrameBg }}
+                            >
+                                <img src={singleQr.qrCode} alt={`Room ${singleQr.roomNumber}`} className="h-full w-full object-contain" />
                             </div>
                             <p className="mt-4 text-2xl font-bold text-foreground print:text-black">Room {singleQr.roomNumber}</p>
                             <p className="mt-1 text-sm text-muted-foreground print:text-neutral-600">Scan to order</p>
@@ -634,6 +657,7 @@ function QrCard({
     wifiPass,
     showBranding,
     hotelName,
+    qrFrameBackground,
     copiedId,
     onDownload,
     onCopy,
@@ -645,6 +669,8 @@ function QrCard({
     wifiPass: string;
     showBranding: boolean;
     hotelName?: string;
+    /** Same as QR PNG background — fills frame to the inner border (no white gutter). */
+    qrFrameBackground: string;
     copiedId: string | null;
     onDownload: () => void;
     onCopy: () => void;
@@ -671,11 +697,14 @@ function QrCard({
                 </p>
             )}
 
-            {/* QR Image */}
-            <div className={cn(
-                "aspect-square w-full rounded-lg bg-white p-1.5 ring-1 ring-black/10 dark:ring-white/20 print:ring-black/15",
-                isLarge ? "mb-4 p-3" : "mb-2",
-            )}>
+            {/* QR Image — frame uses hotel QR background so colour runs to the ring (no white padding). */}
+            <div
+                className={cn(
+                    "aspect-square w-full overflow-hidden rounded-lg p-0 ring-1 ring-black/10 dark:ring-white/20 print:ring-black/15",
+                    isLarge ? "mb-4" : "mb-2",
+                )}
+                style={{ backgroundColor: qrFrameBackground }}
+            >
                 <img src={qr.qrCode} alt={`Room ${qr.roomNumber}`} className="h-full w-full object-contain" />
             </div>
 
