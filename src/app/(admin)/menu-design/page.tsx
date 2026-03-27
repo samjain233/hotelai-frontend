@@ -11,7 +11,9 @@ import {
     Search,
     Info,
     Sparkles,
+    QrCode,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
@@ -25,6 +27,8 @@ import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 const PICKER_FALLBACK_BG = "#09090b";
 const PICKER_FALLBACK_TEXT = "#fafafa";
 const PICKER_FALLBACK_ACCENT = "#fb7185";
+const PICKER_FALLBACK_QR_FG = "#000000";
+const PICKER_FALLBACK_QR_BG = "#ffffff";
 
 function normalizePickerValue(hex: string | null | undefined, emptyFallback: string): string {
     if (!hex?.trim()) return emptyFallback;
@@ -171,7 +175,10 @@ export default function MenuDesignPage() {
     const [bgHex, setBgHex] = useState("");
     const [textHex, setTextHex] = useState("");
     const [accentHex, setAccentHex] = useState("");
+    const [qrFgHex, setQrFgHex] = useState("");
+    const [qrBgHex, setQrBgHex] = useState("");
     const [saving, setSaving] = useState(false);
+    const [qrPreviewUrl, setQrPreviewUrl] = useState("https://example.com/menu");
 
     useEffect(() => {
         if (!loading && admin && admin.role !== "OWNER" && admin.role !== "MANAGER") {
@@ -183,13 +190,30 @@ export default function MenuDesignPage() {
         setBgHex(hotel?.guestMenuBackgroundHex?.trim() ?? "");
         setTextHex(hotel?.guestMenuTextHex?.trim() ?? "");
         setAccentHex(hotel?.guestMenuAccentHex?.trim() ?? "");
-    }, [hotel?.guestMenuBackgroundHex, hotel?.guestMenuTextHex, hotel?.guestMenuAccentHex]);
+        setQrFgHex(hotel?.qrCodeForegroundHex?.trim() ?? "");
+        setQrBgHex(hotel?.qrCodeBackgroundHex?.trim() ?? "");
+    }, [
+        hotel?.guestMenuBackgroundHex,
+        hotel?.guestMenuTextHex,
+        hotel?.guestMenuAccentHex,
+        hotel?.qrCodeForegroundHex,
+        hotel?.qrCodeBackgroundHex,
+    ]);
+
+    useEffect(() => {
+        if (hotel?.slug && typeof window !== "undefined") {
+            setQrPreviewUrl(`${window.location.origin}/menu/${hotel.slug}`);
+        }
+    }, [hotel?.slug]);
 
     const previewStyle = buildGuestMenuThemeStyle({
         guestMenuBackgroundHex: bgHex || null,
         guestMenuTextHex: textHex || null,
         guestMenuAccentHex: accentHex || null,
     });
+
+    const qrPreviewFg = normalizePickerValue(qrFgHex || null, PICKER_FALLBACK_QR_FG);
+    const qrPreviewBg = normalizePickerValue(qrBgHex || null, PICKER_FALLBACK_QR_BG);
 
     const menuUrl =
         typeof window !== "undefined" && hotel?.slug
@@ -207,6 +231,8 @@ export default function MenuDesignPage() {
                 guestMenuBackgroundHex: bgHex.trim(),
                 guestMenuTextHex: textHex.trim(),
                 guestMenuAccentHex: accentHex.trim(),
+                qrCodeForegroundHex: qrFgHex.trim(),
+                qrCodeBackgroundHex: qrBgHex.trim(),
             });
             await refreshHotel();
             toast.success("Guest menu appearance saved.");
@@ -225,10 +251,14 @@ export default function MenuDesignPage() {
                 guestMenuBackgroundHex: "",
                 guestMenuTextHex: "",
                 guestMenuAccentHex: "",
+                qrCodeForegroundHex: "",
+                qrCodeBackgroundHex: "",
             });
             setBgHex("");
             setTextHex("");
             setAccentHex("");
+            setQrFgHex("");
+            setQrBgHex("");
             await refreshHotel();
             toast.success("Reset to default guest menu theme.");
         } catch (err: unknown) {
@@ -260,8 +290,8 @@ export default function MenuDesignPage() {
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Menu design</h1>
                             <p className="text-sm text-muted-foreground">
-                                Theme your <span className="font-medium text-foreground">guest-facing menu</span> — QR codes and room links use
-                                these colours.
+                                Theme your <span className="font-medium text-foreground">guest-facing menu</span> and{" "}
+                                <span className="font-medium text-foreground">printed room QR codes</span> (export from Rooms).
                             </p>
                         </div>
                     </div>
@@ -319,6 +349,52 @@ export default function MenuDesignPage() {
                                     placeholder="#fb7185 or leave empty for default rose"
                                     ariaLabel="Pick accent colour"
                                 />
+                            </div>
+
+                            <div className="space-y-4 border-t border-border pt-6">
+                                <div className="flex items-center gap-2">
+                                    <QrCode className="h-4 w-4 text-primary" aria-hidden />
+                                    <h3 className="text-base font-semibold text-foreground">Room QR codes</h3>
+                                </div>
+                                <p className="text-xs leading-relaxed text-muted-foreground">
+                                    Applies to QR images from <strong className="font-medium text-foreground">Rooms &amp; QR</strong> (single
+                                    download and batch print). Leave both empty for classic <strong className="font-medium text-foreground">black</strong>{" "}
+                                    on <strong className="font-medium text-foreground">white</strong>. Use strong contrast so phones scan
+                                    reliably.
+                                </p>
+                                <ColorField
+                                    label="QR modules (foreground)"
+                                    hint="Squares that encode the link — usually a dark colour."
+                                    value={qrFgHex}
+                                    onChange={setQrFgHex}
+                                    fallback={PICKER_FALLBACK_QR_FG}
+                                    placeholder="#000000 or leave empty for default"
+                                    ariaLabel="Pick QR foreground colour"
+                                />
+                                <ColorField
+                                    label="QR background"
+                                    hint="Quiet zone behind the code — usually light."
+                                    value={qrBgHex}
+                                    onChange={setQrBgHex}
+                                    fallback={PICKER_FALLBACK_QR_BG}
+                                    placeholder="#ffffff or leave empty for default"
+                                    ariaLabel="Pick QR background colour"
+                                />
+                                <div className="flex flex-col items-center gap-2 rounded-xl border border-border/80 bg-secondary/10 py-4">
+                                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">QR preview</p>
+                                    <div className="rounded-lg p-2 shadow-sm ring-1 ring-black/10" style={{ backgroundColor: qrPreviewBg }}>
+                                        <QRCodeSVG
+                                            value={qrPreviewUrl}
+                                            size={132}
+                                            level="M"
+                                            bgColor={qrPreviewBg}
+                                            fgColor={qrPreviewFg}
+                                        />
+                                    </div>
+                                    <p className="max-w-[240px] px-2 text-center text-[10px] text-muted-foreground">
+                                        Sample URL; exported QRs use your real room link.
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="mt-auto flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap">

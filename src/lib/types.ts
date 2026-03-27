@@ -14,6 +14,10 @@ export interface Hotel {
     guestMenuTextHex?: string | null;
     /** #RRGGBB — accent (links, prices, category icons, CTAs); null = default rose/crimson */
     guestMenuAccentHex?: string | null;
+    /** Room QR PNG: module colour; unset = #000000 */
+    qrCodeForegroundHex?: string | null;
+    /** Room QR PNG: background; unset = #ffffff */
+    qrCodeBackgroundHex?: string | null;
 }
 
 // ─── Admin ────────────────────────────────────────────────

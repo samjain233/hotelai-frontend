@@ -176,6 +176,8 @@ class ApiClient {
         guestMenuBackgroundHex?: string;
         guestMenuTextHex?: string;
         guestMenuAccentHex?: string;
+        qrCodeForegroundHex?: string;
+        qrCodeBackgroundHex?: string;
     }) {
         return this.request<Hotel>('/auth/hotel/guest-menu-theme', {
             method: 'PATCH',
