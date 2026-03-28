@@ -3,7 +3,7 @@ import Link from "next/link";
 import { legalEntityName, legalContactLine, legalJurisdiction } from "@/lib/legal-config";
 
 export const metadata: Metadata = {
-    title: "Terms of Service | Hotel AI",
+    title: "Terms of Service",
     description: "Terms of Service for Hotel AI — SaaS for hotels in India.",
 };
 

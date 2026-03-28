@@ -1,0 +1,55 @@
+---
+description: SEO guidance for Hotel AI (Next.js) — metadata, indexing, and audit checklist
+globs:
+  - hotel-ai-frontend/src/app/**/*
+  - hotel-ai-frontend/src/lib/**/*
+---
+
+# Hotel AI — SEO agent
+
+## Product context
+
+Hotel AI is a digital room-service platform: QR-based guest ordering, public guest menu and services by hotel slug, kitchen/staff dashboards, and hotel admin (menu, rooms, settings). Legal pages target India (privacy/terms). Brand in metadata: "Hotel AI".
+
+## Route taxonomy
+
+| Segment | Examples | Indexing |
+|---------|----------|----------|
+| Marketing | `/`, future `/pricing` | **index** — strong titles, descriptions, OG |
+| Legal | `/privacy`, `/terms` | **index** — unique metadata per page |
+| Auth | `/login`, `/register`, `/forgot-password`, `/verify-email/*` | **noindex** (or minimal metadata) |
+| Admin / staff | `/dashboard`, `/orders`, `/menu`, `/kitchen`, `/rooms`, `/settings`, … | **noindex, nofollow** via `(admin)` server layout |
+| Superadmin | `/superadmin/**` | **noindex** |
+| Guest (tenant) | `/menu/[hotelSlug]`, `/services/[hotelSlug]` | Default **noindex** for privacy; if product requires discoverable menus, index + unique `generateMetadata` per hotel |
+
+## Next.js App Router patterns
+
+- Use `export const metadata` or `generateMetadata` for every new **public** route.
+- Set **`metadataBase`** from `NEXT_PUBLIC_SITE_URL` (absolute URLs for `openGraph.images` and canonicals).
+- Add **`openGraph`** and **`twitter`** (card, title, description) for pages meant to be shared.
+- Use **`title.template`** on root layout: e.g. `%s | Hotel AI` for child titles.
+- **JSON-LD**: only when accurate — e.g. `Organization` / `WebSite` on marketing; do not use `LocalBusiness` without a real public address.
+- Guest slug routes: use **`robots: { index: false, follow: false }`** unless product explicitly indexes tenant menus.
+
+## SEO pass checklist
+
+When the user asks for an SEO review or pass:
+
+1. Unique `<title>` and meta description per indexable URL.
+2. Single logical **H1** per page; heading hierarchy sensible.
+3. Images: meaningful **`alt`**; prefer `next/image` for LCP where applicable.
+4. Internal links from landing to key flows (login, legal).
+5. No duplicate thin content across slugs without canonical strategy.
+6. Core Web Vitals: avoid huge unoptimized hero assets; lazy-load below fold.
+
+## Out of scope for generic marketing SEO
+
+API routes, `src/app/api/**`, blob uploads, impersonation tokens — keep **noindex**; do not expose sensitive data in meta tags.
+
+## File references
+
+- Root metadata: `hotel-ai-frontend/src/app/layout.tsx`
+- Robots / sitemap: `hotel-ai-frontend/src/app/robots.ts`, `sitemap.ts`
+- Admin crawl policy: `hotel-ai-frontend/src/app/(admin)/layout.tsx` (server) + `AdminShell.tsx`
+- Guest menu metadata: `hotel-ai-frontend/src/app/(guest)/menu/[hotelSlug]/page.tsx`
+- Guest services: `hotel-ai-frontend/src/app/(guest)/services/[hotelSlug]/layout.tsx` + client page

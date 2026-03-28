@@ -3,7 +3,7 @@ import Link from "next/link";
 import { legalEntityName, legalContactLine } from "@/lib/legal-config";
 
 export const metadata: Metadata = {
-    title: "Privacy Policy | Hotel AI",
+    title: "Privacy Policy",
     description: "Privacy Policy for Hotel AI — digital room service platform for hotels in India.",
 };
 

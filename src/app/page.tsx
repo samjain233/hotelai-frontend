@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -130,8 +131,8 @@ function MockupQrCard({ room }: { room: string }) {
     );
 }
 
-export const metadata = {
-    title: "DreamCanvas — Digital Menu for Hotels",
+export const metadata: Metadata = {
+    title: { absolute: "DreamCanvas — Digital Menu for Hotels" },
     description:
         "Give your guests a premium digital menu experience. QR-based room service menus, real-time updates, and beautiful print-ready QR codes.",
 };

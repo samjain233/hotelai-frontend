@@ -1,27 +1,32 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import GuestMenuClient from "./GuestMenuClient";
 import type { PublicMenuFullData } from "@/lib/types";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { fetchGuestMenuFullData } from "@/lib/guestMenuFullServer";
 
 interface Props {
     params: Promise<{ hotelSlug: string }>;
 }
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const { hotelSlug } = await params;
+    const data = await fetchGuestMenuFullData(hotelSlug);
+    const hotel = data?.hotel;
+    const name = hotel?.name ?? hotelSlug;
+    const description = hotel?.address
+        ? `Order room service at ${name}. ${hotel.address}`
+        : `Browse the digital menu and order room service at ${name}.`;
+    return {
+        title: `${name} — Menu`,
+        description,
+    };
+}
+
 /** Server Component: fetches menu+rooms server-side for faster QR scan load */
 export default async function GuestMenuPage({ params }: Props) {
     const { hotelSlug } = await params;
-
-    let initialData: PublicMenuFullData | null = null;
-    try {
-        const res = await fetch(`${API_URL}/guest/menu/${hotelSlug}/full`, {
-            next: { revalidate: 60 },
-        });
-        if (res.ok) initialData = await res.json();
-    } catch {
-        // Fallback to client fetch
-    }
+    const initialData = await fetchGuestMenuFullData(hotelSlug);
 
     return (
         <Suspense fallback={<MenuSkeleton hotel={initialData?.hotel} />}>
