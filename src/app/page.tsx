@@ -21,6 +21,7 @@ import {
     LayoutGrid,
     Settings,
 } from "lucide-react";
+import { LandingMobileNav } from "@/components/LandingMobileNav";
 
 /** Demo dish photos for landing mockups (Unsplash — free to use). IDs verified live (some older Unsplash IDs 404). */
 const LANDING_MENU_IMAGES = {
@@ -40,7 +41,7 @@ const LANDING_MENU_IMAGES = {
 
 function PhoneMockup({ children, className = "" }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative mx-auto w-[280px] md:w-[300px] ${className}`}>
+        <div className={`relative mx-auto w-[260px] sm:w-[280px] md:w-[300px] ${className}`}>
             {/* Phone shell */}
             <div className="rounded-[2.5rem] border border-white/[0.08] bg-[#111113] p-3 shadow-2xl shadow-black/60 ring-1 ring-white/[0.04]">
                 {/* Notch */}
@@ -142,8 +143,8 @@ export default function LandingPage() {
         <div className="min-h-screen bg-[#09090b] text-white overflow-hidden">
             {/* ─── Navbar ─── */}
             <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-xl">
-                <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-                    <Link href="/" className="flex items-center gap-2.5">
+                <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+                    <Link href="/" className="flex items-center gap-2 sm:gap-2.5">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8862d]">
                             <UtensilsCrossed className="h-4 w-4 text-white" />
                         </div>
@@ -154,42 +155,44 @@ export default function LandingPage() {
                         <a href="#pricing" className="transition-colors hover:text-white">Pricing</a>
                         <a href="#how-it-works" className="transition-colors hover:text-white">How it works</a>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         <Link
                             href="/login"
-                            className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:text-white"
+                            className="hidden rounded-lg px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:text-white md:block"
                         >
                             Sign in
                         </Link>
                         <Link
                             href="/register"
-                            className="rounded-lg bg-gradient-to-r from-[#d4a853] to-[#b8862d] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-[#d4a853]/20 transition-all hover:shadow-[#d4a853]/30 hover:brightness-110"
+                            className="rounded-lg bg-gradient-to-r from-[#d4a853] to-[#b8862d] px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-[#d4a853]/20 transition-all hover:shadow-[#d4a853]/30 hover:brightness-110 sm:px-5"
                         >
-                            Get started free
+                            <span className="sm:hidden">Get started</span>
+                            <span className="hidden sm:inline">Get started free</span>
                         </Link>
+                        <LandingMobileNav />
                     </div>
                 </div>
             </nav>
 
             {/* ─── Hero ─── */}
-            <section className="relative pt-32 pb-20 md:pt-44 md:pb-32">
+            <section className="relative pt-28 pb-16 md:pt-44 md:pb-32">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(212,168,83,0.12)_0%,_transparent_60%)]" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-[#d4a853]/[0.04] blur-[120px]" />
 
-                <div className="relative mx-auto max-w-4xl px-6 text-center">
+                <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
                     <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#d4a853]/20 bg-[#d4a853]/[0.06] px-4 py-1.5 text-xs font-medium text-[#d4a853]">
                         <Zap className="h-3.5 w-3.5" />
                         Now serving 50+ hotels across India
                     </div>
 
-                    <h1 className="text-4xl font-bold leading-[1.1] tracking-tight md:text-6xl lg:text-7xl">
+                    <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-6xl lg:text-7xl">
                         Your menu, on every{" "}
                         <span className="bg-gradient-to-r from-[#d4a853] via-[#e8c875] to-[#d4a853] bg-clip-text text-transparent">
                             guest&apos;s phone
                         </span>
                     </h1>
 
-                    <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400 md:text-xl">
+                    <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg md:text-xl">
                         Replace printed room menus with a beautiful digital experience.
                         Guests scan a QR code, browse your menu, and you update prices in seconds — not days.
                     </p>
@@ -214,7 +217,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Hero phone mockup */}
-                <div className="relative mx-auto mt-16 max-w-5xl px-6 md:mt-24">
+                <div className="relative mx-auto mt-12 max-w-5xl px-4 sm:px-6 md:mt-24">
                     <div className="absolute inset-0 -top-20 bg-[radial-gradient(ellipse_at_center,_rgba(212,168,83,0.08)_0%,_transparent_70%)]" />
                     <div className="relative flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-center md:gap-12">
 
@@ -315,11 +318,11 @@ export default function LandingPage() {
 
             {/* ─── Logos / Social Proof ─── */}
             <section className="border-y border-white/[0.04] bg-white/[0.01] py-10">
-                <div className="mx-auto max-w-4xl px-6 text-center">
+                <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
                     <p className="mb-6 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
                         Trusted by hotels and restaurants
                     </p>
-                    <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-zinc-600">
+                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-4 text-zinc-600 sm:gap-x-12">
                         {["Boutique Hotels", "Heritage Properties", "Resorts", "Restaurants", "Cafes"].map((name) => (
                             <span key={name} className="text-sm font-medium tracking-wide">{name}</span>
                         ))}
@@ -328,10 +331,10 @@ export default function LandingPage() {
             </section>
 
             {/* ─── Features Grid ─── */}
-            <section id="features" className="py-24 md:py-32">
-                <div className="mx-auto max-w-6xl px-6">
+            <section id="features" className="py-16 md:py-32">
+                <div className="mx-auto max-w-6xl px-4 sm:px-6">
                     <div className="mx-auto max-w-2xl text-center">
-                        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                             Everything your hotel needs
                         </h2>
                         <p className="mt-4 text-lg text-zinc-400">
@@ -389,7 +392,7 @@ export default function LandingPage() {
                         ].map((feature) => (
                             <div
                                 key={feature.title}
-                                className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all hover:border-[#d4a853]/20 hover:bg-[#d4a853]/[0.03]"
+                                className="group rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 transition-all hover:border-[#d4a853]/20 hover:bg-[#d4a853]/[0.03] active:border-[#d4a853]/25 active:bg-[#d4a853]/[0.05]"
                             >
                                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4a853]/10 text-[#d4a853] transition-colors group-hover:bg-[#d4a853]/15">
                                     <feature.icon className="h-5 w-5" />
@@ -403,10 +406,10 @@ export default function LandingPage() {
             </section>
 
             {/* ─── Product Showcase ─── */}
-            <section className="py-24 md:py-32 border-y border-white/[0.04] bg-white/[0.01]">
-                <div className="mx-auto max-w-6xl px-6">
-                    <div className="mx-auto max-w-2xl text-center mb-16">
-                        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">See it in action</h2>
+            <section className="py-16 md:py-32 border-y border-white/[0.04] bg-white/[0.01]">
+                <div className="mx-auto max-w-6xl px-4 sm:px-6">
+                    <div className="mx-auto max-w-2xl text-center mb-12 md:mb-16">
+                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">See it in action</h2>
                         <p className="mt-4 text-lg text-zinc-400">A quick look at what you and your guests experience.</p>
                     </div>
 
@@ -594,7 +597,7 @@ export default function LandingPage() {
                                 <span className="ml-auto rounded-full bg-[#d4a853]/15 px-2.5 py-0.5 text-[9px] font-medium text-[#d4a853]">6 per page</span>
                             </div>
                             {/* QR grid */}
-                            <div className="grid grid-cols-3 gap-2.5">
+                            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                                 {["101", "102", "103", "201", "202", "203"].map(room => (
                                     <MockupQrCard key={room} room={`Room ${room}`} />
                                 ))}
@@ -611,18 +614,19 @@ export default function LandingPage() {
             </section>
 
             {/* ─── How It Works ─── */}
-            <section id="how-it-works" className="border-y border-white/[0.04] bg-white/[0.01] py-24 md:py-32">
-                <div className="mx-auto max-w-5xl px-6">
+            <section id="how-it-works" className="border-y border-white/[0.04] bg-white/[0.01] py-16 md:py-32">
+                <div className="mx-auto max-w-5xl px-4 sm:px-6">
                     <div className="mx-auto max-w-2xl text-center">
-                        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                             Live in 5 minutes
                         </h2>
-                        <p className="mt-4 text-lg text-zinc-400">
+                        <p className="mt-4 text-base text-zinc-400 sm:text-lg">
                             From sign-up to guests scanning — faster than ordering lunch.
                         </p>
                     </div>
 
-                    <div className="mt-16 grid gap-8 md:grid-cols-4">
+                    {/* Desktop: horizontal grid */}
+                    <div className="mt-16 hidden gap-8 md:grid md:grid-cols-4">
                         {[
                             { step: "01", title: "Register", desc: "Create your hotel account with one form. Instant access." },
                             { step: "02", title: "Add Your Menu", desc: "Upload dishes, set prices, add images. Organize by category." },
@@ -631,7 +635,7 @@ export default function LandingPage() {
                         ].map((item, i) => (
                             <div key={item.step} className="relative text-center">
                                 {i < 3 && (
-                                    <div className="absolute right-0 top-8 hidden h-px w-full translate-x-1/2 bg-gradient-to-r from-[#d4a853]/30 to-transparent md:block" />
+                                    <div className="absolute right-0 top-8 h-px w-full translate-x-1/2 bg-gradient-to-r from-[#d4a853]/30 to-transparent" />
                                 )}
                                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#d4a853]/20 bg-[#d4a853]/[0.06] text-2xl font-bold text-[#d4a853]">
                                     {item.step}
@@ -641,14 +645,41 @@ export default function LandingPage() {
                             </div>
                         ))}
                     </div>
+
+                    {/* Mobile: vertical timeline */}
+                    <div className="mt-12 space-y-0 md:hidden">
+                        {[
+                            { step: "01", title: "Register", desc: "Create your hotel account with one form. Instant access." },
+                            { step: "02", title: "Add Your Menu", desc: "Upload dishes, set prices, add images. Organize by category." },
+                            { step: "03", title: "Set Up Rooms", desc: "Add room numbers (bulk supported). QR codes generated instantly." },
+                            { step: "04", title: "Print & Place", desc: "Print QR cards and place them in rooms. Guests scan and browse." },
+                        ].map((item, i, arr) => (
+                            <div key={item.step} className="flex gap-4">
+                                {/* Timeline column */}
+                                <div className="flex flex-col items-center">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#d4a853]/20 bg-[#d4a853]/[0.06] text-lg font-bold text-[#d4a853]">
+                                        {item.step}
+                                    </div>
+                                    {i < arr.length - 1 && (
+                                        <div className="w-px flex-1 bg-gradient-to-b from-[#d4a853]/30 to-transparent" />
+                                    )}
+                                </div>
+                                {/* Content */}
+                                <div className="pb-8">
+                                    <h3 className="text-base font-semibold">{item.title}</h3>
+                                    <p className="mt-1 text-sm text-zinc-400">{item.desc}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </section>
 
             {/* ─── Pricing ─── */}
-            <section id="pricing" className="py-24 md:py-32">
-                <div className="mx-auto max-w-5xl px-6">
+            <section id="pricing" className="py-16 md:py-32">
+                <div className="mx-auto max-w-5xl px-4 sm:px-6">
                     <div className="mx-auto max-w-2xl text-center">
-                        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                             Simple, honest pricing
                         </h2>
                         <p className="mt-4 text-lg text-zinc-400">
@@ -731,14 +762,14 @@ export default function LandingPage() {
             </section>
 
             {/* ─── Testimonial ─── */}
-            <section className="border-y border-white/[0.04] bg-white/[0.01] py-20">
-                <div className="mx-auto max-w-3xl px-6 text-center">
+            <section className="border-y border-white/[0.04] bg-white/[0.01] py-16 md:py-20">
+                <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
                     <div className="mb-4 flex items-center justify-center gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
                             <Star key={i} className="h-5 w-5 fill-[#d4a853] text-[#d4a853]" />
                         ))}
                     </div>
-                    <blockquote className="text-xl font-medium leading-relaxed text-zinc-200 md:text-2xl">
+                    <blockquote className="text-lg font-medium leading-relaxed text-zinc-200 sm:text-xl md:text-2xl">
                         &ldquo;We replaced all our printed menus in 30 minutes.
                         Guests love scanning the QR — and we save thousands on reprinting every season.&rdquo;
                     </blockquote>
@@ -749,9 +780,9 @@ export default function LandingPage() {
             </section>
 
             {/* ─── CTA ─── */}
-            <section className="py-24 md:py-32">
-                <div className="mx-auto max-w-3xl px-6 text-center">
-                    <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+            <section className="py-16 md:py-32">
+                <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+                    <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                         Ready to go paperless?
                     </h2>
                     <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
@@ -772,18 +803,18 @@ export default function LandingPage() {
             </section>
 
             {/* ─── Footer ─── */}
-            <footer className="border-t border-white/[0.06] py-12">
-                <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 md:flex-row">
+            <footer className="border-t border-white/[0.06] py-10 md:py-12">
+                <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 sm:px-6 md:flex-row">
                     <div className="flex items-center gap-2.5">
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8862d]">
                             <UtensilsCrossed className="h-3.5 w-3.5 text-white" />
                         </div>
                         <span className="text-sm font-semibold tracking-tight">dreamcanvas</span>
                     </div>
-                    <div className="flex items-center gap-6 text-xs text-zinc-500">
-                        <Link href="/terms" className="transition-colors hover:text-zinc-300">Terms</Link>
-                        <Link href="/privacy" className="transition-colors hover:text-zinc-300">Privacy</Link>
-                        <Link href="/login" className="transition-colors hover:text-zinc-300">Hotel Login</Link>
+                    <div className="flex items-center gap-4 text-xs text-zinc-500 sm:gap-6">
+                        <Link href="/terms" className="min-h-[44px] flex items-center transition-colors hover:text-zinc-300">Terms</Link>
+                        <Link href="/privacy" className="min-h-[44px] flex items-center transition-colors hover:text-zinc-300">Privacy</Link>
+                        <Link href="/login" className="min-h-[44px] flex items-center transition-colors hover:text-zinc-300">Hotel Login</Link>
                     </div>
                     <p className="text-xs text-zinc-600">
                         &copy; {new Date().getFullYear()} DreamCanvas. All rights reserved.
