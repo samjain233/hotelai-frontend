@@ -47,6 +47,22 @@ function resolveQrPrintFrameBackground(hex: string | null | undefined): string {
     return "#ffffff";
 }
 
+/** Dark text on light QR card bg; light text on dark bg (screen + print). */
+function isQrPrintBackgroundLight(hex: string): boolean {
+    const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
+    if (!m) return true;
+    const n = parseInt(m[1], 16);
+    const r = (n >> 16) & 255;
+    const g = (n >> 8) & 255;
+    const b = n & 255;
+    const lin = (c: number) => {
+        const x = c / 255;
+        return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+    };
+    const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    return L > 0.45;
+}
+
 const LAYOUT_OPTIONS: { value: QrLayout; label: string; cols: string; desc: string }[] = [
     { value: 4, label: "Large", cols: "qr-print-cols-2", desc: "4 / page" },
     { value: 6, label: "Medium", cols: "qr-print-cols-3", desc: "6 / page" },
@@ -59,6 +75,7 @@ export default function RoomsPage() {
         () => resolveQrPrintFrameBackground(hotel?.qrCodeBackgroundHex),
         [hotel?.qrCodeBackgroundHex],
     );
+    const qrPrintCardLight = useMemo(() => isQrPrintBackgroundLight(qrPrintFrameBg), [qrPrintFrameBg]);
     const [rooms, setRooms] = useState<Room[]>([]);
     const [qrs, setQrs] = useState<RoomQr[]>([]);
     const [loading, setLoading] = useState(true);
@@ -580,7 +597,8 @@ export default function RoomsPage() {
                                                     wifiPass={qrWifiPass}
                                                     showBranding={qrShowBranding}
                                                     hotelName={hotel?.name}
-                                                    qrFrameBackground={qrPrintFrameBg}
+                                                    qrCardBackground={qrPrintFrameBg}
+                                                    cardTextOnLight={qrPrintCardLight}
                                                     copiedId={copiedId}
                                                     onDownload={() => downloadQr(qr)}
                                                     onCopy={() => copyUrl(qr)}
@@ -613,24 +631,47 @@ export default function RoomsPage() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.96 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-md bg-card rounded-xl border border-border shadow-2xl overflow-hidden print:max-w-none print:rounded-none print:border-0 print:shadow-none print:bg-white"
+                        className="w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden print:max-w-none print:rounded-none print:border print:border-neutral-300 print:shadow-none"
+                        style={{ backgroundColor: qrPrintFrameBg }}
                     >
-                        <div className="flex items-center justify-between p-4 border-b border-border print:hidden">
+                        <div className="flex items-center justify-between border-b border-border bg-card/95 p-4 print:hidden">
                             <h3 className="font-semibold text-foreground">Room {singleQr.roomNumber}</h3>
                             <button type="button" onClick={() => setSingleQr(null)}><X className="w-5 h-5 text-muted-foreground" /></button>
                         </div>
-                        <div className="p-8 flex flex-col items-center print:p-4">
+                        <div
+                            className={cn(
+                                "flex flex-col items-center p-8 print:p-4",
+                                qrPrintCardLight ? "text-zinc-900" : "text-zinc-100",
+                            )}
+                        >
                             {hotel?.name && (
-                                <p className="mb-4 text-center text-sm font-semibold text-foreground print:mb-3 print:text-black">{hotel.name}</p>
+                                <p
+                                    className={cn(
+                                        "mb-4 text-center text-sm font-semibold print:mb-3",
+                                        qrPrintCardLight ? "text-zinc-800" : "text-zinc-200",
+                                    )}
+                                >
+                                    {hotel.name}
+                                </p>
                             )}
                             <div
-                                className="w-64 h-64 overflow-hidden rounded-xl p-0 ring-1 ring-black/10 print:w-72 print:h-72 print:mx-auto"
+                                className={cn(
+                                    "w-64 h-64 overflow-hidden rounded-xl p-0 ring-1 print:w-72 print:h-72 print:mx-auto",
+                                    qrPrintCardLight ? "ring-black/15" : "ring-white/25",
+                                )}
                                 style={{ backgroundColor: qrPrintFrameBg }}
                             >
                                 <img src={singleQr.qrCode} alt={`Room ${singleQr.roomNumber}`} className="h-full w-full object-contain" />
                             </div>
-                            <p className="mt-4 text-2xl font-bold text-foreground print:text-black">Room {singleQr.roomNumber}</p>
-                            <p className="mt-1 text-sm text-muted-foreground print:text-neutral-600">Scan to order</p>
+                            <p className="mt-4 text-2xl font-bold">Room {singleQr.roomNumber}</p>
+                            <p
+                                className={cn(
+                                    "mt-1 text-sm",
+                                    qrPrintCardLight ? "text-zinc-600" : "text-zinc-400",
+                                )}
+                            >
+                                Scan to order
+                            </p>
                         </div>
                         <div className="flex gap-2 p-4 border-t border-border print:hidden">
                             <Button variant="outline" className="flex-1" onClick={() => downloadQr(singleQr)}>
@@ -657,7 +698,8 @@ function QrCard({
     wifiPass,
     showBranding,
     hotelName,
-    qrFrameBackground,
+    qrCardBackground,
+    cardTextOnLight,
     copiedId,
     onDownload,
     onCopy,
@@ -669,66 +711,79 @@ function QrCard({
     wifiPass: string;
     showBranding: boolean;
     hotelName?: string;
-    /** Same as QR PNG background — fills frame to the inner border (no white gutter). */
-    qrFrameBackground: string;
+    /** Fills entire card to outer border (same as QR PNG background). */
+    qrCardBackground: string;
+    /** True → dark text; false → light text (for dark QR backgrounds). */
+    cardTextOnLight: boolean;
     copiedId: string | null;
     onDownload: () => void;
     onCopy: () => void;
 }) {
     const isLarge = layout === 4;
     const hasWifi = wifiName.trim() || wifiPass.trim();
+    const t = cardTextOnLight;
+    const textMain = t ? "text-zinc-900" : "text-zinc-100";
+    const textMuted = t ? "text-zinc-600" : "text-zinc-400";
+    const textSubtle = t ? "text-zinc-700" : "text-zinc-300";
+    const ringQr = t ? "ring-black/15" : "ring-white/25";
 
     return (
-        <div className={cn(
-            "qr-print-card flex flex-col items-center rounded-xl border border-border bg-card p-3 text-center text-foreground shadow-sm",
-            "print:break-inside-avoid print:border print:border-neutral-300 print:bg-white print:shadow-none print:rounded-lg",
-            isLarge && "p-5",
-        )}>
+        <div
+            className={cn(
+                "qr-print-card flex flex-col items-center rounded-xl border border-border p-3 text-center shadow-sm",
+                "print:break-inside-avoid print:border print:border-neutral-300 print:shadow-none print:rounded-lg",
+                textMain,
+                isLarge && "p-5",
+            )}
+            style={{ backgroundColor: qrCardBackground }}
+        >
             {/* Branding (print only by default, always visible for large) */}
             {showBranding && hotelName && (
                 <p
                     className={cn(
-                        "mb-2 max-w-full truncate text-center text-[10px] font-semibold text-muted-foreground",
+                        "mb-2 max-w-full truncate text-center text-[10px] font-semibold",
+                        textSubtle,
                         !isLarge && "hidden print:block",
-                        "print:mb-1.5 print:text-xs print:text-neutral-700",
+                        "print:mb-1.5 print:text-xs",
                     )}
                 >
                     {hotelName}
                 </p>
             )}
 
-            {/* QR Image — frame uses hotel QR background so colour runs to the ring (no white padding). */}
+            {/* QR — inner ring; outer card already uses same fill as PNG. */}
             <div
                 className={cn(
-                    "aspect-square w-full overflow-hidden rounded-lg p-0 ring-1 ring-black/10 dark:ring-white/20 print:ring-black/15",
+                    "aspect-square w-full overflow-hidden rounded-lg p-0 ring-1",
+                    ringQr,
                     isLarge ? "mb-4" : "mb-2",
                 )}
-                style={{ backgroundColor: qrFrameBackground }}
+                style={{ backgroundColor: qrCardBackground }}
             >
                 <img src={qr.qrCode} alt={`Room ${qr.roomNumber}`} className="h-full w-full object-contain" />
             </div>
 
             {/* Room number */}
-            <p className={cn(
-                "font-bold print:text-black",
-                isLarge ? "text-2xl" : "text-lg",
-            )}>
+            <p className={cn("font-bold", isLarge ? "text-2xl" : "text-lg")}>
                 Room {qr.roomNumber}
             </p>
 
             {/* Tagline */}
-            <p className={cn(
-                "text-muted-foreground print:text-neutral-600",
-                isLarge ? "text-sm mt-1" : "text-[11px]",
-                hasWifi ? "mb-1" : "mb-2 print:mb-0",
-            )}>
+            <p
+                className={cn(
+                    textMuted,
+                    isLarge ? "text-sm mt-1" : "text-[11px]",
+                    hasWifi ? "mb-1" : "mb-2 print:mb-0",
+                )}
+            >
                 {tagline || "Scan to order"}
             </p>
 
             {/* WiFi */}
             {hasWifi && (
                 <div className={cn(
-                    "flex items-center gap-1 text-muted-foreground print:text-neutral-500 mb-2 print:mb-1",
+                    "mb-2 flex items-center gap-1 print:mb-1",
+                    textMuted,
                     isLarge ? "text-xs" : "text-[10px]",
                 )}>
                     <Wifi className="w-3 h-3 shrink-0" />
