@@ -146,14 +146,19 @@ export async function GET(request: NextRequest) {
         return fail(`${base}?error=${encodeURIComponent(msg)}`);
     }
 
-    const data = (await syncRes.json()) as { token: string };
+    const data = (await syncRes.json()) as {
+        token?: string;
+        admin?: { role?: string };
+    };
     if (!data.token) {
         const base = registerCtx ? "/register" : "/login";
         return fail(`${base}?error=${encodeURIComponent("sync_failed")}`);
     }
 
+    const postAuthPath = data.admin?.role === "KITCHEN" ? "/orders" : "/dashboard";
+
     const isProd = process.env.NODE_ENV === "production";
-    const nextRes = NextResponse.redirect(`${origin}/`);
+    const nextRes = NextResponse.redirect(`${origin}${postAuthPath}`);
     nextRes.cookies.delete(STATE_COOKIE);
     nextRes.cookies.delete(REGISTER_COOKIE);
     nextRes.cookies.set(AUTH_COOKIE, data.token, {
