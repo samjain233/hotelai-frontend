@@ -14,8 +14,6 @@ import { Badge } from "@/components/ui/Badge";
 import {
     Search,
     MapPin,
-    Phone,
-    PhoneCall,
     Plus,
     Minus,
     Utensils,
@@ -59,13 +57,6 @@ const AnimatedOverlays = dynamic(
 
 function formatPrice(price: number) {
     return `₹${price.toLocaleString()}`;
-}
-
-/** `tel:` href from hotel-entered number (spaces/dashes stripped). */
-function roomServiceTelHref(phone: string): string {
-    const t = phone.trim();
-    if (!t) return "#";
-    return `tel:${t.replace(/[\s().-]/g, "")}`;
 }
 
 interface Props {
@@ -574,14 +565,13 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         )}
                                     </p>
                                     {guestCallNumber ? (
-                                        <a
-                                            href={roomServiceTelHref(guestCallNumber)}
-                                            className="mt-1 inline-flex max-w-full items-center gap-1 rounded-md py-0.5 text-[11px] font-medium text-[var(--guest-accent-90)] underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guest-accent-40)]"
-                                            aria-label={`Call room service, ${guestCallNumber}`}
-                                        >
-                                            <Phone className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" aria-hidden />
-                                            <span className="min-w-0 truncate">Room service · {guestCallNumber}</span>
-                                        </a>
+                                        <p className="mt-1 text-[11px] leading-snug text-[var(--guest-muted)]">
+                                            <span className="font-medium text-[var(--guest-text)]">Room service</span>
+                                            <span className="mx-1 text-[var(--guest-subtle)]">·</span>
+                                            <span className="break-all font-medium tabular-nums text-[var(--guest-text)]">
+                                                {guestCallNumber}
+                                            </span>
+                                        </p>
                                     ) : null}
                                 </div>
                             </div>
@@ -609,16 +599,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 </button>
                             ) : null}
                         </div>
-                        {guestCallNumber ? (
-                            <a
-                                href={roomServiceTelHref(guestCallNumber)}
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--guest-surface)] text-[var(--guest-accent)] ring-1 ring-[var(--guest-accent-35)] transition-colors hover:bg-[var(--guest-accent-12)] hover:ring-[var(--guest-accent-50)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guest-accent-40)]"
-                                aria-label={`Call room service, ${guestCallNumber}`}
-                                title="Call room service"
-                            >
-                                <PhoneCall className="h-5 w-5" strokeWidth={2} aria-hidden />
-                            </a>
-                        ) : null}
                         <div className="relative shrink-0">
                             <button
                                 type="button"
