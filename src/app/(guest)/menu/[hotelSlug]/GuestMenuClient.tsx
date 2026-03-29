@@ -11,7 +11,22 @@ import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Search, MapPin, Phone, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, SlidersHorizontal, Egg, Menu } from "lucide-react";
+import {
+    Search,
+    MapPin,
+    Phone,
+    PhoneCall,
+    Plus,
+    Minus,
+    Utensils,
+    X,
+    CheckCircle2,
+    Receipt,
+    Clock,
+    SlidersHorizontal,
+    Egg,
+    Menu,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
 import { ENABLE_GUEST_ORDERING } from "@/lib/guestMenuConfig";
@@ -100,6 +115,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const roomId = searchParams.get("room") || selectedRoomId;
     const currentRoom = availableRooms.find((r) => r.id === roomId);
     const roomDisplayName = currentRoom?.number || "";
+
+    /** Room service line: dedicated number, else main hotel phone (Settings). */
+    const guestCallNumber = useMemo(
+        () => hotel?.roomServicePhone?.trim() || hotel?.phone?.trim() || "",
+        [hotel?.roomServicePhone, hotel?.phone],
+    );
 
     useEffect(() => {
         if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0].id);
@@ -552,19 +573,16 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             <span className="italic text-[var(--guest-subtle)]">Digital menu</span>
                                         )}
                                     </p>
-                                    {(() => {
-                                        const n =
-                                            hotel?.roomServicePhone?.trim() || hotel?.phone?.trim() || "";
-                                        return n ? (
-                                            <a
-                                                href={roomServiceTelHref(n)}
-                                                className="mt-1 inline-flex max-w-full items-center gap-1 rounded-md py-0.5 text-[11px] font-medium text-[var(--guest-accent-90)] underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guest-accent-40)]"
-                                            >
-                                                <Phone className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" aria-hidden />
-                                                <span className="min-w-0 truncate">Room service · {n}</span>
-                                            </a>
-                                        ) : null;
-                                    })()}
+                                    {guestCallNumber ? (
+                                        <a
+                                            href={roomServiceTelHref(guestCallNumber)}
+                                            className="mt-1 inline-flex max-w-full items-center gap-1 rounded-md py-0.5 text-[11px] font-medium text-[var(--guest-accent-90)] underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guest-accent-40)]"
+                                            aria-label={`Call room service, ${guestCallNumber}`}
+                                        >
+                                            <Phone className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                                            <span className="min-w-0 truncate">Room service · {guestCallNumber}</span>
+                                        </a>
+                                    ) : null}
                                 </div>
                             </div>
                     </div>
@@ -591,6 +609,16 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 </button>
                             ) : null}
                         </div>
+                        {guestCallNumber ? (
+                            <a
+                                href={roomServiceTelHref(guestCallNumber)}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--guest-surface)] text-[var(--guest-accent)] ring-1 ring-[var(--guest-accent-35)] transition-colors hover:bg-[var(--guest-accent-12)] hover:ring-[var(--guest-accent-50)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guest-accent-40)]"
+                                aria-label={`Call room service, ${guestCallNumber}`}
+                                title="Call room service"
+                            >
+                                <PhoneCall className="h-5 w-5" strokeWidth={2} aria-hidden />
+                            </a>
+                        ) : null}
                         <div className="relative shrink-0">
                             <button
                                 type="button"
