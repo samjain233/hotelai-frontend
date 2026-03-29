@@ -361,7 +361,7 @@
   @apply bg-zinc-700;
 }
 
-/* ─── Print: cleaner PDF / paper (e.g. Room QR batch) ─── */
+/* ─── Print: cleaner PDF / paper (e.g. room QRs sheet) ─── */
 @media print {
   @page {
     margin: 10mm;
@@ -396,7 +396,7 @@
     break-inside: avoid;
   }
 
-  /* Batch QR modal: flex + fixed vh clips multi-page print; force full document flow */
+  /* Print QRs modal: flex + fixed vh clips multi-page print; force full document flow */
   .room-qr-print-backdrop,
   .room-qr-print-modal {
     overflow: visible !important;

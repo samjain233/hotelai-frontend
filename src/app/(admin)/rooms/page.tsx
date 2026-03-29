@@ -234,7 +234,7 @@ export default function RoomsPage() {
                 </div>
                 <div className="flex gap-3">
                     <Button variant="outline" onClick={showAllQrs}>
-                        <QrCode className="w-4 h-4 mr-2" /> Batch QR
+                        <QrCode className="w-4 h-4 mr-2" /> Print QRs
                     </Button>
                     <Button onClick={() => setShowModal(true)}>
                         <Plus className="w-4 h-4 mr-2" /> Add Room
@@ -356,7 +356,7 @@ export default function RoomsPage() {
             </AnimatePresence>
         </div>
 
-        {/* ───── Batch QR Modal (visible for print) ───── */}
+        {/* ───── Print QRs modal (multi-room, for print/PDF) ───── */}
         <AnimatePresence>
             {showQrModal && (
                 <div className="room-qr-print-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm print:static print:inset-auto print:flex print:min-h-0 print:items-start print:justify-start print:overflow-visible print:bg-transparent print:backdrop-blur-0" onClick={() => setShowQrModal(false)}>
