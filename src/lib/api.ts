@@ -164,7 +164,15 @@ class ApiClient {
         return this.request('/auth/me');
     }
 
-    async updateHotel(data: { name?: string; address?: string; phone?: string; logoUrl?: string; openTime?: string; closeTime?: string }) {
+    async updateHotel(data: {
+        name?: string;
+        address?: string;
+        phone?: string;
+        roomServicePhone?: string;
+        logoUrl?: string;
+        openTime?: string;
+        closeTime?: string;
+    }) {
         return this.request<Hotel>('/auth/hotel', {
             method: 'PATCH',
             body: JSON.stringify(data),

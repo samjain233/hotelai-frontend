@@ -11,7 +11,7 @@ import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Search, MapPin, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, SlidersHorizontal, Egg, Menu } from "lucide-react";
+import { Search, MapPin, Phone, Plus, Minus, Utensils, X, CheckCircle2, Receipt, Clock, SlidersHorizontal, Egg, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
 import { ENABLE_GUEST_ORDERING } from "@/lib/guestMenuConfig";
@@ -44,6 +44,13 @@ const AnimatedOverlays = dynamic(
 
 function formatPrice(price: number) {
     return `₹${price.toLocaleString()}`;
+}
+
+/** `tel:` href from hotel-entered number (spaces/dashes stripped). */
+function roomServiceTelHref(phone: string): string {
+    const t = phone.trim();
+    if (!t) return "#";
+    return `tel:${t.replace(/[\s().-]/g, "")}`;
 }
 
 interface Props {
@@ -512,7 +519,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     <div
                         className={cn(
                             "overflow-hidden transition-[max-height,opacity] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
-                            brandingBarHidden ? "pointer-events-none max-h-0 opacity-0" : "max-h-[5.5rem] opacity-100",
+                            brandingBarHidden ? "pointer-events-none max-h-0 opacity-0" : "max-h-[8rem] opacity-100",
                         )}
                         aria-hidden={brandingBarHidden}
                     >
@@ -538,13 +545,26 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     <p className="flex items-center gap-1 text-[11px] text-[var(--guest-muted)]">
                                         {roomDisplayName ? (
                                             <>
-                                                <MapPin className="h-3 w-3 text-[var(--guest-accent)]" />
+                                                <MapPin className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" />
                                                 <span>Room {roomDisplayName}</span>
                                             </>
                                         ) : (
                                             <span className="italic text-[var(--guest-subtle)]">Digital menu</span>
                                         )}
                                     </p>
+                                    {(() => {
+                                        const n =
+                                            hotel?.roomServicePhone?.trim() || hotel?.phone?.trim() || "";
+                                        return n ? (
+                                            <a
+                                                href={roomServiceTelHref(n)}
+                                                className="mt-1 inline-flex max-w-full items-center gap-1 rounded-md py-0.5 text-[11px] font-medium text-[var(--guest-accent-90)] underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--guest-accent-40)]"
+                                            >
+                                                <Phone className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                                                <span className="min-w-0 truncate">Room service · {n}</span>
+                                            </a>
+                                        ) : null;
+                                    })()}
                                 </div>
                             </div>
                     </div>

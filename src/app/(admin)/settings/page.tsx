@@ -21,10 +21,27 @@ import { LegalFooter } from "@/components/LegalFooter";
 
 const NOTIFICATION_SOUND_KEY = "hotel-admin-notification-sound";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
-function HotelProfileSection({ hotel, refreshHotel }: { hotel: { id: string; name: string; slug: string; address?: string | null; phone?: string | null; logoUrl?: string | null; openTime?: string | null; closeTime?: string | null }; refreshHotel: () => Promise<void> }) {
+function HotelProfileSection({
+    hotel,
+    refreshHotel,
+}: {
+    hotel: {
+        id: string;
+        name: string;
+        slug: string;
+        address?: string | null;
+        phone?: string | null;
+        roomServicePhone?: string | null;
+        logoUrl?: string | null;
+        openTime?: string | null;
+        closeTime?: string | null;
+    };
+    refreshHotel: () => Promise<void>;
+}) {
     const [name, setName] = useState(hotel?.name ?? "");
     const [address, setAddress] = useState(hotel?.address ?? "");
     const [phone, setPhone] = useState(hotel?.phone ?? "");
+    const [roomServicePhone, setRoomServicePhone] = useState(hotel?.roomServicePhone ?? "");
     const [logoUrl, setLogoUrl] = useState(hotel?.logoUrl ?? "");
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -35,6 +52,7 @@ function HotelProfileSection({ hotel, refreshHotel }: { hotel: { id: string; nam
         setName(hotel?.name ?? "");
         setAddress(hotel?.address ?? "");
         setPhone(hotel?.phone ?? "");
+        setRoomServicePhone(hotel?.roomServicePhone ?? "");
         setLogoUrl(hotel?.logoUrl ?? "");
         setLogoUnsaved(false);
     }, [hotel]);
@@ -83,6 +101,7 @@ function HotelProfileSection({ hotel, refreshHotel }: { hotel: { id: string; nam
                 name: name || undefined,
                 address: address || undefined,
                 phone: phone || undefined,
+                roomServicePhone: roomServicePhone.trim(),
                 logoUrl: logoUrl || undefined,
             });
             await refreshHotel();
@@ -113,7 +132,19 @@ function HotelProfileSection({ hotel, refreshHotel }: { hotel: { id: string; nam
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
-                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="bg-secondary/50" />
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Reception / main contact" className="bg-secondary/50" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Room service number</label>
+                    <Input
+                        value={roomServicePhone}
+                        onChange={(e) => setRoomServicePhone(e.target.value)}
+                        placeholder="+91 98765 43210"
+                        className="bg-secondary/50"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        Shown on the guest digital menu as <span className="font-medium text-foreground">Room service</span> (tap to call). Leave empty to use the main phone number above instead.
+                    </p>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Logo</label>

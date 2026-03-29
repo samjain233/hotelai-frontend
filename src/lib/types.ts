@@ -5,6 +5,8 @@ export interface Hotel {
     slug: string;
     address?: string;
     phone?: string;
+    /** Guest menu room service tap-to-call; separate from main phone */
+    roomServicePhone?: string;
     logoUrl?: string;
     openTime?: string;
     closeTime?: string;
