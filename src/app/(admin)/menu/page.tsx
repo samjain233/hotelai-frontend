@@ -23,6 +23,7 @@ import {
     Search,
     Edit2,
     Trash2,
+    AlertTriangle,
     FolderOpen,
     X,
     Image as ImageIcon,
@@ -37,6 +38,8 @@ import {
 } from "lucide-react";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const DELETE_CONFIRM_WORD = "delete";
 
 const SAMPLE_BULK_JSON = JSON.stringify(
     {
@@ -89,8 +92,56 @@ export default function MenuPage() {
     const [bulkJsonText, setBulkJsonText] = useState("");
     const [bulkImporting, setBulkImporting] = useState(false);
     const [bulkImportError, setBulkImportError] = useState<string | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<{
+        type: "item" | "category";
+        id: string;
+        name: string;
+    } | null>(null);
+    const [deleteInput, setDeleteInput] = useState("");
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     /** When true, next successful category create selects that category in the item form */
     const selectNewCategoryInItemForm = useRef(false);
+
+    const deletePhraseMatches = deleteInput.trim().toLowerCase() === DELETE_CONFIRM_WORD;
+
+    function closeDeleteModal() {
+        setDeleteConfirm(null);
+        setDeleteInput("");
+        setDeleteError(null);
+        setDeleting(false);
+    }
+
+    function openDeleteItemModal(item: MenuItem) {
+        setDeleteConfirm({ type: "item", id: item.id, name: item.name });
+        setDeleteInput("");
+        setDeleteError(null);
+    }
+
+    function openDeleteCategoryModal(cat: { id: string; name: string }) {
+        setDeleteConfirm({ type: "category", id: cat.id, name: cat.name });
+        setDeleteInput("");
+        setDeleteError(null);
+    }
+
+    async function confirmDelete() {
+        if (!deleteConfirm || !deletePhraseMatches) return;
+        setDeleting(true);
+        setDeleteError(null);
+        try {
+            if (deleteConfirm.type === "item") {
+                await api.deleteMenuItem(deleteConfirm.id);
+            } else {
+                await api.deleteCategory(deleteConfirm.id);
+            }
+            invalidateMenuCache();
+            closeDeleteModal();
+        } catch (err: unknown) {
+            setDeleteError(err instanceof Error ? err.message : "Something went wrong");
+        } finally {
+            setDeleting(false);
+        }
+    }
 
     function closeItemModal() {
         setShowItemModal(false);
@@ -194,11 +245,6 @@ export default function MenuPage() {
         } catch (err: any) { alert(err.message); }
         finally { setSaving(false); }
     }
-    async function deleteItem(id: string) {
-        if (!confirm("Delete this item?")) return;
-        try { await api.deleteMenuItem(id); invalidateMenuCache(); }
-        catch (err: any) { alert(err.message); }
-    }
     async function saveCategory(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true);
@@ -216,11 +262,6 @@ export default function MenuPage() {
         } finally {
             setSaving(false);
         }
-    }
-    async function deleteCategory(id: string) {
-        if (!confirm("Delete this category and all its items?")) return;
-        try { await api.deleteCategory(id); invalidateMenuCache(); }
-        catch (err: any) { alert(err.message); }
     }
 
     function closeCatModal() {
@@ -318,10 +359,20 @@ export default function MenuPage() {
                                         </div>
                                     )}
                                     <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => openEditItem(item)} className="p-2 bg-secondary backdrop-blur-md rounded-lg text-foreground hover:bg-secondary/80 border border-border">
+                                        <button
+                                            type="button"
+                                            onClick={() => openEditItem(item)}
+                                            className="p-2 bg-secondary backdrop-blur-md rounded-lg text-foreground hover:bg-secondary/80 border border-border"
+                                            aria-label={`Edit ${item.name}`}
+                                        >
                                             <Edit2 className="w-4 h-4" />
                                         </button>
-                                        <button onClick={() => deleteItem(item.id)} className="p-2 bg-destructive/90 backdrop-blur-md rounded-lg text-destructive-foreground hover:bg-destructive shadow-sm">
+                                        <button
+                                            type="button"
+                                            onClick={() => openDeleteItemModal(item)}
+                                            className="p-2 bg-destructive/90 backdrop-blur-md rounded-lg text-destructive-foreground hover:bg-destructive shadow-sm"
+                                            aria-label={`Delete ${item.name}`}
+                                        >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -352,7 +403,14 @@ export default function MenuPage() {
                                 )}
                                 <h3 className="font-semibold text-foreground">{cat.name}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">{cat._count?.items || 0} items active</p>
-                                <button onClick={(e) => { e.stopPropagation(); deleteCategory(cat.id); }} className="mt-4 text-xs text-red-400 opacity-0 group-hover:opacity-100 hover:underline">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        openDeleteCategoryModal(cat);
+                                    }}
+                                    className="mt-4 text-xs text-red-400 opacity-0 group-hover:opacity-100 hover:underline"
+                                >
                                     Delete
                                 </button>
                             </div>
@@ -829,6 +887,121 @@ export default function MenuPage() {
                                     <Button type="submit" loading={saving} className="flex-1">Create</Button>
                                 </div>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Delete confirmation — type "delete" to proceed */}
+            <AnimatePresence>
+                {deleteConfirm && (
+                    <div
+                        className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+                        onClick={() => {
+                            if (!deleting) closeDeleteModal();
+                        }}
+                        role="presentation"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="delete-confirm-title"
+                            aria-describedby="delete-confirm-desc"
+                        >
+                            <div className="px-6 pt-6 pb-4 border-b border-border bg-destructive/5">
+                                <div className="flex items-start gap-3">
+                                    <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+                                        <AlertTriangle className="h-5 w-5" aria-hidden />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 id="delete-confirm-title" className="text-lg font-semibold text-foreground">
+                                            {deleteConfirm.type === "item" ? "Delete menu item?" : "Delete category?"}
+                                        </h3>
+                                        <p id="delete-confirm-desc" className="mt-1 text-sm text-muted-foreground">
+                                            {deleteConfirm.type === "item" ? (
+                                                <>
+                                                    <span className="font-medium text-foreground">&ldquo;{deleteConfirm.name}&rdquo;</span> will be
+                                                    removed from your menu. This cannot be undone.
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="font-medium text-foreground">&ldquo;{deleteConfirm.name}&rdquo;</span> and{" "}
+                                                    <strong className="text-foreground">all items in this category</strong> will be permanently
+                                                    removed. This cannot be undone.
+                                                </>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={closeDeleteModal}
+                                        disabled={deleting}
+                                        className="shrink-0 p-2 -m-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-50"
+                                        aria-label="Close"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label htmlFor="delete-confirm-input" className="text-sm font-medium text-foreground block mb-1.5">
+                                        Type <span className="font-mono text-destructive">{DELETE_CONFIRM_WORD}</span> to confirm
+                                    </label>
+                                    <Input
+                                        id="delete-confirm-input"
+                                        autoComplete="off"
+                                        autoFocus
+                                        placeholder={DELETE_CONFIRM_WORD}
+                                        value={deleteInput}
+                                        onChange={(e) => {
+                                            setDeleteInput(e.target.value);
+                                            setDeleteError(null);
+                                        }}
+                                        disabled={deleting}
+                                        className={cn(
+                                            "h-11",
+                                            deleteInput.length > 0 &&
+                                                !deletePhraseMatches &&
+                                                "border-destructive/50 focus-visible:ring-destructive/30",
+                                            deletePhraseMatches && "border-emerald-500/50 focus-visible:ring-emerald-500/30",
+                                        )}
+                                    />
+                                </div>
+                                {deleteError && (
+                                    <p className="text-sm text-destructive" role="alert">
+                                        {deleteError}
+                                    </p>
+                                )}
+                                <div className="flex gap-3 pt-1">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1 h-11"
+                                        onClick={closeDeleteModal}
+                                        disabled={deleting}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        className="flex-1 h-11"
+                                        loading={deleting}
+                                        disabled={!deletePhraseMatches || deleting}
+                                        onClick={() => void confirmDelete()}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 )}
