@@ -215,15 +215,20 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                             animate={{ x: 0 }}
                             exit={{ x: "-100%" }}
                             transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-                            className="fixed inset-y-0 left-0 w-[280px] bg-card border-r border-border z-50 lg:hidden flex flex-col"
+                            className="fixed inset-y-0 left-0 w-[280px] bg-card border-r border-border z-50 lg:hidden flex flex-col min-h-0"
                         >
-                            <div className="h-16 flex items-center justify-between px-6 border-b border-border">
-                                <span className="font-semibold text-lg">{hotel?.name}</span>
-                                <button onClick={() => setMobileMenuOpen(false)}>
-                                    <X className="w-6 h-6 text-muted-foreground" />
+                            <div className="h-16 shrink-0 flex items-center justify-between px-6 border-b border-border">
+                                <span className="font-semibold text-lg truncate pr-2">{hotel?.name}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary shrink-0"
+                                    aria-label="Close menu"
+                                >
+                                    <X className="w-6 h-6" />
                                 </button>
                             </div>
-                            <nav className="flex-1 px-4 py-6 space-y-1">
+                            <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-1">
                                 {navItems.map((item) => (
                                     <Link
                                         key={item.href}
@@ -236,11 +241,28 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                                 : "text-muted-foreground hover:bg-secondary"
                                         )}
                                     >
-                                        <item.icon className="w-5 h-5" />
+                                        <item.icon className="w-5 h-5 shrink-0" />
                                         {item.name}
                                     </Link>
                                 ))}
                             </nav>
+                            <div className="shrink-0 border-t border-border px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] space-y-2">
+                                <div className="px-3 py-2 rounded-lg bg-secondary/50 border border-border">
+                                    <p className="text-xs font-medium text-foreground truncate">{admin?.name}</p>
+                                    <p className="text-[10px] text-muted-foreground truncate">{admin?.email}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setMobileMenuOpen(false);
+                                        void logout();
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors group"
+                                >
+                                    <LogOut className="w-4 h-4 text-muted-foreground group-hover:text-destructive transition-colors shrink-0" />
+                                    Sign out
+                                </button>
+                            </div>
                         </motion.aside>
                     </>
                 )}
