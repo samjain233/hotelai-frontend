@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import { upload } from "@vercel/blob/client";
 import { blobPathnameWithExtension, resolveImageContentType } from "@/lib/imageUpload";
 import { cn } from "@/lib/utils";
@@ -808,13 +809,22 @@ export default function MenuPage() {
                                             await invalidateMenuCache();
                                             setBulkJsonText("");
                                             closeBulkImportModal();
-                                            alert(
-                                                `Imported ${result.created} item(s)` +
-                                                    (result.categoriesCreated
-                                                        ? ` (${result.categoriesCreated} new categor${result.categoriesCreated === 1 ? "y" : "ies"})`
-                                                        : "") +
-                                                    ".",
-                                            );
+                                            const itemLabel = `${result.created} item${result.created === 1 ? "" : "s"}`;
+                                            const catNote =
+                                                result.categoriesCreated && result.categoriesCreated > 0
+                                                    ? `${result.categoriesCreated} new categor${result.categoriesCreated === 1 ? "y" : "ies"} created.`
+                                                    : undefined;
+                                            toast.success(`Imported ${itemLabel}`, {
+                                                description: catNote,
+                                                duration: 8000,
+                                                action: {
+                                                    label: "View menu",
+                                                    onClick: () => {
+                                                        setActiveTab("items");
+                                                        window.scrollTo({ top: 0, behavior: "smooth" });
+                                                    },
+                                                },
+                                            });
                                         } catch (err) {
                                             setBulkImportError(err instanceof Error ? err.message : "Import failed");
                                         } finally {
