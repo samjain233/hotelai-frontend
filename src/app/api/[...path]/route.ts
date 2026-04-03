@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+/**
+ * Allow slow upstream calls (e.g. Gemini menu photo scan) when deployed on Vercel.
+ * Hobby plan is capped at 10s — use Pro or call the API directly (no /api proxy) for long scans.
+ * @see https://vercel.com/docs/functions/configuring-functions/duration
+ */
+export const maxDuration = 120;
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
     return proxyRequest(request, await params);
 }

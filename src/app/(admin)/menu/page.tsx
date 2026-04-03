@@ -36,9 +36,12 @@ import {
     Loader2,
     FileJson2,
     Download,
+    Sparkles,
 } from "lucide-react";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+/** Max size for Gemini menu photo (base64 request body). */
+const MAX_MENU_PHOTO_BYTES = 8 * 1024 * 1024;
 
 const DELETE_CONFIRM_WORD = "delete";
 
@@ -89,9 +92,11 @@ export default function MenuPage() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bulkFileInputRef = useRef<HTMLInputElement>(null);
+    const bulkMenuPhotoInputRef = useRef<HTMLInputElement>(null);
     const [showBulkImportModal, setShowBulkImportModal] = useState(false);
     const [bulkJsonText, setBulkJsonText] = useState("");
     const [bulkImporting, setBulkImporting] = useState(false);
+    const [extractingMenuPhoto, setExtractingMenuPhoto] = useState(false);
     const [bulkImportError, setBulkImportError] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{
         type: "item" | "category";
@@ -273,6 +278,75 @@ export default function MenuPage() {
     function closeBulkImportModal() {
         setShowBulkImportModal(false);
         setBulkImportError(null);
+        setExtractingMenuPhoto(false);
+    }
+
+    function handleMenuPhotoForExtraction(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please choose a JPEG, PNG, or WebP image.");
+            return;
+        }
+        if (file.size > MAX_MENU_PHOTO_BYTES) {
+            toast.error("Image must be 8 MB or smaller for menu scanning.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result;
+            if (typeof dataUrl !== "string") return;
+            const m = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl);
+            if (!m) {
+                toast.error("Could not read the image.");
+                return;
+            }
+            const [, declaredMime, imageBase64] = m;
+            const resolvedMime =
+                declaredMime.split(";")[0].trim().toLowerCase() === "image/jpg"
+                    ? "image/jpeg"
+                    : declaredMime.split(";")[0].trim().toLowerCase();
+
+            const allowedMime = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+            if (!allowedMime.has(resolvedMime)) {
+                toast.error("Use a JPEG, PNG, WebP, or GIF image.");
+                return;
+            }
+
+            void (async () => {
+                setBulkImportError(null);
+                setExtractingMenuPhoto(true);
+                try {
+                    const { items } = await api.extractMenuFromImage({
+                        imageBase64,
+                        mimeType: resolvedMime,
+                    });
+                    setBulkJsonText(JSON.stringify({ items }, null, 2));
+                    if (items.length === 0) {
+                        toast.message("No items detected", {
+                            description: "Try a straighter, well-lit photo of the full menu.",
+                        });
+                    } else {
+                        toast.success(`Extracted ${items.length} item(s)`, {
+                            description: "Review and edit the JSON, then tap Import items.",
+                        });
+                    }
+                } catch (err) {
+                    const msg = err instanceof Error ? err.message : "Menu scan failed";
+                    setBulkImportError(msg);
+                    toast.error(msg);
+                } finally {
+                    setExtractingMenuPhoto(false);
+                }
+            })();
+        };
+        reader.onerror = () => {
+            toast.error("Could not read the file.");
+        };
+        reader.readAsDataURL(file);
     }
 
     const filteredItems = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.description?.toLowerCase().includes(search.toLowerCase()));
@@ -767,6 +841,41 @@ export default function MenuPage() {
                                         }}
                                     />
                                 </div>
+
+                                <div className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 space-y-2">
+                                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                                        <Sparkles className="w-4 h-4 text-primary shrink-0" aria-hidden />
+                                        Scan menu from a photo
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                        Upload a clear photo of your printed menu. Google Gemini turns it into JSON below — always
+                                        review prices and names before importing. Requires{" "}
+                                        <code className="text-foreground">GEMINI_API_KEY</code> on your API server. A large or busy
+                                        photo can take <span className="text-foreground/90">30–90 seconds</span>; keep this tab open
+                                        until it finishes.
+                                    </p>
+                                    <input
+                                        ref={bulkMenuPhotoInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp,image/gif"
+                                        className="hidden"
+                                        disabled={extractingMenuPhoto || bulkImporting}
+                                        onChange={handleMenuPhotoForExtraction}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs w-full sm:w-auto"
+                                        disabled={extractingMenuPhoto || bulkImporting}
+                                        loading={extractingMenuPhoto}
+                                        onClick={() => bulkMenuPhotoInputRef.current?.click()}
+                                    >
+                                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                                        {extractingMenuPhoto ? "Scanning…" : "Choose menu photo (AI)"}
+                                    </Button>
+                                </div>
+
                                 <textarea
                                     value={bulkJsonText}
                                     onChange={(e) => setBulkJsonText(e.target.value)}
@@ -787,7 +896,7 @@ export default function MenuPage() {
                                 <Button
                                     type="button"
                                     className="flex-1"
-                                    disabled={bulkImporting || !bulkJsonText.trim()}
+                                    disabled={bulkImporting || extractingMenuPhoto || !bulkJsonText.trim()}
                                     onClick={async () => {
                                         setBulkImportError(null);
                                         let parsed: unknown;

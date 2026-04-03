@@ -264,6 +264,19 @@ class ApiClient {
      * Bulk create menu items from JSON. Categories are created when categoryName is used and missing.
      * Parses Nest `errors[]` on 400 for readable messages.
      */
+    /**
+     * Gemini vision (backend): menu photo → items JSON. Requires GEMINI_API_KEY on the API server.
+     */
+    async extractMenuFromImage(payload: {
+        imageBase64: string;
+        mimeType: string;
+    }): Promise<{ items: BulkMenuImportRow[] }> {
+        return this.request('/admin/menu/extract-from-image', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
     async bulkImportMenuItems(payload: { items: BulkMenuImportRow[] }): Promise<{
         created: number;
         categoriesCreated: number;
