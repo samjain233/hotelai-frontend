@@ -225,42 +225,43 @@ export default function RoomsPage() {
     return (
         <>
         {/* ───── Normal page (hidden when printing) ───── */}
-        <div className="space-y-8 animate-in fade-in duration-500 print:hidden">
+        <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 print:hidden pb-[env(safe-area-inset-bottom,0px)]">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Rooms & QR Codes</h1>
-                    <p className="text-muted-foreground mt-1">Manage physical spaces and digital access points</p>
+                <div className="min-w-0">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Rooms & QR Codes</h1>
+                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage physical spaces and digital access points</p>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="outline" onClick={showAllQrs}>
-                        <QrCode className="w-4 h-4 mr-2" /> Print QRs
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full md:w-auto shrink-0">
+                    <Button variant="outline" className="w-full sm:w-auto min-h-11 justify-center" onClick={showAllQrs}>
+                        <QrCode className="w-4 h-4 mr-2 shrink-0" /> Print QRs
                     </Button>
-                    <Button onClick={() => setShowModal(true)}>
-                        <Plus className="w-4 h-4 mr-2" /> Add Room
+                    <Button className="w-full sm:w-auto min-h-11 justify-center" onClick={() => setShowModal(true)}>
+                        <Plus className="w-4 h-4 mr-2 shrink-0" /> Add Room
                     </Button>
                 </div>
             </div>
 
             {/* Toolbar */}
-            <div className="flex justify-between items-center border-b border-border pb-6">
-                <div className="relative w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center border-b border-border pb-4 sm:pb-6">
+                <div className="relative w-full sm:w-72 sm:max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     <input
-                        type="text"
+                        type="search"
+                        enterKeyHint="search"
                         placeholder="Search by room number..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-secondary/50 border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="w-full min-h-11 bg-secondary/50 border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                     />
                 </div>
-                <div className="text-sm text-muted-foreground">
-                    Total Rooms: <span className="font-semibold text-foreground">{rooms.length}</span>
+                <div className="text-sm text-muted-foreground shrink-0">
+                    Total rooms: <span className="font-semibold text-foreground tabular-nums">{rooms.length}</span>
                 </div>
             </div>
 
             {/* Room Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-6">
                 <AnimatePresence>
                     {filteredRooms.map((room) => (
                         <motion.div
@@ -269,12 +270,12 @@ export default function RoomsPage() {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             key={room.id}
-                            className="dashboard-card p-6 flex flex-col items-center text-center group relative hover:border-primary/50"
+                            className="dashboard-card p-4 sm:p-6 flex flex-col items-center text-center group relative hover:border-primary/50"
                         >
-                            <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-2xl font-bold text-primary mb-3 shadow-inner">
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-secondary flex items-center justify-center text-xl sm:text-2xl font-bold text-primary mb-2 sm:mb-3 shadow-inner tabular-nums">
                                 {room.number}
                             </div>
-                            <h3 className="font-semibold text-foreground">Room {room.number}</h3>
+                            <h3 className="font-semibold text-foreground text-sm sm:text-base">Room {room.number}</h3>
                             {room.type?.trim() ? (
                                 <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{room.type}</p>
                             ) : null}
@@ -284,17 +285,22 @@ export default function RoomsPage() {
                                 </span>
                             )}
 
-                            {/* Hover actions */}
+                            {/* QR / delete — always visible on small screens (no hover on touch) */}
                             <button
+                                type="button"
                                 onClick={() => handleSinglePrint(room.id)}
                                 title="Print QR"
-                                className="absolute top-3 left-3 p-1.5 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label={`Print QR for room ${room.number}`}
+                                className="absolute top-2 left-2 sm:top-3 sm:left-3 p-2 min-h-10 min-w-10 sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded-lg bg-secondary/90 border border-border text-muted-foreground hover:text-primary opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-sm"
                             >
                                 <QrCode className="w-4 h-4" />
                             </button>
                             <button
+                                type="button"
                                 onClick={() => deleteRoom(room.id)}
-                                className="absolute top-3 right-3 p-1.5 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Delete room"
+                                aria-label={`Delete room ${room.number}`}
+                                className="absolute top-2 right-2 sm:top-3 sm:right-3 p-2 min-h-10 min-w-10 sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded-lg bg-secondary/90 border border-border text-muted-foreground hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-sm"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -306,22 +312,24 @@ export default function RoomsPage() {
             {/* Add Room Modal */}
             <AnimatePresence>
                 {showModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
-                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm bg-card border border-border rounded-xl shadow-2xl">
-                            <div className="flex justify-between items-center p-5 border-b border-border bg-muted/20">
+                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)]" onClick={() => setShowModal(false)}>
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl">
+                            <div className="flex justify-between items-center p-4 sm:p-5 border-b border-border bg-muted/20">
                                 <h3 className="font-semibold text-foreground">Add Room</h3>
-                                <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
+                                <button type="button" className="p-2 -m-2 rounded-lg hover:bg-secondary" onClick={() => setShowModal(false)} aria-label="Close"><X className="w-5 h-5 text-muted-foreground" /></button>
                             </div>
-                            <form onSubmit={handleCreateRoom} className="p-6 space-y-4">
+                            <form onSubmit={handleCreateRoom} className="p-4 sm:p-6 space-y-4">
                                 <div className="space-y-1.5">
-                                    <div
-                                        className="relative"
-                                        onMouseEnter={() => setRoomNumberHelpOpen(true)}
-                                        onMouseLeave={() => setRoomNumberHelpOpen(false)}
-                                    >
+                                    <div className="relative">
                                         <div className="flex items-center gap-1.5">
                                             <label htmlFor="add-room-numbers" className="text-xs font-medium text-muted-foreground">Room number(s)</label>
-                                            <button type="button" className="rounded-full p-0.5 text-muted-foreground outline-none hover:text-foreground" aria-label="Room number format help" aria-expanded={roomNumberHelpOpen}>
+                                            <button
+                                                type="button"
+                                                className="rounded-full p-1.5 min-h-9 min-w-9 flex items-center justify-center text-muted-foreground outline-none hover:text-foreground hover:bg-secondary"
+                                                aria-label="Room number format help"
+                                                aria-expanded={roomNumberHelpOpen}
+                                                onClick={() => setRoomNumberHelpOpen((o) => !o)}
+                                            >
                                                 <CircleHelp className="w-4 h-4 shrink-0" aria-hidden />
                                             </button>
                                         </div>
@@ -343,9 +351,9 @@ export default function RoomsPage() {
                                     <Input id="add-room-numbers" placeholder="101  or  101,102,105  or  101-105" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} required autoComplete="off" />
                                 </div>
                                 <Input placeholder="Floor (Optional) — applies to all" value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} />
-                                <div className="flex gap-3 pt-2">
-                                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-                                    <Button type="submit" loading={saving} className="flex-1">
+                                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
+                                    <Button type="button" variant="outline" className="flex-1 min-h-11" onClick={() => setShowModal(false)}>Cancel</Button>
+                                    <Button type="submit" loading={saving} className="flex-1 min-h-11">
                                         {(() => { const { numbers } = parseRoomNumbersInput(form.number); return numbers.length > 1 ? `Add ${numbers.length} rooms` : "Add room"; })()}
                                     </Button>
                                 </div>
@@ -359,22 +367,22 @@ export default function RoomsPage() {
         {/* ───── Print QRs modal (multi-room, for print/PDF) ───── */}
         <AnimatePresence>
             {showQrModal && (
-                <div className="room-qr-print-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm print:static print:inset-auto print:flex print:min-h-0 print:items-start print:justify-start print:overflow-visible print:bg-transparent print:backdrop-blur-0" onClick={() => setShowQrModal(false)}>
+                <div className="room-qr-print-backdrop fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 sm:p-2 lg:p-4 bg-black/80 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)] print:static print:inset-auto print:flex print:min-h-0 print:items-start print:justify-start print:overflow-visible print:bg-transparent print:backdrop-blur-0" onClick={() => setShowQrModal(false)}>
                     <motion.div
                         initial={{ opacity: 0, scale: 0.96 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.96 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="room-qr-print-modal flex h-[92vh] w-full max-w-[1200px] mx-4 rounded-xl border border-border bg-card shadow-2xl overflow-hidden print:block print:h-auto print:max-h-none print:min-h-0 print:w-full print:max-w-none print:mx-0 print:overflow-visible print:rounded-none print:border-0 print:bg-white print:shadow-none"
+                        className="room-qr-print-modal flex flex-col lg:flex-row h-[96dvh] max-h-[96dvh] lg:h-[92vh] lg:max-h-[92vh] w-full max-w-[1200px] sm:mx-auto rounded-t-2xl lg:rounded-xl border border-border bg-card shadow-2xl overflow-hidden print:block print:h-auto print:max-h-none print:min-h-0 print:w-full print:max-w-none print:mx-0 print:overflow-visible print:rounded-none print:border-0 print:bg-white print:shadow-none"
                     >
-                        {/* ── Sidebar (screen only) ── */}
-                        <aside className="w-[280px] shrink-0 border-r border-border bg-muted/30 flex flex-col overflow-hidden print:hidden">
-                            <div className="p-4 border-b border-border">
+                        {/* ── Sidebar (screen only) — scrollable panel on mobile, fixed width on lg ── */}
+                        <aside className="flex w-full shrink-0 flex-col overflow-hidden border-b border-border bg-muted/30 min-h-0 max-h-[40vh] lg:max-h-none lg:w-[280px] lg:border-b-0 lg:border-r print:hidden">
+                            <div className="shrink-0 p-4 border-b border-border">
                                 <h3 className="text-base font-semibold text-foreground">QR Print Settings</h3>
                                 <p className="text-xs text-muted-foreground mt-0.5">Customize before printing</p>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-4 space-y-5 text-sm">
+                            <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-5 text-sm">
                                 {/* Layout */}
                                 <div>
                                     <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
@@ -539,8 +547,8 @@ export default function RoomsPage() {
                             </div>
 
                             {/* Print button */}
-                            <div className="p-4 border-t border-border space-y-2">
-                                <Button className="w-full" onClick={() => window.print()} disabled={qrSelectedIds.size === 0}>
+                            <div className="shrink-0 border-t border-border p-4 space-y-2">
+                                <Button className="w-full min-h-11" onClick={() => window.print()} disabled={qrSelectedIds.size === 0}>
                                     <Printer className="w-4 h-4 mr-2" /> Print {qrSelectedIds.size > 0 ? `${qrSelectedIds.size} QR${qrSelectedIds.size > 1 ? "s" : ""}` : ""}
                                 </Button>
                                 <button type="button" onClick={() => setShowQrModal(false)} className="w-full text-xs text-muted-foreground hover:text-foreground py-1.5 transition-colors">
@@ -550,9 +558,9 @@ export default function RoomsPage() {
                         </aside>
 
                         {/* ── Main QR grid (screen + print) ── */}
-                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden print:block print:h-auto print:w-full print:min-h-0 print:overflow-visible print:max-h-none">
+                        <div className="flex min-h-[45vh] flex-1 flex-col overflow-hidden lg:min-h-0 print:block print:h-auto print:w-full print:min-h-0 print:overflow-visible print:max-h-none">
                             {/* Screen header */}
-                            <div className="flex items-center justify-between border-b border-border p-4 print:hidden">
+                            <div className="flex items-center justify-between gap-2 border-b border-border p-3 sm:p-4 print:hidden shrink-0">
                                 <div>
                                     <h3 className="text-lg font-semibold text-foreground">Room QR Codes</h3>
                                     <p className="text-xs text-muted-foreground">Preview — {selectedQrs.length} room{selectedQrs.length !== 1 ? "s" : ""}</p>
@@ -571,7 +579,7 @@ export default function RoomsPage() {
                             </div>
 
                             {/* QR grid */}
-                            <div className="min-h-0 flex-1 overflow-y-auto bg-secondary/20 p-6 print:block print:h-auto print:w-full print:min-h-0 print:overflow-visible print:bg-white print:p-2 print:max-h-none">
+                            <div className="min-h-0 flex-1 overflow-y-auto bg-secondary/20 p-3 sm:p-6 print:block print:h-auto print:w-full print:min-h-0 print:overflow-visible print:bg-white print:p-2 print:max-h-none">
                                 {printFloorGroups.map(([floor, floorQrs]) => (
                                     <div key={floor} className="mb-6 print:mb-2 last:mb-0">
                                         {floorGroups.length > 1 && (
@@ -625,13 +633,13 @@ export default function RoomsPage() {
         {/* ───── Single Room QR Print Modal ───── */}
         <AnimatePresence>
             {singleQr && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm print:static print:inset-auto print:bg-transparent print:backdrop-blur-0" onClick={() => setSingleQr(null)}>
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)] print:static print:inset-auto print:bg-transparent print:backdrop-blur-0" onClick={() => setSingleQr(null)}>
                     <motion.div
                         initial={{ opacity: 0, scale: 0.96 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.96 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden print:max-w-none print:rounded-none print:border print:border-neutral-300 print:shadow-none"
+                        className="w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-xl border border-border bg-card shadow-2xl print:max-w-none print:rounded-none print:border print:border-neutral-300 print:shadow-none"
                         style={{ backgroundColor: qrPrintFrameBg }}
                     >
                         <div className="flex items-center justify-between border-b border-border bg-card/95 p-4 print:hidden">
@@ -673,11 +681,11 @@ export default function RoomsPage() {
                                 Scan to order
                             </p>
                         </div>
-                        <div className="flex gap-2 p-4 border-t border-border print:hidden">
-                            <Button variant="outline" className="flex-1" onClick={() => downloadQr(singleQr)}>
+                        <div className="flex flex-col-reverse sm:flex-row gap-2 p-4 border-t border-border print:hidden">
+                            <Button variant="outline" className="flex-1 min-h-11" onClick={() => downloadQr(singleQr)}>
                                 <Download className="w-4 h-4 mr-2" /> Download
                             </Button>
-                            <Button className="flex-1" onClick={() => window.print()}>
+                            <Button className="flex-1 min-h-11" onClick={() => window.print()}>
                                 <Printer className="w-4 h-4 mr-2" /> Print
                             </Button>
                         </div>
@@ -795,10 +803,10 @@ function QrCard({
 
             {/* Actions (screen only) */}
             <div className="flex w-full gap-1.5 print:hidden mt-auto">
-                <Button variant="outline" size="sm" className="flex-1 px-0 text-[11px]" onClick={onDownload}>
-                    <Download className="mr-1 h-3 w-3" /> PNG
+                <Button variant="outline" size="sm" className="flex-1 min-h-10 px-0 text-[11px] sm:min-h-8" onClick={onDownload}>
+                    <Download className="mr-1 h-3 w-3 shrink-0" /> PNG
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1 px-0 text-[11px]" onClick={onCopy}>
+                <Button variant="outline" size="sm" className="flex-1 min-h-10 px-0 text-[11px] sm:min-h-8" onClick={onCopy}>
                     {copiedId === qr.roomId ? (
                         <><Check className="mr-1 h-3 w-3 text-emerald-500" /> Copied</>
                     ) : (

@@ -280,50 +280,55 @@ export default function MenuPage() {
     if (loading) return <AdminPageSkeleton cardCount={9} />;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-[env(safe-area-inset-bottom,0px)]">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Menu Management</h1>
-                    <p className="text-muted-foreground mt-1">Organize your offerings into categories</p>
+                <div className="min-w-0">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Menu Management</h1>
+                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Organize your offerings into categories</p>
                 </div>
-                <div className="flex flex-wrap gap-3 justify-end">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 w-full md:w-auto md:justify-end">
                     <Button
                         variant="outline"
+                        className="w-full sm:w-auto min-h-11 justify-center sm:justify-center"
                         onClick={() => {
                             selectNewCategoryInItemForm.current = false;
                             setCatForm({ name: "", icon: "" });
                             setShowCatModal(true);
                         }}
                     >
-                        <FolderOpen className="w-4 h-4 mr-2" /> New Category
+                        <FolderOpen className="w-4 h-4 mr-2 shrink-0" /> New Category
                     </Button>
-                    <Button onClick={openNewItem}>
-                        <Plus className="w-4 h-4 mr-2" /> Add Item
+                    <Button className="w-full sm:w-auto min-h-11 justify-center" onClick={openNewItem}>
+                        <Plus className="w-4 h-4 mr-2 shrink-0" /> Add Item
                     </Button>
                     <Button
                         variant="outline"
+                        className="w-full sm:w-auto min-h-11 justify-center"
                         onClick={() => {
                             setBulkImportError(null);
                             setShowBulkImportModal(true);
                         }}
                     >
-                        <FileJson2 className="w-4 h-4 mr-2" /> Import JSON
+                        <FileJson2 className="w-4 h-4 mr-2 shrink-0" /> Import JSON
                     </Button>
                 </div>
             </div>
 
             {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-center border-b border-border pb-1">
-                <div className="flex gap-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between sm:items-end border-b border-border pb-1">
+                <div className="flex gap-6 sm:gap-8 shrink-0">
                     {(["items", "categories"] as const).map((tab) => (
                         <button
                             key={tab}
+                            type="button"
                             onClick={() => setActiveTab(tab)}
-                            className={`text-sm font-medium pb-3 border-b-2 transition-colors capitalize ${activeTab === tab
-                                ? "border-primary text-primary"
-                                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                                }`}
+                            className={cn(
+                                "text-sm font-medium min-h-11 py-2 border-b-2 transition-colors capitalize -mb-px",
+                                activeTab === tab
+                                    ? "border-primary text-primary"
+                                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                            )}
                         >
                             {tab}
                         </button>
@@ -331,14 +336,15 @@ export default function MenuPage() {
                 </div>
 
                 {activeTab === "items" && (
-                    <div className="relative w-full sm:w-64 pb-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 -mt-1 w-4 h-4 text-muted-foreground" />
+                    <div className="relative w-full sm:w-64 sm:max-w-xs pb-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                         <input
-                            type="text"
+                            type="search"
+                            enterKeyHint="search"
                             placeholder="Search items..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-secondary/50 border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            className="w-full min-h-11 bg-secondary/50 border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                     </div>
                 )}
@@ -347,7 +353,7 @@ export default function MenuPage() {
             {/* Content Key-based Animation */}
             <AnimatePresence mode="wait">
                 {activeTab === "items" ? (
-                    <motion.div key="items" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <motion.div key="items" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                         {filteredItems.map((item) => (
                             <div key={item.id} className="dashboard-card overflow-hidden group flex flex-col h-full">
                                 {/* Image Area */}
@@ -359,11 +365,11 @@ export default function MenuPage() {
                                             <ImageIcon className="w-8 h-8 opacity-20" />
                                         </div>
                                     )}
-                                    <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex gap-1.5 sm:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                         <button
                                             type="button"
                                             onClick={() => openEditItem(item)}
-                                            className="p-2 bg-secondary backdrop-blur-md rounded-lg text-foreground hover:bg-secondary/80 border border-border"
+                                            className="p-2.5 sm:p-2 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 flex items-center justify-center bg-secondary/95 backdrop-blur-md rounded-lg text-foreground hover:bg-secondary border border-border shadow-sm"
                                             aria-label={`Edit ${item.name}`}
                                         >
                                             <Edit2 className="w-4 h-4" />
@@ -371,7 +377,7 @@ export default function MenuPage() {
                                         <button
                                             type="button"
                                             onClick={() => openDeleteItemModal(item)}
-                                            className="p-2 bg-destructive/90 backdrop-blur-md rounded-lg text-destructive-foreground hover:bg-destructive shadow-sm"
+                                            className="p-2.5 sm:p-2 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 flex items-center justify-center bg-destructive/90 backdrop-blur-md rounded-lg text-destructive-foreground hover:bg-destructive shadow-sm"
                                             aria-label={`Delete ${item.name}`}
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -392,9 +398,9 @@ export default function MenuPage() {
                         ))}
                     </motion.div>
                 ) : (
-                    <motion.div key="categories" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <motion.div key="categories" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
                         {categories.map((cat) => (
-                            <div key={cat.id} className="dashboard-card p-8 flex flex-col items-center text-center cursor-pointer group hover:border-primary/50">
+                            <div key={cat.id} className="dashboard-card p-4 sm:p-8 flex flex-col items-center text-center cursor-pointer group hover:border-primary/50">
                                 {hasCategoryIcon(cat.icon) ? (
                                     <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform duration-300 shadow-inner">
                                         <CategoryIconDisplay icon={cat.icon} size="xl" className="text-primary" />
@@ -410,7 +416,7 @@ export default function MenuPage() {
                                         e.stopPropagation();
                                         openDeleteCategoryModal(cat);
                                     }}
-                                    className="mt-4 text-xs text-red-400 opacity-0 group-hover:opacity-100 hover:underline"
+                                    className="mt-3 sm:mt-4 min-h-10 px-2 text-xs font-medium text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:underline"
                                 >
                                     Delete
                                 </button>
@@ -423,17 +429,20 @@ export default function MenuPage() {
             {/* New Item / Edit Item Modal */}
             <AnimatePresence>
                 {showItemModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto py-8" onClick={() => closeItemModal()}>
+                    <div
+                        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md overflow-y-auto sm:py-8 pb-[env(safe-area-inset-bottom,0px)]"
+                        onClick={() => closeItemModal()}
+                    >
                         <motion.div
                             initial={{ opacity: 0, scale: 0.96, y: 8 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 8 }}
                             transition={{ duration: 0.2 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-4xl my-auto bg-card border border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden"
+                            className="w-full max-w-4xl sm:my-auto bg-card border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-black/40 overflow-hidden max-h-[100dvh] sm:max-h-[min(100dvh,56rem)] flex flex-col"
                         >
                             {/* Header */}
-                            <div className="px-6 py-4 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent">
+                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent shrink-0">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-foreground tracking-tight">{editingItem ? "Edit Item" : "New Item"}</h3>
                                     <button
@@ -445,8 +454,8 @@ export default function MenuPage() {
                                 </div>
                             </div>
 
-                            <form onSubmit={saveItem}>
-                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
+                            <form onSubmit={saveItem} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                                <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 overflow-y-auto min-h-0 max-h-[calc(100dvh-11rem)] sm:max-h-[calc(100vh-14rem)]">
                                     {/* Left column: Basic info */}
                                     <div className="space-y-4">
                                         <div>
@@ -532,7 +541,7 @@ export default function MenuPage() {
                                                 }}
                                                 onClick={() => !uploading && fileInputRef.current?.click()}
                                                 className={cn(
-                                                    "relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 transition-all duration-200 min-h-[280px] group overflow-hidden",
+                                                    "relative border-2 border-dashed rounded-xl p-4 sm:p-6 flex flex-col items-center justify-center gap-2 transition-all duration-200 min-h-[200px] sm:min-h-[280px] group overflow-hidden",
                                                     uploading ? "cursor-wait pointer-events-none" : "cursor-pointer",
                                                     itemForm.imageUrl
                                                         ? "border-white/20 bg-secondary/40 hover:border-white/30"
@@ -651,7 +660,7 @@ export default function MenuPage() {
                                 </div>
 
                                 {/* Actions - full width footer */}
-                                <div className="flex gap-3 px-6 pb-6 pt-5">
+                                <div className="flex gap-3 px-4 sm:px-6 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:pb-6 pt-4 sm:pt-5 border-t border-white/10 shrink-0 bg-card">
                                     <Button type="button" variant="outline" className="flex-1 h-11 rounded-xl" onClick={closeItemModal}>
                                         Cancel
                                     </Button>
@@ -673,7 +682,7 @@ export default function MenuPage() {
             <AnimatePresence>
                 {showBulkImportModal && (
                     <div
-                        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto py-8"
+                        className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md overflow-y-auto py-0 sm:py-8 pb-[env(safe-area-inset-bottom,0px)]"
                         onClick={closeBulkImportModal}
                     >
                         <motion.div
@@ -682,7 +691,7 @@ export default function MenuPage() {
                             exit={{ opacity: 0, scale: 0.96, y: 8 }}
                             transition={{ duration: 0.2 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-2xl my-auto bg-card border border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden max-h-[min(90vh,720px)] flex flex-col"
+                            className="w-full max-w-2xl sm:my-auto bg-card border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-black/40 overflow-hidden max-h-[95dvh] sm:max-h-[min(90vh,720px)] flex flex-col"
                         >
                             <div className="px-6 py-4 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent shrink-0">
                                 <div className="flex items-center justify-between gap-3">
@@ -771,7 +780,7 @@ export default function MenuPage() {
                                     </p>
                                 )}
                             </div>
-                            <div className="flex gap-3 px-6 pb-6 pt-2 border-t border-border/60 shrink-0">
+                            <div className="flex gap-3 px-4 sm:px-6 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:pb-6 pt-2 border-t border-border/60 shrink-0">
                                 <Button type="button" variant="outline" className="flex-1" onClick={closeBulkImportModal}>
                                     Cancel
                                 </Button>
@@ -853,8 +862,8 @@ export default function MenuPage() {
             {/* Category modal */}
             <AnimatePresence>
                 {showCatModal && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeCatModal}>
-                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-card border border-border rounded-xl shadow-2xl">
+                    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)]" onClick={closeCatModal}>
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[90dvh] overflow-y-auto bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl">
                             <div className="flex justify-between items-center p-5 border-b border-border bg-muted/20">
                                 <h3 className="font-semibold text-foreground">New Category</h3>
                                 <button type="button" onClick={closeCatModal}><X className="w-5 h-5 text-muted-foreground" /></button>
@@ -906,7 +915,7 @@ export default function MenuPage() {
             <AnimatePresence>
                 {deleteConfirm && (
                     <div
-                        className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+                        className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md pb-[env(safe-area-inset-bottom,0px)]"
                         onClick={() => {
                             if (!deleting) closeDeleteModal();
                         }}
@@ -918,7 +927,7 @@ export default function MenuPage() {
                             exit={{ opacity: 0, scale: 0.96, y: 8 }}
                             transition={{ duration: 0.2 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden"
+                            className="w-full max-w-md bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-black/40 max-h-[90dvh] overflow-y-auto"
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="delete-confirm-title"
@@ -989,11 +998,11 @@ export default function MenuPage() {
                                         {deleteError}
                                     </p>
                                 )}
-                                <div className="flex gap-3 pt-1">
+                                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-1">
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        className="flex-1 h-11"
+                                        className="flex-1 h-11 min-h-11"
                                         onClick={closeDeleteModal}
                                         disabled={deleting}
                                     >
@@ -1002,7 +1011,7 @@ export default function MenuPage() {
                                     <Button
                                         type="button"
                                         variant="destructive"
-                                        className="flex-1 h-11"
+                                        className="flex-1 h-11 min-h-11"
                                         loading={deleting}
                                         disabled={!deletePhraseMatches || deleting}
                                         onClick={() => void confirmDelete()}
