@@ -248,6 +248,7 @@ export default function MenuPage() {
             }
             closeItemModal();
             invalidateMenuCache();
+            toast.success(editingItem ? "Item updated successfully" : "Item added successfully");
         } catch (err: any) { alert(err.message); }
         finally { setSaving(false); }
     }
@@ -259,6 +260,7 @@ export default function MenuPage() {
             setShowCatModal(false);
             setCatForm({ name: "", icon: "" });
             invalidateMenuCache();
+            toast.success("Category created successfully");
             if (selectNewCategoryInItemForm.current) {
                 selectNewCategoryInItemForm.current = false;
                 setItemForm((prev) => ({ ...prev, categoryId: created.id }));
@@ -536,7 +538,7 @@ export default function MenuPage() {
                                             <label className="text-sm font-medium text-foreground mb-1.5 block">Item name</label>
                                             <Input placeholder="e.g. Masala Dosa" value={itemForm.name} onChange={e => setItemForm({ ...itemForm, name: e.target.value })} required className="h-11" />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-sm font-medium text-foreground mb-1.5 block">Price (₹)</label>
                                                 <Input type="number" placeholder="0" value={itemForm.price} onChange={e => setItemForm({ ...itemForm, price: e.target.value })} required className="h-11" />
