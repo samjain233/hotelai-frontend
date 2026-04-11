@@ -361,10 +361,10 @@
   @apply bg-zinc-700;
 }
 
-/* A6 stand inserts (105×148mm, one room per sheet) — used with .room-qr-print-paper-a6 */
-@page qr-a6-stand {
-  size: A6 portrait;
-  margin: 5mm;
+/* A6 stand cards on A4 landscape: 2× ISO A6 portrait slots (105×148mm) per sheet — .room-qr-print-paper-a6 */
+@page qr-a4l-a6-sheet {
+  size: A4 landscape;
+  margin: 6mm;
 }
 
 /* ─── Print: cleaner PDF / paper (e.g. room QRs sheet) ─── */
@@ -391,7 +391,8 @@
   .qr-print-cols-4 { grid-template-columns: repeat(4, 1fr) !important; }
 
   /* Cut guides: dashed borders between cards */
-  .qr-cut-guides .qr-print-card {
+  .qr-cut-guides .qr-print-card,
+  .qr-cut-guides .qr-print-card-a6-slot {
     border: 1px dashed #999 !important;
     border-radius: 2px !important;
   }
@@ -418,19 +419,8 @@
     page-break-inside: auto;
   }
 
-  /* A6 desk-stand: one QR card per ISO A6 sheet */
-  .room-qr-print-paper-a6 .qr-print-card {
-    page: qr-a6-stand;
-    break-after: page;
-    page-break-after: always;
-  }
-
-  .room-qr-print-paper-a6 .qr-print-floor-block:last-child .qr-print-card:last-child {
-    break-after: auto;
-    page-break-after: auto;
-  }
-
-  .room-qr-print-paper-a6 .qr-a6-stand-sheet {
-    page: qr-a6-stand;
+  /* A4 landscape: each logical page holds up to two A6 portrait slots; small QR inside each slot */
+  .room-qr-print-paper-a6 .qr-a4l-print-page {
+    page: qr-a4l-a6-sheet;
   }
 }

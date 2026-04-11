@@ -33,8 +33,10 @@ import { cn } from "@/lib/utils";
 
 type QrLayout = 4 | 6 | 8;
 
-/** A4 = multi-card sheet; A6 = ISO 105×148mm, one room per sheet (typical desk stand inserts). */
+/** A4 = multi-card sheet; A6 = ISO 105×148mm slot with small QR, 2 slots per A4 landscape sheet. */
 type QrPaperSize = "a4" | "a6";
+
+type A6PrintChunk = { floor: string; pair: RoomQr[]; showFloor: boolean };
 
 /** Matches server QR `light` colour so the print frame has no white margin around the PNG. */
 function resolveQrPrintFrameBackground(hex: string | null | undefined): string {
@@ -223,6 +225,21 @@ export default function RoomsPage() {
         }
         return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
     }, [selectedQrs]);
+
+    /** Pairs of rooms per printed A4 landscape page (two A6 portrait cut areas). */
+    const a6PrintChunks = useMemo((): A6PrintChunk[] => {
+        const out: A6PrintChunk[] = [];
+        for (const [floor, floorQrs] of printFloorGroups) {
+            for (let i = 0; i < floorQrs.length; i += 2) {
+                out.push({
+                    floor,
+                    pair: floorQrs.slice(i, i + 2),
+                    showFloor: i === 0,
+                });
+            }
+        }
+        return out;
+    }, [printFloorGroups]);
 
     const layoutCols = LAYOUT_OPTIONS.find((o) => o.value === qrLayout)!.cols;
 
@@ -429,20 +446,22 @@ export default function RoomsPage() {
                                                 )}
                                             >
                                                 <span className="block text-xs font-semibold">A6 stand</span>
-                                                <span className="block text-[10px] opacity-70 mt-0.5">105×148 mm, 1 room</span>
+                                                <span className="block text-[10px] opacity-70 mt-0.5">2 per A4 landscape</span>
                                             </button>
                                         </div>
                                     </div>
 
-                                    {/* Layout (A4 only — A6 is always one large card per sheet) */}
+                                    {/* Layout (A4 only — A6 uses fixed 2× A6 slots on each A4 landscape page) */}
                                     <div>
                                         <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
                                             <LayoutGrid className="w-3.5 h-3.5" /> Layout
                                         </label>
                                         {qrPaperSize === "a6" ? (
                                             <p className="text-[11px] text-muted-foreground leading-snug rounded-lg border border-border bg-secondary/30 px-3 py-2">
-                                                A6 inserts use one enlarged QR per sheet. Switch to <strong className="text-foreground">A4 sheet</strong> for
-                                                multi-card layouts.
+                                                Prints on <strong className="text-foreground">A4 landscape</strong>. Each cut area is{" "}
+                                                <strong className="text-foreground">105×148&nbsp;mm</strong> (A6) with a{" "}
+                                                <strong className="text-foreground">small</strong> QR inside. Two stand cards per sheet. Use{" "}
+                                                <strong className="text-foreground">Cut guides</strong> to trim.
                                             </p>
                                         ) : (
                                             <div className="grid grid-cols-3 gap-1.5">
@@ -638,48 +657,86 @@ export default function RoomsPage() {
 
                                 {/* QR grid */}
                                 <div className="min-h-0 flex-1 overflow-y-auto bg-secondary/20 p-3 sm:p-6 print:block print:h-auto print:w-full print:min-h-0 print:overflow-visible print:bg-white print:p-2 print:max-h-none">
-                                    {printFloorGroups.map(([floor, floorQrs]) => (
-                                        <div key={floor} className="qr-print-floor-block mb-6 print:mb-0 last:mb-0">
-                                            {floorGroups.length > 1 && (
-                                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1 print:text-black print:text-sm print:mb-2 print:border-b print:border-neutral-200 print:pb-1">
-                                                    {floor === "—" ? "Other Rooms" : `Floor ${floor}`}
-                                                </h4>
-                                            )}
-                                            <div
-                                                className={cn(
-                                                    "grid gap-4",
-                                                    qrPaperSize === "a6"
-                                                        ? "grid-cols-1 w-full max-w-[105mm] mx-auto print:max-w-none"
-                                                        : cn(
-                                                              qrLayout === 4 && "grid-cols-2",
-                                                              qrLayout === 6 && "grid-cols-3",
-                                                              qrLayout === 8 && "grid-cols-2 md:grid-cols-4",
-                                                              layoutCols,
-                                                          ),
-                                                    qrShowCutGuides && "qr-cut-guides",
-                                                )}
-                                            >
-                                                {floorQrs.map((qr) => (
-                                                    <QrCard
-                                                        key={qr.roomId}
-                                                        qr={qr}
-                                                        layout={qrLayout}
-                                                        paperA6={qrPaperSize === "a6"}
-                                                        tagline={qrTagline}
-                                                        wifiName={qrWifiName}
-                                                        wifiPass={qrWifiPass}
-                                                        showBranding={qrShowBranding}
-                                                        hotelName={hotel?.name}
-                                                        qrCardBackground={qrPrintFrameBg}
-                                                        cardTextOnLight={qrPrintCardLight}
-                                                        copiedId={copiedId}
-                                                        onDownload={() => downloadQr(qr)}
-                                                        onCopy={() => copyUrl(qr)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
+                                    {qrPaperSize === "a6"
+                                        ? a6PrintChunks.map((row, idx) => (
+                                              <div
+                                                  key={`${row.floor}-${idx}-${row.pair[0]?.roomId ?? idx}`}
+                                                  className={cn(
+                                                      "qr-a4l-print-page mb-10 last:mb-0 print:mb-0",
+                                                      "print:flex print:min-h-[198mm] print:w-full print:flex-col print:items-center print:justify-center print:box-border",
+                                                      idx < a6PrintChunks.length - 1 && "print:break-after-page",
+                                                  )}
+                                              >
+                                                  {floorGroups.length > 1 && row.showFloor && (
+                                                      <h4 className="w-full text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1 print:text-black print:text-sm print:mb-3 print:text-center print:max-w-[calc(105mm*2+10mm)]">
+                                                          {row.floor === "—" ? "Other Rooms" : `Floor ${row.floor}`}
+                                                      </h4>
+                                                  )}
+                                                  <div
+                                                      className={cn(
+                                                          "flex w-full max-w-[calc(105mm*2+2.5rem)] flex-row flex-wrap justify-center gap-6 print:max-w-none print:flex-nowrap print:justify-center print:gap-[8mm]",
+                                                          qrShowCutGuides && "qr-cut-guides",
+                                                      )}
+                                                  >
+                                                      {row.pair.map((qr) => (
+                                                          <QrCard
+                                                              key={qr.roomId}
+                                                              qr={qr}
+                                                              layout={qrLayout}
+                                                              paperA6
+                                                              tagline={qrTagline}
+                                                              wifiName={qrWifiName}
+                                                              wifiPass={qrWifiPass}
+                                                              showBranding={qrShowBranding}
+                                                              hotelName={hotel?.name}
+                                                              qrCardBackground={qrPrintFrameBg}
+                                                              cardTextOnLight={qrPrintCardLight}
+                                                              copiedId={copiedId}
+                                                              onDownload={() => downloadQr(qr)}
+                                                              onCopy={() => copyUrl(qr)}
+                                                          />
+                                                      ))}
+                                                  </div>
+                                              </div>
+                                          ))
+                                        : printFloorGroups.map(([floor, floorQrs]) => (
+                                              <div key={floor} className="qr-print-floor-block mb-6 print:mb-0 last:mb-0">
+                                                  {floorGroups.length > 1 && (
+                                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1 print:text-black print:text-sm print:mb-2 print:border-b print:border-neutral-200 print:pb-1">
+                                                          {floor === "—" ? "Other Rooms" : `Floor ${floor}`}
+                                                      </h4>
+                                                  )}
+                                                  <div
+                                                      className={cn(
+                                                          "grid gap-4",
+                                                          qrLayout === 4 && "grid-cols-2",
+                                                          qrLayout === 6 && "grid-cols-3",
+                                                          qrLayout === 8 && "grid-cols-2 md:grid-cols-4",
+                                                          layoutCols,
+                                                          qrShowCutGuides && "qr-cut-guides",
+                                                      )}
+                                                  >
+                                                      {floorQrs.map((qr) => (
+                                                          <QrCard
+                                                              key={qr.roomId}
+                                                              qr={qr}
+                                                              layout={qrLayout}
+                                                              paperA6={false}
+                                                              tagline={qrTagline}
+                                                              wifiName={qrWifiName}
+                                                              wifiPass={qrWifiPass}
+                                                              showBranding={qrShowBranding}
+                                                              hotelName={hotel?.name}
+                                                              qrCardBackground={qrPrintFrameBg}
+                                                              cardTextOnLight={qrPrintCardLight}
+                                                              copiedId={copiedId}
+                                                              onDownload={() => downloadQr(qr)}
+                                                              onCopy={() => copyUrl(qr)}
+                                                          />
+                                                      ))}
+                                                  </div>
+                                              </div>
+                                          ))}
 
                                     {selectedQrs.length === 0 && (
                                         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -711,8 +768,10 @@ export default function RoomsPage() {
                             exit={{ opacity: 0, scale: 0.96 }}
                             onClick={(e) => e.stopPropagation()}
                             className={cn(
-                                "w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-xl border border-border bg-card shadow-2xl print:max-w-none print:rounded-none print:border print:border-neutral-300 print:shadow-none",
-                                qrPaperSize === "a6" && "qr-a6-stand-sheet max-w-[105mm] sm:max-w-[105mm]",
+                                "w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-xl border border-border bg-card shadow-2xl print:max-w-none print:rounded-none print:shadow-none",
+                                qrPaperSize === "a4" && "print:border print:border-neutral-300",
+                                qrPaperSize === "a6" &&
+                                    "qr-a4l-print-page qr-a4l-single-room max-w-[105mm] sm:max-w-[105mm] print:max-w-none print:min-h-[198mm] print:flex print:flex-col print:items-center print:justify-center print:box-border print:border-0",
                             )}
                             style={{ backgroundColor: qrPrintFrameBg }}
                         >
@@ -754,13 +813,17 @@ export default function RoomsPage() {
                             <div
                                 className={cn(
                                     "flex flex-col items-center p-8 print:p-4",
+                                    qrPaperSize === "a6" &&
+                                        "print:border print:border-neutral-400 print:w-[105mm] print:h-[148mm] print:max-h-[148mm] print:box-border print:justify-between print:py-5 print:px-4",
                                     qrPrintCardLight ? "text-zinc-900" : "text-zinc-100",
                                 )}
+                                style={qrPaperSize === "a6" ? { backgroundColor: qrPrintFrameBg } : undefined}
                             >
                                 {hotel?.name && (
                                     <p
                                         className={cn(
-                                            "mb-4 text-center text-sm font-semibold print:mb-3",
+                                            "mb-4 text-center text-sm font-semibold print:mb-2",
+                                            qrPaperSize === "a6" && "print:text-[10px] print:max-w-[95mm] print:truncate",
                                             qrPrintCardLight ? "text-zinc-800" : "text-zinc-200",
                                         )}
                                     >
@@ -771,7 +834,7 @@ export default function RoomsPage() {
                                     className={cn(
                                         "w-64 h-64 overflow-hidden rounded-xl p-0 ring-1 print:mx-auto",
                                         qrPaperSize === "a6"
-                                            ? "print:w-[min(88mm,90vw)] print:h-[min(88mm,90vw)] print:max-h-[88mm]"
+                                            ? "h-[38mm] w-[38mm] sm:h-36 sm:w-36 print:h-[36mm] print:w-[36mm] print:rounded-md"
                                             : "print:w-72 print:h-72",
                                         qrPrintCardLight ? "ring-black/15" : "ring-white/25",
                                     )}
@@ -779,13 +842,18 @@ export default function RoomsPage() {
                                 >
                                     <img src={singleQr.qrCode} alt={`Room ${singleQr.roomNumber}`} className="h-full w-full object-contain" />
                                 </div>
-                                <p className={cn("mt-4 font-bold", qrPaperSize === "a6" ? "text-2xl print:text-3xl" : "text-2xl")}>
+                                <p
+                                    className={cn(
+                                        "mt-4 font-bold text-2xl",
+                                        qrPaperSize === "a6" && "print:text-[1.35rem] print:mt-3",
+                                    )}
+                                >
                                     Room {singleQr.roomNumber}
                                 </p>
                                 <p
                                     className={cn(
-                                        "mt-1",
-                                        qrPaperSize === "a6" ? "text-sm print:text-base" : "text-sm",
+                                        "mt-1 text-sm",
+                                        qrPaperSize === "a6" && "print:text-xs",
                                         qrPrintCardLight ? "text-zinc-600" : "text-zinc-400",
                                     )}
                                 >
@@ -826,7 +894,7 @@ function QrCard({
 }: {
     qr: RoomQr;
     layout: QrLayout;
-    /** ISO A6 stand: one enlarged card per printed sheet. */
+    /** A6 stand slot (105×148mm) on A4 landscape; small QR inside the slot. */
     paperA6: boolean;
     tagline: string;
     wifiName: string;
@@ -841,7 +909,7 @@ function QrCard({
     onDownload: () => void;
     onCopy: () => void;
 }) {
-    const isLarge = layout === 4 || paperA6;
+    const isLarge = layout === 4 && !paperA6;
     const hasWifi = wifiName.trim() || wifiPass.trim();
     const t = cardTextOnLight;
     const textMain = t ? "text-zinc-900" : "text-zinc-100";
@@ -856,7 +924,8 @@ function QrCard({
                 "print:break-inside-avoid print:border print:border-neutral-300 print:shadow-none print:rounded-lg",
                 textMain,
                 isLarge && "p-5",
-                paperA6 && "print:px-5 print:py-6 print:min-h-[calc(148mm-10mm)] print:justify-center",
+                paperA6 &&
+                    "qr-print-card-a6-slot w-[min(105mm,calc(100vw-2rem))] h-[148mm] max-w-full shrink-0 box-border justify-between print:w-[105mm] print:h-[148mm] print:max-h-[148mm] print:px-4 print:py-5 print:justify-between",
             )}
             style={{ backgroundColor: qrCardBackground }}
         >
@@ -866,20 +935,24 @@ function QrCard({
                     className={cn(
                         "mb-2 max-w-full truncate text-center text-[10px] font-semibold",
                         textSubtle,
-                        !isLarge && "hidden print:block",
-                        "print:mb-1.5 print:text-xs",
+                        !isLarge && !paperA6 && "hidden print:block",
+                        paperA6 && "print:block print:mb-2 print:text-[10px] print:max-w-[95mm]",
+                        !paperA6 && "print:mb-1.5 print:text-xs",
                     )}
                 >
                     {hotelName}
                 </p>
             )}
 
-            {/* QR — inner ring; outer card already uses same fill as PNG. */}
+            {/* QR — full width on A4 layouts; fixed small tile inside A6 stand slot */}
             <div
                 className={cn(
-                    "aspect-square w-full overflow-hidden rounded-lg p-0 ring-1",
+                    !paperA6 && "aspect-square w-full",
+                    paperA6 &&
+                        "h-[38mm] w-[38mm] shrink-0 overflow-hidden rounded-md p-0 ring-1 sm:h-36 sm:w-36 print:h-[36mm] print:w-[36mm]",
+                    !paperA6 && "overflow-hidden rounded-lg p-0 ring-1",
                     ringQr,
-                    isLarge ? "mb-4" : "mb-2",
+                    isLarge ? "mb-4" : paperA6 ? "mb-3 print:mb-3" : "mb-2",
                 )}
                 style={{ backgroundColor: qrCardBackground }}
             >
@@ -887,7 +960,12 @@ function QrCard({
             </div>
 
             {/* Room number */}
-            <p className={cn("font-bold", isLarge ? "text-2xl" : "text-lg", paperA6 && "print:text-[1.65rem] print:tracking-tight")}>
+            <p
+                className={cn(
+                    "font-bold",
+                    isLarge ? "text-2xl" : paperA6 ? "text-xl print:text-[1.35rem]" : "text-lg",
+                )}
+            >
                 Room {qr.roomNumber}
             </p>
 
