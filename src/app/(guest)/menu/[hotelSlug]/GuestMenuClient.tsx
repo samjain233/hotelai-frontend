@@ -977,7 +977,13 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)]">
                                                     {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img src={imageSrc} alt="" className="h-full w-full object-cover" />
+                                                    <img
+                                                        src={imageSrc}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        className="h-full w-full object-cover"
+                                                    />
                                                 </div>
                                                 {actionBlock}
                                             </div>

@@ -45,13 +45,15 @@ export function usePublicMenuFull(
     hotelSlug: string | null,
     options?: { fallbackData?: PublicMenuFullData }
 ) {
+    const hasSsrFallback = !!options?.fallbackData;
     return useSWR<PublicMenuFullData>(
         hotelSlug ? `/guest/menu/${hotelSlug}/full` : null,
         swrFetcher,
         {
             ...STALE_60,
             fallbackData: options?.fallbackData ?? undefined,
-            revalidateOnMount: !!options?.fallbackData,
+            // SSR already returned fresh data; avoid an immediate duplicate /full fetch on hydration.
+            revalidateOnMount: !hasSsrFallback,
         },
     );
 }
