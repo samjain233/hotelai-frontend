@@ -829,7 +829,7 @@ export default function RoomsPage() {
                                         cardTextOnLight={qrPrintCardLight}
                                         wifiName=""
                                         wifiPass=""
-                                        qrBoxClassName="h-[44mm] w-[44mm] sm:h-48 sm:w-48 print:h-[50mm] print:w-[50mm]"
+                                        qrBoxClassName="h-[46mm] w-[46mm] sm:h-56 sm:w-56 print:h-[56mm] print:w-[56mm]"
                                     />
                                 ) : (
                                     <>
@@ -914,7 +914,7 @@ function QrStandInsertLayout({
             <header className="flex w-full flex-col items-center shrink-0">
                 <div
                     className={cn(
-                        "mb-2.5 h-[3px] w-14 rounded-full print:mb-2",
+                        "mb-2.5 h-[3px] w-14 rounded-full print:mb-1.5",
                         t
                             ? "bg-gradient-to-r from-amber-900/20 via-amber-700/50 to-amber-900/20"
                             : "bg-gradient-to-r from-white/15 via-white/45 to-white/15",
@@ -935,10 +935,10 @@ function QrStandInsertLayout({
                 )}
             </header>
 
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1.5 print:py-2">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1 print:py-1.5">
                 <div
                     className={cn(
-                        "rounded-2xl p-3 shadow-[0_6px_28px_rgba(0,0,0,0.09)] ring-1 ring-inset print:rounded-xl print:p-2.5 print:shadow-[0_4px_20px_rgba(0,0,0,0.07)]",
+                        "rounded-2xl p-3 shadow-[0_6px_28px_rgba(0,0,0,0.09)] ring-1 ring-inset print:rounded-xl print:p-2 print:shadow-[0_4px_20px_rgba(0,0,0,0.07)]",
                         t ? "bg-white ring-black/[0.07]" : "bg-white ring-black/10",
                     )}
                 >
@@ -1054,7 +1054,7 @@ function QrCard({
                     cardTextOnLight={cardTextOnLight}
                     wifiName={wifiName}
                     wifiPass={wifiPass}
-                    qrBoxClassName="h-[44mm] w-[44mm] sm:h-48 sm:w-48 print:h-[50mm] print:w-[50mm]"
+                    qrBoxClassName="h-[46mm] w-[46mm] sm:h-56 sm:w-56 print:h-[56mm] print:w-[56mm]"
                 />
                 <div className="mt-auto flex w-full gap-1.5 pt-3 print:hidden">
                     <Button variant="outline" size="sm" className="min-h-10 flex-1 px-0 text-[11px] sm:min-h-8" onClick={onDownload}>
