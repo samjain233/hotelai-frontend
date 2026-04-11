@@ -814,51 +814,59 @@ export default function RoomsPage() {
                                 className={cn(
                                     "flex flex-col items-center p-8 print:p-4",
                                     qrPaperSize === "a6" &&
-                                        "print:border print:border-neutral-400 print:w-[105mm] print:h-[148mm] print:max-h-[148mm] print:box-border print:justify-between print:py-5 print:px-4",
+                                        "h-[148mm] min-h-[148mm] w-[min(105mm,calc(100vw-2rem))] max-w-full justify-between rounded-2xl border border-border/80 p-5 print:h-[148mm] print:min-h-0 print:w-[105mm] print:max-h-[148mm] print:rounded-2xl print:border print:border-neutral-300/90 print:px-5 print:py-6 print:shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
                                     qrPrintCardLight ? "text-zinc-900" : "text-zinc-100",
                                 )}
                                 style={qrPaperSize === "a6" ? { backgroundColor: qrPrintFrameBg } : undefined}
                             >
-                                {hotel?.name && (
-                                    <p
-                                        className={cn(
-                                            "mb-4 text-center text-sm font-semibold print:mb-2",
-                                            qrPaperSize === "a6" && "print:text-[10px] print:max-w-[95mm] print:truncate",
-                                            qrPrintCardLight ? "text-zinc-800" : "text-zinc-200",
+                                {qrPaperSize === "a6" ? (
+                                    <QrStandInsertLayout
+                                        hotelName={hotel?.name}
+                                        showBranding={Boolean(hotel?.name)}
+                                        roomNumber={singleQr.roomNumber}
+                                        qrCode={singleQr.qrCode}
+                                        tagline="Scan to order"
+                                        cardTextOnLight={qrPrintCardLight}
+                                        wifiName=""
+                                        wifiPass=""
+                                        qrBoxClassName="h-[38mm] w-[38mm] sm:h-36 sm:w-36 print:h-[36mm] print:w-[36mm]"
+                                    />
+                                ) : (
+                                    <>
+                                        {hotel?.name && (
+                                            <p
+                                                className={cn(
+                                                    "mb-4 text-center text-sm font-semibold",
+                                                    qrPrintCardLight ? "text-zinc-800" : "text-zinc-200",
+                                                )}
+                                            >
+                                                {hotel.name}
+                                            </p>
                                         )}
-                                    >
-                                        {hotel.name}
-                                    </p>
+                                        <div
+                                            className={cn(
+                                                "h-64 w-64 overflow-hidden rounded-xl p-0 ring-1 print:mx-auto print:h-72 print:w-72",
+                                                qrPrintCardLight ? "ring-black/15" : "ring-white/25",
+                                            )}
+                                            style={{ backgroundColor: qrPrintFrameBg }}
+                                        >
+                                            <img
+                                                src={singleQr.qrCode}
+                                                alt={`Room ${singleQr.roomNumber}`}
+                                                className="h-full w-full object-contain"
+                                            />
+                                        </div>
+                                        <p className="mt-4 text-2xl font-bold">Room {singleQr.roomNumber}</p>
+                                        <p
+                                            className={cn(
+                                                "mt-1 text-sm",
+                                                qrPrintCardLight ? "text-zinc-600" : "text-zinc-400",
+                                            )}
+                                        >
+                                            Scan to order
+                                        </p>
+                                    </>
                                 )}
-                                <div
-                                    className={cn(
-                                        "w-64 h-64 overflow-hidden rounded-xl p-0 ring-1 print:mx-auto",
-                                        qrPaperSize === "a6"
-                                            ? "h-[38mm] w-[38mm] sm:h-36 sm:w-36 print:h-[36mm] print:w-[36mm] print:rounded-md"
-                                            : "print:w-72 print:h-72",
-                                        qrPrintCardLight ? "ring-black/15" : "ring-white/25",
-                                    )}
-                                    style={{ backgroundColor: qrPrintFrameBg }}
-                                >
-                                    <img src={singleQr.qrCode} alt={`Room ${singleQr.roomNumber}`} className="h-full w-full object-contain" />
-                                </div>
-                                <p
-                                    className={cn(
-                                        "mt-4 font-bold text-2xl",
-                                        qrPaperSize === "a6" && "print:text-[1.35rem] print:mt-3",
-                                    )}
-                                >
-                                    Room {singleQr.roomNumber}
-                                </p>
-                                <p
-                                    className={cn(
-                                        "mt-1 text-sm",
-                                        qrPaperSize === "a6" && "print:text-xs",
-                                        qrPrintCardLight ? "text-zinc-600" : "text-zinc-400",
-                                    )}
-                                >
-                                    Scan to order
-                                </p>
                             </div>
                             <div className="flex flex-col-reverse sm:flex-row gap-2 p-4 border-t border-border print:hidden">
                                 <Button variant="outline" className="flex-1 min-h-11" onClick={() => downloadQr(singleQr)}>
@@ -872,6 +880,116 @@ export default function RoomsPage() {
                     </div>
                 )}
             </AnimatePresence>
+        </>
+    );
+}
+
+/** Shared layout for A6 stand inserts: serif branding, QR medallion, typographic room block. */
+function QrStandInsertLayout({
+    hotelName,
+    showBranding,
+    roomNumber,
+    qrCode,
+    tagline,
+    cardTextOnLight,
+    wifiName,
+    wifiPass,
+    qrBoxClassName,
+}: {
+    hotelName?: string;
+    showBranding: boolean;
+    roomNumber: string;
+    qrCode: string;
+    tagline: string;
+    cardTextOnLight: boolean;
+    wifiName: string;
+    wifiPass: string;
+    /** Tailwind classes for the QR image wrapper (mm sizes for print). */
+    qrBoxClassName: string;
+}) {
+    const t = cardTextOnLight;
+    const hasWifi = wifiName.trim() || wifiPass.trim();
+    return (
+        <>
+            <header className="flex w-full flex-col items-center shrink-0">
+                <div
+                    className={cn(
+                        "mb-3 h-[3px] w-12 rounded-full print:mb-2.5",
+                        t
+                            ? "bg-gradient-to-r from-amber-900/20 via-amber-700/50 to-amber-900/20"
+                            : "bg-gradient-to-r from-white/15 via-white/45 to-white/15",
+                    )}
+                    aria-hidden
+                />
+                {showBranding && hotelName ? (
+                    <p
+                        className={cn(
+                            "font-serif max-w-[92mm] text-center text-[11px] font-medium leading-snug tracking-[0.14em] print:text-[10px] print:leading-tight",
+                            t ? "text-zinc-800" : "text-zinc-200",
+                        )}
+                    >
+                        {hotelName}
+                    </p>
+                ) : (
+                    <span className="h-[0.875rem] print:h-2" aria-hidden />
+                )}
+            </header>
+
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-2 print:py-3">
+                <div
+                    className={cn(
+                        "rounded-2xl p-2.5 shadow-[0_6px_28px_rgba(0,0,0,0.09)] ring-1 ring-inset print:rounded-xl print:p-2 print:shadow-[0_4px_20px_rgba(0,0,0,0.07)]",
+                        t ? "bg-white ring-black/[0.07]" : "bg-white ring-black/10",
+                    )}
+                >
+                    <div className={cn("overflow-hidden rounded-lg", qrBoxClassName)}>
+                        <img src={qrCode} alt={`Room ${roomNumber}`} className="h-full w-full object-contain" />
+                    </div>
+                </div>
+            </div>
+
+            <footer className="flex w-full flex-col items-center gap-1 shrink-0 text-center">
+                <span
+                    className={cn(
+                        "text-[7px] font-semibold uppercase tracking-[0.42em] print:text-[7px]",
+                        t ? "text-zinc-500" : "text-zinc-400",
+                    )}
+                >
+                    Room
+                </span>
+                <p
+                    className={cn(
+                        "font-serif text-[1.85rem] font-semibold leading-none tracking-tight print:text-[1.7rem]",
+                        t ? "text-zinc-900" : "text-zinc-50",
+                    )}
+                >
+                    {roomNumber}
+                </p>
+                <div className={cn("my-1.5 h-px w-9 print:my-1", t ? "bg-zinc-300/90" : "bg-zinc-500/80")} aria-hidden />
+                <p
+                    className={cn(
+                        "max-w-[90mm] text-[9px] font-medium uppercase tracking-[0.22em] print:text-[8px]",
+                        t ? "text-zinc-500" : "text-zinc-400",
+                    )}
+                >
+                    {tagline?.trim() || "Scan to order"}
+                </p>
+                {hasWifi && (
+                    <div
+                        className={cn(
+                            "mt-2 flex max-w-[92mm] items-center justify-center gap-1 text-[8px] leading-tight print:mt-1.5 print:text-[7px]",
+                            t ? "text-zinc-600" : "text-zinc-400",
+                        )}
+                    >
+                        <Wifi className="h-2.5 w-2.5 shrink-0 opacity-80" />
+                        <span className="truncate">
+                            {wifiName.trim()}
+                            {wifiName.trim() && wifiPass.trim() ? " · " : ""}
+                            {wifiPass.trim()}
+                        </span>
+                    </div>
+                )}
+            </footer>
         </>
     );
 }
@@ -917,6 +1035,47 @@ function QrCard({
     const textSubtle = t ? "text-zinc-700" : "text-zinc-300";
     const ringQr = t ? "ring-black/15" : "ring-white/25";
 
+    if (paperA6) {
+        return (
+            <div
+                className={cn(
+                    "qr-print-card qr-print-card-a6-slot flex h-[148mm] w-[min(105mm,calc(100vw-2rem))] max-w-full shrink-0 flex-col rounded-2xl border border-border/80 p-4 text-center shadow-sm",
+                    "print:break-inside-avoid print:h-[148mm] print:w-[105mm] print:max-h-[148mm] print:rounded-2xl print:border print:border-neutral-300/90 print:px-5 print:py-6 print:shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+                    textMain,
+                )}
+                style={{ backgroundColor: qrCardBackground }}
+            >
+                <QrStandInsertLayout
+                    hotelName={hotelName}
+                    showBranding={showBranding && Boolean(hotelName)}
+                    roomNumber={qr.roomNumber}
+                    qrCode={qr.qrCode}
+                    tagline={tagline}
+                    cardTextOnLight={cardTextOnLight}
+                    wifiName={wifiName}
+                    wifiPass={wifiPass}
+                    qrBoxClassName="h-[38mm] w-[38mm] sm:h-36 sm:w-36 print:h-[36mm] print:w-[36mm]"
+                />
+                <div className="mt-auto flex w-full gap-1.5 pt-3 print:hidden">
+                    <Button variant="outline" size="sm" className="min-h-10 flex-1 px-0 text-[11px] sm:min-h-8" onClick={onDownload}>
+                        <Download className="mr-1 h-3 w-3 shrink-0" /> PNG
+                    </Button>
+                    <Button variant="outline" size="sm" className="min-h-10 flex-1 px-0 text-[11px] sm:min-h-8" onClick={onCopy}>
+                        {copiedId === qr.roomId ? (
+                            <>
+                                <Check className="mr-1 h-3 w-3 text-emerald-500" /> Copied
+                            </>
+                        ) : (
+                            <>
+                                <Link className="mr-1 h-3 w-3" /> Link
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div
             className={cn(
@@ -924,8 +1083,6 @@ function QrCard({
                 "print:break-inside-avoid print:border print:border-neutral-300 print:shadow-none print:rounded-lg",
                 textMain,
                 isLarge && "p-5",
-                paperA6 &&
-                    "qr-print-card-a6-slot w-[min(105mm,calc(100vw-2rem))] h-[148mm] max-w-full shrink-0 box-border justify-between print:w-[105mm] print:h-[148mm] print:max-h-[148mm] print:px-4 print:py-5 print:justify-between",
             )}
             style={{ backgroundColor: qrCardBackground }}
         >
@@ -935,24 +1092,20 @@ function QrCard({
                     className={cn(
                         "mb-2 max-w-full truncate text-center text-[10px] font-semibold",
                         textSubtle,
-                        !isLarge && !paperA6 && "hidden print:block",
-                        paperA6 && "print:block print:mb-2 print:text-[10px] print:max-w-[95mm]",
-                        !paperA6 && "print:mb-1.5 print:text-xs",
+                        !isLarge && "hidden print:block",
+                        "print:mb-1.5 print:text-xs",
                     )}
                 >
                     {hotelName}
                 </p>
             )}
 
-            {/* QR — full width on A4 layouts; fixed small tile inside A6 stand slot */}
+            {/* QR — full width on A4 layouts */}
             <div
                 className={cn(
-                    !paperA6 && "aspect-square w-full",
-                    paperA6 &&
-                        "h-[38mm] w-[38mm] shrink-0 overflow-hidden rounded-md p-0 ring-1 sm:h-36 sm:w-36 print:h-[36mm] print:w-[36mm]",
-                    !paperA6 && "overflow-hidden rounded-lg p-0 ring-1",
+                    "aspect-square w-full overflow-hidden rounded-lg p-0 ring-1",
                     ringQr,
-                    isLarge ? "mb-4" : paperA6 ? "mb-3 print:mb-3" : "mb-2",
+                    isLarge ? "mb-4" : "mb-2",
                 )}
                 style={{ backgroundColor: qrCardBackground }}
             >
@@ -960,20 +1113,13 @@ function QrCard({
             </div>
 
             {/* Room number */}
-            <p
-                className={cn(
-                    "font-bold",
-                    isLarge ? "text-2xl" : paperA6 ? "text-xl print:text-[1.35rem]" : "text-lg",
-                )}
-            >
-                Room {qr.roomNumber}
-            </p>
+            <p className={cn("font-bold", isLarge ? "text-2xl" : "text-lg")}>Room {qr.roomNumber}</p>
 
             {/* Tagline */}
             <p
                 className={cn(
                     textMuted,
-                    isLarge ? "text-sm mt-1" : "text-[11px]",
+                    isLarge ? "mt-1 text-sm" : "text-[11px]",
                     hasWifi ? "mb-1" : "mb-2 print:mb-0",
                 )}
             >
@@ -982,28 +1128,36 @@ function QrCard({
 
             {/* WiFi */}
             {hasWifi && (
-                <div className={cn(
-                    "mb-2 flex items-center gap-1 print:mb-1",
-                    textMuted,
-                    isLarge ? "text-xs" : "text-[10px]",
-                )}>
-                    <Wifi className="w-3 h-3 shrink-0" />
+                <div
+                    className={cn(
+                        "mb-2 flex items-center gap-1 print:mb-1",
+                        textMuted,
+                        isLarge ? "text-xs" : "text-[10px]",
+                    )}
+                >
+                    <Wifi className="h-3 w-3 shrink-0" />
                     <span className="truncate">
-                        {wifiName.trim()}{wifiName.trim() && wifiPass.trim() ? " · " : ""}{wifiPass.trim()}
+                        {wifiName.trim()}
+                        {wifiName.trim() && wifiPass.trim() ? " · " : ""}
+                        {wifiPass.trim()}
                     </span>
                 </div>
             )}
 
             {/* Actions (screen only) */}
-            <div className="flex w-full gap-1.5 print:hidden mt-auto">
-                <Button variant="outline" size="sm" className="flex-1 min-h-10 px-0 text-[11px] sm:min-h-8" onClick={onDownload}>
+            <div className="mt-auto flex w-full gap-1.5 print:hidden">
+                <Button variant="outline" size="sm" className="min-h-10 flex-1 px-0 text-[11px] sm:min-h-8" onClick={onDownload}>
                     <Download className="mr-1 h-3 w-3 shrink-0" /> PNG
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1 min-h-10 px-0 text-[11px] sm:min-h-8" onClick={onCopy}>
+                <Button variant="outline" size="sm" className="min-h-10 flex-1 px-0 text-[11px] sm:min-h-8" onClick={onCopy}>
                     {copiedId === qr.roomId ? (
-                        <><Check className="mr-1 h-3 w-3 text-emerald-500" /> Copied</>
+                        <>
+                            <Check className="mr-1 h-3 w-3 text-emerald-500" /> Copied
+                        </>
                     ) : (
-                        <><Link className="mr-1 h-3 w-3" /> Link</>
+                        <>
+                            <Link className="mr-1 h-3 w-3" /> Link
+                        </>
                     )}
                 </Button>
             </div>
