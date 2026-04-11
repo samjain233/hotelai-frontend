@@ -33,6 +33,9 @@ import { cn } from "@/lib/utils";
 
 type QrLayout = 4 | 6 | 8;
 
+/** A4 = multi-card sheet; A6 = ISO 105×148mm, one room per sheet (typical desk stand inserts). */
+type QrPaperSize = "a4" | "a6";
+
 /** Matches server QR `light` colour so the print frame has no white margin around the PNG. */
 function resolveQrPrintFrameBackground(hex: string | null | undefined): string {
     const raw = hex?.trim();
@@ -89,6 +92,7 @@ export default function RoomsPage() {
     const [roomNumberHelpOpen, setRoomNumberHelpOpen] = useState(false);
 
     // QR print settings
+    const [qrPaperSize, setQrPaperSize] = useState<QrPaperSize>("a4");
     const [qrLayout, setQrLayout] = useState<QrLayout>(8);
     const [qrTagline, setQrTagline] = useState("Scan to order");
     const [qrWifiName, setQrWifiName] = useState("");
@@ -371,7 +375,13 @@ export default function RoomsPage() {
             {/* ───── Print QRs modal (multi-room, for print/PDF) ───── */}
             <AnimatePresence>
                 {showQrModal && (
-                    <div className="room-qr-print-backdrop fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 sm:p-2 lg:p-4 bg-black/80 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)] print:static print:inset-auto print:flex print:min-h-0 print:items-start print:justify-start print:overflow-visible print:bg-transparent print:backdrop-blur-0" onClick={() => setShowQrModal(false)}>
+                    <div
+                        className={cn(
+                            "room-qr-print-backdrop fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 sm:p-2 lg:p-4 bg-black/80 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)] print:static print:inset-auto print:flex print:min-h-0 print:items-start print:justify-start print:overflow-visible print:bg-transparent print:backdrop-blur-0",
+                            qrPaperSize === "a6" && "room-qr-print-paper-a6",
+                        )}
+                        onClick={() => setShowQrModal(false)}
+                    >
                         <motion.div
                             initial={{ opacity: 0, scale: 0.96 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -387,29 +397,73 @@ export default function RoomsPage() {
                                 </div>
 
                                 <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-5 text-sm">
-                                    {/* Layout */}
+                                    {/* Paper size (A6 = one QR per stand insert) */}
+                                    <div>
+                                        <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
+                                            Paper size
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <button
+                                                type="button"
+                                                aria-pressed={qrPaperSize === "a4"}
+                                                onClick={() => setQrPaperSize("a4")}
+                                                className={cn(
+                                                    "rounded-lg border px-2 py-2.5 text-center transition-all",
+                                                    qrPaperSize === "a4"
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/40",
+                                                )}
+                                            >
+                                                <span className="block text-xs font-semibold">A4 sheet</span>
+                                                <span className="block text-[10px] opacity-70 mt-0.5">4 / 6 / 8 per page</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-pressed={qrPaperSize === "a6"}
+                                                onClick={() => setQrPaperSize("a6")}
+                                                className={cn(
+                                                    "rounded-lg border px-2 py-2.5 text-center transition-all",
+                                                    qrPaperSize === "a6"
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/40",
+                                                )}
+                                            >
+                                                <span className="block text-xs font-semibold">A6 stand</span>
+                                                <span className="block text-[10px] opacity-70 mt-0.5">105×148 mm, 1 room</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Layout (A4 only — A6 is always one large card per sheet) */}
                                     <div>
                                         <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
                                             <LayoutGrid className="w-3.5 h-3.5" /> Layout
                                         </label>
-                                        <div className="grid grid-cols-3 gap-1.5">
-                                            {LAYOUT_OPTIONS.map((opt) => (
-                                                <button
-                                                    key={opt.value}
-                                                    type="button"
-                                                    onClick={() => setQrLayout(opt.value)}
-                                                    className={cn(
-                                                        "rounded-lg border px-2 py-2 text-center transition-all",
-                                                        qrLayout === opt.value
-                                                            ? "border-primary bg-primary/10 text-primary"
-                                                            : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/40",
-                                                    )}
-                                                >
-                                                    <span className="block text-xs font-semibold">{opt.label}</span>
-                                                    <span className="block text-[10px] opacity-70">{opt.desc}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                                        {qrPaperSize === "a6" ? (
+                                            <p className="text-[11px] text-muted-foreground leading-snug rounded-lg border border-border bg-secondary/30 px-3 py-2">
+                                                A6 inserts use one enlarged QR per sheet. Switch to <strong className="text-foreground">A4 sheet</strong> for
+                                                multi-card layouts.
+                                            </p>
+                                        ) : (
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                {LAYOUT_OPTIONS.map((opt) => (
+                                                    <button
+                                                        key={opt.value}
+                                                        type="button"
+                                                        onClick={() => setQrLayout(opt.value)}
+                                                        className={cn(
+                                                            "rounded-lg border px-2 py-2 text-center transition-all",
+                                                            qrLayout === opt.value
+                                                                ? "border-primary bg-primary/10 text-primary"
+                                                                : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/40",
+                                                        )}
+                                                    >
+                                                        <span className="block text-xs font-semibold">{opt.label}</span>
+                                                        <span className="block text-[10px] opacity-70">{opt.desc}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Tagline */}
@@ -585,25 +639,32 @@ export default function RoomsPage() {
                                 {/* QR grid */}
                                 <div className="min-h-0 flex-1 overflow-y-auto bg-secondary/20 p-3 sm:p-6 print:block print:h-auto print:w-full print:min-h-0 print:overflow-visible print:bg-white print:p-2 print:max-h-none">
                                     {printFloorGroups.map(([floor, floorQrs]) => (
-                                        <div key={floor} className="mb-6 print:mb-2 last:mb-0">
+                                        <div key={floor} className="qr-print-floor-block mb-6 print:mb-0 last:mb-0">
                                             {floorGroups.length > 1 && (
                                                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1 print:text-black print:text-sm print:mb-2 print:border-b print:border-neutral-200 print:pb-1">
                                                     {floor === "—" ? "Other Rooms" : `Floor ${floor}`}
                                                 </h4>
                                             )}
-                                            <div className={cn(
-                                                "grid gap-4",
-                                                qrLayout === 4 && "grid-cols-2",
-                                                qrLayout === 6 && "grid-cols-3",
-                                                qrLayout === 8 && "grid-cols-2 md:grid-cols-4",
-                                                layoutCols,
-                                                qrShowCutGuides && "qr-cut-guides",
-                                            )}>
+                                            <div
+                                                className={cn(
+                                                    "grid gap-4",
+                                                    qrPaperSize === "a6"
+                                                        ? "grid-cols-1 w-full max-w-[105mm] mx-auto print:max-w-none"
+                                                        : cn(
+                                                              qrLayout === 4 && "grid-cols-2",
+                                                              qrLayout === 6 && "grid-cols-3",
+                                                              qrLayout === 8 && "grid-cols-2 md:grid-cols-4",
+                                                              layoutCols,
+                                                          ),
+                                                    qrShowCutGuides && "qr-cut-guides",
+                                                )}
+                                            >
                                                 {floorQrs.map((qr) => (
                                                     <QrCard
                                                         key={qr.roomId}
                                                         qr={qr}
                                                         layout={qrLayout}
+                                                        paperA6={qrPaperSize === "a6"}
                                                         tagline={qrTagline}
                                                         wifiName={qrWifiName}
                                                         wifiPass={qrWifiPass}
@@ -637,18 +698,58 @@ export default function RoomsPage() {
             {/* ───── Single Room QR Print Modal ───── */}
             <AnimatePresence>
                 {singleQr && (
-                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)] print:static print:inset-auto print:bg-transparent print:backdrop-blur-0" onClick={() => setSingleQr(null)}>
+                    <div
+                        className={cn(
+                            "fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)] print:static print:inset-auto print:bg-transparent print:backdrop-blur-0",
+                            qrPaperSize === "a6" && "room-qr-print-paper-a6",
+                        )}
+                        onClick={() => setSingleQr(null)}
+                    >
                         <motion.div
                             initial={{ opacity: 0, scale: 0.96 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.96 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-xl border border-border bg-card shadow-2xl print:max-w-none print:rounded-none print:border print:border-neutral-300 print:shadow-none"
+                            className={cn(
+                                "w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-xl border border-border bg-card shadow-2xl print:max-w-none print:rounded-none print:border print:border-neutral-300 print:shadow-none",
+                                qrPaperSize === "a6" && "qr-a6-stand-sheet max-w-[105mm] sm:max-w-[105mm]",
+                            )}
                             style={{ backgroundColor: qrPrintFrameBg }}
                         >
                             <div className="flex items-center justify-between border-b border-border bg-card/95 p-4 print:hidden">
                                 <h3 className="font-semibold text-foreground">Room {singleQr.roomNumber}</h3>
                                 <button type="button" onClick={() => setSingleQr(null)}><X className="w-5 h-5 text-muted-foreground" /></button>
+                            </div>
+                            <div className="px-4 pb-2 pt-1 print:hidden">
+                                <p className="text-[10px] font-medium text-muted-foreground mb-1.5">Print paper</p>
+                                <div className="flex gap-1.5">
+                                    <button
+                                        type="button"
+                                        aria-pressed={qrPaperSize === "a4"}
+                                        onClick={() => setQrPaperSize("a4")}
+                                        className={cn(
+                                            "flex-1 rounded-md border px-2 py-1.5 text-[11px] font-medium transition-colors",
+                                            qrPaperSize === "a4"
+                                                ? "border-primary bg-primary/10 text-primary"
+                                                : "border-border bg-secondary/40 text-muted-foreground hover:border-primary/30",
+                                        )}
+                                    >
+                                        A4
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-pressed={qrPaperSize === "a6"}
+                                        onClick={() => setQrPaperSize("a6")}
+                                        className={cn(
+                                            "flex-1 rounded-md border px-2 py-1.5 text-[11px] font-medium transition-colors",
+                                            qrPaperSize === "a6"
+                                                ? "border-primary bg-primary/10 text-primary"
+                                                : "border-border bg-secondary/40 text-muted-foreground hover:border-primary/30",
+                                        )}
+                                    >
+                                        A6 stand
+                                    </button>
+                                </div>
                             </div>
                             <div
                                 className={cn(
@@ -668,17 +769,23 @@ export default function RoomsPage() {
                                 )}
                                 <div
                                     className={cn(
-                                        "w-64 h-64 overflow-hidden rounded-xl p-0 ring-1 print:w-72 print:h-72 print:mx-auto",
+                                        "w-64 h-64 overflow-hidden rounded-xl p-0 ring-1 print:mx-auto",
+                                        qrPaperSize === "a6"
+                                            ? "print:w-[min(88mm,90vw)] print:h-[min(88mm,90vw)] print:max-h-[88mm]"
+                                            : "print:w-72 print:h-72",
                                         qrPrintCardLight ? "ring-black/15" : "ring-white/25",
                                     )}
                                     style={{ backgroundColor: qrPrintFrameBg }}
                                 >
                                     <img src={singleQr.qrCode} alt={`Room ${singleQr.roomNumber}`} className="h-full w-full object-contain" />
                                 </div>
-                                <p className="mt-4 text-2xl font-bold">Room {singleQr.roomNumber}</p>
+                                <p className={cn("mt-4 font-bold", qrPaperSize === "a6" ? "text-2xl print:text-3xl" : "text-2xl")}>
+                                    Room {singleQr.roomNumber}
+                                </p>
                                 <p
                                     className={cn(
-                                        "mt-1 text-sm",
+                                        "mt-1",
+                                        qrPaperSize === "a6" ? "text-sm print:text-base" : "text-sm",
                                         qrPrintCardLight ? "text-zinc-600" : "text-zinc-400",
                                     )}
                                 >
@@ -705,6 +812,7 @@ export default function RoomsPage() {
 function QrCard({
     qr,
     layout,
+    paperA6,
     tagline,
     wifiName,
     wifiPass,
@@ -718,6 +826,8 @@ function QrCard({
 }: {
     qr: RoomQr;
     layout: QrLayout;
+    /** ISO A6 stand: one enlarged card per printed sheet. */
+    paperA6: boolean;
     tagline: string;
     wifiName: string;
     wifiPass: string;
@@ -731,7 +841,7 @@ function QrCard({
     onDownload: () => void;
     onCopy: () => void;
 }) {
-    const isLarge = layout === 4;
+    const isLarge = layout === 4 || paperA6;
     const hasWifi = wifiName.trim() || wifiPass.trim();
     const t = cardTextOnLight;
     const textMain = t ? "text-zinc-900" : "text-zinc-100";
@@ -746,6 +856,7 @@ function QrCard({
                 "print:break-inside-avoid print:border print:border-neutral-300 print:shadow-none print:rounded-lg",
                 textMain,
                 isLarge && "p-5",
+                paperA6 && "print:px-5 print:py-6 print:min-h-[calc(148mm-10mm)] print:justify-center",
             )}
             style={{ backgroundColor: qrCardBackground }}
         >
@@ -776,7 +887,7 @@ function QrCard({
             </div>
 
             {/* Room number */}
-            <p className={cn("font-bold", isLarge ? "text-2xl" : "text-lg")}>
+            <p className={cn("font-bold", isLarge ? "text-2xl" : "text-lg", paperA6 && "print:text-[1.65rem] print:tracking-tight")}>
                 Room {qr.roomNumber}
             </p>
 
