@@ -829,7 +829,7 @@ export default function RoomsPage() {
                                         cardTextOnLight={qrPrintCardLight}
                                         wifiName=""
                                         wifiPass=""
-                                        qrBoxClassName="h-[38mm] w-[38mm] sm:h-36 sm:w-36 print:h-[36mm] print:w-[36mm]"
+                                        qrBoxClassName="h-[44mm] w-[44mm] sm:h-48 sm:w-48 print:h-[50mm] print:w-[50mm]"
                                     />
                                 ) : (
                                     <>
@@ -914,7 +914,7 @@ function QrStandInsertLayout({
             <header className="flex w-full flex-col items-center shrink-0">
                 <div
                     className={cn(
-                        "mb-3 h-[3px] w-12 rounded-full print:mb-2.5",
+                        "mb-2.5 h-[3px] w-14 rounded-full print:mb-2",
                         t
                             ? "bg-gradient-to-r from-amber-900/20 via-amber-700/50 to-amber-900/20"
                             : "bg-gradient-to-r from-white/15 via-white/45 to-white/15",
@@ -924,21 +924,21 @@ function QrStandInsertLayout({
                 {showBranding && hotelName ? (
                     <p
                         className={cn(
-                            "font-serif max-w-[92mm] text-center text-[11px] font-medium leading-snug tracking-[0.14em] print:text-[10px] print:leading-tight",
+                            "font-serif max-w-[92mm] text-center text-[13px] font-semibold leading-snug tracking-[0.12em] sm:text-sm print:text-[12px] print:leading-snug",
                             t ? "text-zinc-800" : "text-zinc-200",
                         )}
                     >
                         {hotelName}
                     </p>
                 ) : (
-                    <span className="h-[0.875rem] print:h-2" aria-hidden />
+                    <span className="h-4 print:h-3" aria-hidden />
                 )}
             </header>
 
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-2 print:py-3">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1.5 print:py-2">
                 <div
                     className={cn(
-                        "rounded-2xl p-2.5 shadow-[0_6px_28px_rgba(0,0,0,0.09)] ring-1 ring-inset print:rounded-xl print:p-2 print:shadow-[0_4px_20px_rgba(0,0,0,0.07)]",
+                        "rounded-2xl p-3 shadow-[0_6px_28px_rgba(0,0,0,0.09)] ring-1 ring-inset print:rounded-xl print:p-2.5 print:shadow-[0_4px_20px_rgba(0,0,0,0.07)]",
                         t ? "bg-white ring-black/[0.07]" : "bg-white ring-black/10",
                     )}
                 >
@@ -948,28 +948,28 @@ function QrStandInsertLayout({
                 </div>
             </div>
 
-            <footer className="flex w-full flex-col items-center gap-1 shrink-0 text-center">
+            <footer className="flex w-full flex-col items-center gap-1.5 shrink-0 text-center">
                 <span
                     className={cn(
-                        "text-[7px] font-semibold uppercase tracking-[0.42em] print:text-[7px]",
-                        t ? "text-zinc-500" : "text-zinc-400",
+                        "text-[9px] font-semibold uppercase tracking-[0.32em] print:text-[9px]",
+                        t ? "text-zinc-600" : "text-zinc-400",
                     )}
                 >
                     Room
                 </span>
                 <p
                     className={cn(
-                        "font-serif text-[1.85rem] font-semibold leading-none tracking-tight print:text-[1.7rem]",
+                        "font-serif text-[2.1rem] font-semibold leading-none tracking-tight sm:text-[2.2rem] print:text-[2.05rem]",
                         t ? "text-zinc-900" : "text-zinc-50",
                     )}
                 >
                     {roomNumber}
                 </p>
-                <div className={cn("my-1.5 h-px w-9 print:my-1", t ? "bg-zinc-300/90" : "bg-zinc-500/80")} aria-hidden />
+                <div className={cn("my-1 h-px w-11 print:my-0.5", t ? "bg-zinc-300/90" : "bg-zinc-500/80")} aria-hidden />
                 <p
                     className={cn(
-                        "max-w-[90mm] text-[9px] font-medium uppercase tracking-[0.22em] print:text-[8px]",
-                        t ? "text-zinc-500" : "text-zinc-400",
+                        "max-w-[90mm] text-[11px] font-semibold uppercase tracking-[0.18em] print:text-[10px]",
+                        t ? "text-zinc-600" : "text-zinc-400",
                     )}
                 >
                     {tagline?.trim() || "Scan to order"}
@@ -977,11 +977,11 @@ function QrStandInsertLayout({
                 {hasWifi && (
                     <div
                         className={cn(
-                            "mt-2 flex max-w-[92mm] items-center justify-center gap-1 text-[8px] leading-tight print:mt-1.5 print:text-[7px]",
+                            "mt-1 flex max-w-[92mm] items-center justify-center gap-1.5 text-[10px] leading-snug print:mt-1.5 print:text-[9px]",
                             t ? "text-zinc-600" : "text-zinc-400",
                         )}
                     >
-                        <Wifi className="h-2.5 w-2.5 shrink-0 opacity-80" />
+                        <Wifi className="h-3 w-3 shrink-0 opacity-80" />
                         <span className="truncate">
                             {wifiName.trim()}
                             {wifiName.trim() && wifiPass.trim() ? " · " : ""}
@@ -1054,7 +1054,7 @@ function QrCard({
                     cardTextOnLight={cardTextOnLight}
                     wifiName={wifiName}
                     wifiPass={wifiPass}
-                    qrBoxClassName="h-[38mm] w-[38mm] sm:h-36 sm:w-36 print:h-[36mm] print:w-[36mm]"
+                    qrBoxClassName="h-[44mm] w-[44mm] sm:h-48 sm:w-48 print:h-[50mm] print:w-[50mm]"
                 />
                 <div className="mt-auto flex w-full gap-1.5 pt-3 print:hidden">
                     <Button variant="outline" size="sm" className="min-h-10 flex-1 px-0 text-[11px] sm:min-h-8" onClick={onDownload}>
