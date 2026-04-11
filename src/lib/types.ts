@@ -112,6 +112,8 @@ export interface Room {
     floor?: string;
     /** null / omitted when not set at creation */
     type: string | null;
+    /** Short public id for QR URLs; unique per hotel when set */
+    scanCode?: string | null;
     hotelId: string;
     _count?: { orders: number };
 }
@@ -167,7 +169,7 @@ export interface PublicMenuData {
 }
 
 export interface PublicMenuFullData extends PublicMenuData {
-    rooms: { id: string; number: string; floor?: string; type?: string }[];
+    rooms: { id: string; number: string; floor?: string; type?: string; scanCode?: string | null }[];
 }
 
 // ─── Service Request ──────────────────────────────────────

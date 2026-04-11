@@ -31,7 +31,7 @@ export function usePublicMenu(hotelSlug: string | null) {
  * Public rooms for guests. Safe to cache.
  */
 export function usePublicRooms(hotelSlug: string | null) {
-    return useSWR<{ id: string; number: string; floor?: string; type?: string; hotelId?: string }[]>(
+    return useSWR<{ id: string; number: string; floor?: string; type?: string; scanCode?: string | null; hotelId?: string }[]>(
         hotelSlug ? `/guest/rooms/${hotelSlug}` : null,
         swrFetcher,
         STALE_60,

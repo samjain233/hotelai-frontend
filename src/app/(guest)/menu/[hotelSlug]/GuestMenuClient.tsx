@@ -103,8 +103,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const scrollSpySuspended = useRef(false);
     const guestHeaderRef = useRef<HTMLElement | null>(null);
     const searchParams = useSearchParams();
-    const roomId = searchParams.get("room") || selectedRoomId;
-    const currentRoom = availableRooms.find((r) => r.id === roomId);
+    const roomParam = searchParams.get("room") || selectedRoomId;
+    const resolvedRoomId = useMemo(() => {
+        if (!roomParam || availableRooms.length === 0) return "";
+        const byId = availableRooms.find((r) => r.id === roomParam);
+        if (byId) return byId.id;
+        const byCode = availableRooms.find((r) => r.scanCode != null && r.scanCode !== "" && r.scanCode === roomParam);
+        return byCode?.id ?? "";
+    }, [roomParam, availableRooms]);
+    const currentRoom = availableRooms.find((r) => r.id === resolvedRoomId);
     const roomDisplayName = currentRoom?.number || "";
 
     /** Room service line: dedicated number, else main hotel phone (Settings). */
@@ -297,9 +304,9 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     orderRef.current = order;
 
     const loadPastOrders = useCallback(async () => {
-        if (!ENABLE_GUEST_ORDERING || !roomId) return;
+        if (!ENABLE_GUEST_ORDERING || !resolvedRoomId) return;
         try {
-            const orders = await api.getGuestRoomOrders(roomId);
+            const orders = await api.getGuestRoomOrders(resolvedRoomId);
             setPastOrders(orders);
             const tracking = orderRef.current;
             if (tracking?.id) {
@@ -309,11 +316,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         } catch (err) {
             console.error("Failed to load past orders", err);
         }
-    }, [roomId]);
+    }, [resolvedRoomId]);
 
     useEffect(() => {
-        if (ENABLE_GUEST_ORDERING && roomId) loadPastOrders();
-    }, [roomId, loadPastOrders]);
+        if (ENABLE_GUEST_ORDERING && resolvedRoomId) loadPastOrders();
+    }, [resolvedRoomId, loadPastOrders]);
 
     const handleOrderUpdated = useCallback((ord: Order) => {
         setPastOrders((prev) => {
@@ -326,8 +333,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     useActivityStreamGuest({
         hotelSlug,
-        roomId: roomId || "",
-        enabled: ENABLE_GUEST_ORDERING && !!roomId,
+        roomId: resolvedRoomId || "",
+        enabled: ENABLE_GUEST_ORDERING && !!resolvedRoomId,
         onOrderNew: loadPastOrders,
         onOrderUpdated: handleOrderUpdated,
     });
@@ -359,7 +366,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     function initiateOrder() {
         if (!ENABLE_GUEST_ORDERING || !isOpen) return;
-        if (!roomId) {
+        if (!resolvedRoomId) {
             setShowCart(false);
             setShowRoomModal(true);
             return;
@@ -368,11 +375,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }
 
     async function placeOrder() {
-        if (!ENABLE_GUEST_ORDERING || !isOpen || !roomId) return;
+        if (!ENABLE_GUEST_ORDERING || !isOpen || !resolvedRoomId) return;
         setPlacing(true);
         try {
             const result = await api.placeOrder({
-                roomId,
+                roomId: resolvedRoomId,
                 items: cart.map((ci) => ({ itemId: ci.item.id, quantity: ci.quantity })),
                 notes: notes || undefined,
                 guestName: guestName || undefined,

@@ -78,7 +78,7 @@ export default function GuestServicesClient() {
     const loading = roomsRes.isLoading;
 
     const [activeTab, setActiveTab] = useState<Tab>("complaint");
-    const [selectedRoom, setSelectedRoom] = useState(roomFromUrl); // only pre-fill if from QR
+    const [selectedRoom, setSelectedRoom] = useState("");
     const [guestName, setGuestName] = useState("");
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [submitting, setSubmitting] = useState(false);
@@ -100,8 +100,9 @@ export default function GuestServicesClient() {
     const hasAutoSelectedRef = useRef(false);
     useEffect(() => {
         if (hasAutoSelectedRef.current || !roomFromUrl || rooms.length === 0) return;
-        if (rooms.some((r) => r.id === roomFromUrl)) {
-            setSelectedRoom(roomFromUrl);
+        const match = rooms.find((r) => r.id === roomFromUrl || (r.scanCode != null && r.scanCode === roomFromUrl));
+        if (match) {
+            setSelectedRoom(match.id);
             hasAutoSelectedRef.current = true;
         }
     }, [rooms, roomFromUrl]);

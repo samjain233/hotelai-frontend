@@ -49,7 +49,7 @@ interface AnimatedOverlaysProps {
     notes: string;
     placing: boolean;
     pastOrders: Order[];
-    availableRooms: { id: string; number: string; floor?: string }[];
+    availableRooms: { id: string; number: string; floor?: string; scanCode?: string | null }[];
     selectedRoomId: string;
     isOpen?: boolean;
     onCloseCart: () => void;
@@ -257,7 +257,7 @@ export function HistoryDrawer({ pastOrders, onClose, formatPrice }: HistoryDrawe
 }
 
 interface RoomModalProps {
-    availableRooms: { id: string; number: string; floor?: string }[];
+    availableRooms: { id: string; number: string; floor?: string; scanCode?: string | null }[];
     selectedRoomId: string;
     isOpen?: boolean;
     onClose: () => void;
