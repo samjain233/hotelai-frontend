@@ -113,7 +113,8 @@ export interface MenuItem {
     searchAliases?: string[];
     price: number;
     imageUrl?: string;
-    available: boolean;
+    /** Guest public menu lists only available items; field may be omitted (treated as true). */
+    available?: boolean;
     dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
     spiceLevel?: 'NONE' | 'MILD' | 'MEDIUM' | 'HOT';
     allergenCodes?: string[];
@@ -185,9 +186,17 @@ export interface CartItem {
 }
 
 // ─── Public Menu ──────────────────────────────────────────
+/** Slim category shape returned by guest public menu APIs (no schedule/sort metadata). */
+export interface GuestPublicMenuCategory {
+    id: string;
+    name: string;
+    icon?: string;
+    items: MenuItem[];
+}
+
 export interface PublicMenuData {
     hotel: Hotel;
-    categories: (MenuCategory & { items: MenuItem[] })[];
+    categories: GuestPublicMenuCategory[];
     isOpen?: boolean;
 }
 

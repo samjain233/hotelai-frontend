@@ -839,7 +839,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         {sortBy !== "default" ? <span> · sorted</span> : null}
                     </div>
                 )}
-                {filteredCategories.map((cat) => (
+                {filteredCategories.map((cat, catIndex) => (
                     <div
                         key={cat.id}
                         id={`cat-${cat.id}`}
@@ -868,15 +868,18 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         <ul className="relative z-0 divide-y divide-dashed divide-[var(--guest-line)]">
                             {(cat.items ?? []).map((item, itemIndex) => {
                                 const qty = ENABLE_GUEST_ORDERING ? getCartQuantity(item.id) : 0;
+                                const itemIsAvailable = item.available !== false;
                                 const desc = item.description?.trim() ?? "";
                                 const descLong = desc.length > 72;
                                 const descOpen = expandedDescId === item.id;
                                 const imageSrc = item.imageUrl?.trim() ?? "";
                                 const hasImage = imageSrc.length > 0;
+                                const isPriorityImage =
+                                    hasImage && !searchNormalized && catIndex === 0 && itemIndex < 4;
 
                                 let actionBlock: ReactNode = null;
                                 if (!ENABLE_GUEST_ORDERING) {
-                                    if (!item.available) {
+                                    if (!itemIsAvailable) {
                                         actionBlock = (
                                             <span className="text-center text-[10px] font-medium text-[var(--guest-muted)] sm:text-left">Unavailable</span>
                                         );
@@ -886,12 +889,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         <button
                                             type="button"
                                             onClick={() => addToCart(item)}
-                                            disabled={!item.available || !isOpen}
+                                            disabled={!itemIsAvailable || !isOpen}
                                             className={cn(
                                                 "w-full rounded-md border-2 border-[var(--guest-accent-70)] bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-[var(--guest-accent)] transition-colors hover:bg-[var(--guest-accent-12)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-[108px]",
                                             )}
                                         >
-                                            {!isOpen ? "Closed" : item.available ? "Add +" : "Sold out"}
+                                            {!isOpen ? "Closed" : itemIsAvailable ? "Add +" : "Sold out"}
                                         </button>
                                     );
                                 } else {
@@ -982,8 +985,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                     <img
                                                         src={imageSrc}
                                                         alt=""
-                                                        loading="lazy"
+                                                        width={216}
+                                                        height={162}
+                                                        loading={isPriorityImage ? "eager" : "lazy"}
                                                         decoding="async"
+                                                        fetchPriority={isPriorityImage ? "high" : "auto"}
                                                         className="h-full w-full object-cover"
                                                     />
                                                 </div>

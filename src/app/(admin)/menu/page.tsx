@@ -266,7 +266,7 @@ export default function MenuPage() {
             categoryId: item.categoryId,
             imageUrl: item.imageUrl || "",
             dietaryPreference: item.dietaryPreference || "NONE",
-            available: item.available,
+            available: item.available ?? true,
             spiceLevel: item.spiceLevel ?? "NONE",
             allergenCodes: [...(item.allergenCodes ?? [])],
             dietaryTags: [...(item.dietaryTags ?? [])],

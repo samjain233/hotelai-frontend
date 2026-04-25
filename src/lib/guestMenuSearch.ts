@@ -1,4 +1,4 @@
-import type { MenuCategory, MenuItem } from "@/lib/types";
+import type { GuestPublicMenuCategory, MenuItem } from "@/lib/types";
 
 export type GuestMenuSort = "default" | "name-asc" | "name-desc" | "price-asc" | "price-desc";
 
@@ -108,11 +108,14 @@ export function findDidYouMeanItem(queryRaw: string, items: MenuItem[]): MenuIte
     return best;
 }
 
-function categoryItems(cat: MenuCategory): MenuItem[] {
+function categoryItems(cat: GuestPublicMenuCategory): MenuItem[] {
     return cat.items ?? [];
 }
 
-export function filterCategoriesBySearch(categories: MenuCategory[], queryRaw: string): MenuCategory[] {
+export function filterCategoriesBySearch(
+    categories: GuestPublicMenuCategory[],
+    queryRaw: string,
+): GuestPublicMenuCategory[] {
     const q = normalizeSearchText(queryRaw);
     if (!q) {
         return categories.map((c) => ({ ...c, items: [...categoryItems(c)] }));
@@ -132,7 +135,10 @@ export function itemPassesDietFilters(item: MenuItem, selected: ReadonlySet<Gues
     return selected.has(p as GuestDietFilterKey);
 }
 
-export function filterCategoriesByDiet(categories: MenuCategory[], selected: ReadonlySet<GuestDietFilterKey>): MenuCategory[] {
+export function filterCategoriesByDiet(
+    categories: GuestPublicMenuCategory[],
+    selected: ReadonlySet<GuestDietFilterKey>,
+): GuestPublicMenuCategory[] {
     if (selected.size === 0) {
         return categories.map((c) => ({ ...c, items: [...categoryItems(c)] }));
     }
@@ -166,10 +172,13 @@ export function sortMenuItems(items: readonly MenuItem[], sort: GuestMenuSort): 
     return copy;
 }
 
-export function applySortToCategories(categories: MenuCategory[], sort: GuestMenuSort): MenuCategory[] {
+export function applySortToCategories(
+    categories: GuestPublicMenuCategory[],
+    sort: GuestMenuSort,
+): GuestPublicMenuCategory[] {
     return categories.map((c) => ({ ...c, items: sortMenuItems(categoryItems(c), sort) }));
 }
 
-export function flattenMenuItems(categories: MenuCategory[]): MenuItem[] {
+export function flattenMenuItems(categories: GuestPublicMenuCategory[]): MenuItem[] {
     return categories.flatMap((c) => categoryItems(c));
 }

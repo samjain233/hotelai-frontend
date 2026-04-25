@@ -116,10 +116,10 @@ export function AdminDashboardClient({
 
     // ─── TOGGLE AVAILABILITY ───
     async function toggleAvailability(item: MenuItem) {
-        await handleUpdateItem(item.id, { available: !item.available });
+        await handleUpdateItem(item.id, { available: !(item.available ?? true) });
     }
 
-    const availableCount = items.filter((i) => i.available).length;
+    const availableCount = items.filter((i) => i.available !== false).length;
     const unavailableCount = items.length - availableCount;
 
     return (
@@ -226,7 +226,7 @@ export function AdminDashboardClient({
                                 {items.map((item) => (
                                     <div
                                         key={item.id}
-                                        className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${item.available
+                                        className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${item.available !== false
                                                 ? "bg-[var(--color-bg-card)] border-[rgba(255,255,255,0.04)] hover:border-[var(--color-border-gold)]"
                                                 : "bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.03)] opacity-60"
                                             }`}
@@ -245,7 +245,7 @@ export function AdminDashboardClient({
                                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgba(255,255,255,0.05)] text-[var(--color-text-muted)] shrink-0">
                                                     {item.category}
                                                 </span>
-                                                {!item.available && (
+                                                {item.available === false && (
                                                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 shrink-0">
                                                         Unavailable
                                                     </span>
@@ -269,12 +269,12 @@ export function AdminDashboardClient({
                                                 onClick={() => toggleAvailability(item)}
                                                 className="w-9 h-9 rounded-lg flex items-center justify-center text-sm transition-all cursor-pointer hover:bg-[rgba(255,255,255,0.06)]"
                                                 title={
-                                                    item.available
+                                                    item.available !== false
                                                         ? "Mark as unavailable"
                                                         : "Mark as available"
                                                 }
                                             >
-                                                {item.available ? "✅" : "⏸️"}
+                                                {item.available !== false ? "✅" : "⏸️"}
                                             </button>
                                             <button
                                                 onClick={() => setEditItem(item)}

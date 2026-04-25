@@ -5,6 +5,10 @@ import type { PublicMenuFullData } from "@/lib/types";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 import { fetchGuestMenuFullData } from "@/lib/guestMenuFullServer";
 
+/** Edge-friendly HTML cache: rebuild at most once per minute per hotel slug. */
+export const revalidate = 60;
+export const dynamic = "force-static";
+
 interface Props {
     params: Promise<{ hotelSlug: string }>;
 }
