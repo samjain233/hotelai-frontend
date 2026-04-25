@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { api } from "@/lib/api";
-import { BulkMenuImportRow, MenuItem } from "@/lib/types";
+import { BulkMenuImportRow, MenuItem, type MenuCategory } from "@/lib/types";
 import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwrApi";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
@@ -46,6 +46,21 @@ function toggleStrList(list: string[], code: string): string[] {
     return list.includes(code) ? list.filter((c) => c !== code) : [...list, code];
 }
 
+/** ISO weekday 1 = Monday … 7 = Sunday (matches backend category schedule). */
+const ISO_WEEKDAY_OPTIONS: { iso: number; label: string }[] = [
+    { iso: 1, label: "Mon" },
+    { iso: 2, label: "Tue" },
+    { iso: 3, label: "Wed" },
+    { iso: 4, label: "Thu" },
+    { iso: 5, label: "Fri" },
+    { iso: 6, label: "Sat" },
+    { iso: 7, label: "Sun" },
+];
+
+function toggleIsoDay(list: number[], day: number): number[] {
+    return list.includes(day) ? list.filter((d) => d !== day) : [...list, day].sort((a, b) => a - b);
+}
+
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 /** Max size for Gemini menu photo (base64 request body). */
 const MAX_MENU_PHOTO_BYTES = 8 * 1024 * 1024;
@@ -83,6 +98,7 @@ export default function MenuPage() {
     const [search, setSearch] = useState("");
     const [showItemModal, setShowItemModal] = useState(false);
     const [showCatModal, setShowCatModal] = useState(false);
+    const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
     const [itemForm, setItemForm] = useState({
         name: "",
@@ -100,7 +116,13 @@ export default function MenuPage() {
         chefRecommended: false,
         containsAlcohol: false,
     });
-    const [catForm, setCatForm] = useState({ name: "", icon: "" });
+    const [catForm, setCatForm] = useState({
+        name: "",
+        icon: "",
+        serveTimeStart: "",
+        serveTimeEnd: "",
+        serveDaysOfWeek: [] as number[],
+    });
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -304,15 +326,41 @@ export default function MenuPage() {
         e.preventDefault();
         setSaving(true);
         try {
-            const created = await api.createCategory({ name: catForm.name, icon: catForm.icon || undefined });
-            setShowCatModal(false);
-            setCatForm({ name: "", icon: "" });
-            invalidateMenuCache();
-            toast.success("Category created successfully");
-            if (selectNewCategoryInItemForm.current) {
-                selectNewCategoryInItemForm.current = false;
-                setItemForm((prev) => ({ ...prev, categoryId: created.id }));
+            const payload = {
+                name: catForm.name,
+                icon: catForm.icon || undefined,
+                serveTimeStart: catForm.serveTimeStart.trim()
+                    ? catForm.serveTimeStart.trim()
+                    : editingCategory
+                      ? null
+                      : undefined,
+                serveTimeEnd: catForm.serveTimeEnd.trim()
+                    ? catForm.serveTimeEnd.trim()
+                    : editingCategory
+                      ? null
+                      : undefined,
+            };
+            if (editingCategory) {
+                await api.updateCategory(editingCategory.id, {
+                    ...payload,
+                    serveDaysOfWeek: catForm.serveDaysOfWeek,
+                });
+                toast.success("Category updated");
+            } else {
+                const created = await api.createCategory({
+                    ...payload,
+                    serveDaysOfWeek: catForm.serveDaysOfWeek.length > 0 ? catForm.serveDaysOfWeek : undefined,
+                });
+                toast.success("Category created successfully");
+                if (selectNewCategoryInItemForm.current) {
+                    selectNewCategoryInItemForm.current = false;
+                    setItemForm((prev) => ({ ...prev, categoryId: created.id }));
+                }
             }
+            setShowCatModal(false);
+            setEditingCategory(null);
+            setCatForm({ name: "", icon: "", serveTimeStart: "", serveTimeEnd: "", serveDaysOfWeek: [] });
+            invalidateMenuCache();
         } catch (err: any) {
             alert(err.message);
         } finally {
@@ -323,6 +371,20 @@ export default function MenuPage() {
     function closeCatModal() {
         selectNewCategoryInItemForm.current = false;
         setShowCatModal(false);
+        setEditingCategory(null);
+        setCatForm({ name: "", icon: "", serveTimeStart: "", serveTimeEnd: "", serveDaysOfWeek: [] });
+    }
+
+    function openEditCategory(cat: MenuCategory) {
+        setEditingCategory(cat);
+        setCatForm({
+            name: cat.name,
+            icon: cat.icon ?? "",
+            serveTimeStart: cat.serveTimeStart?.trim() ?? "",
+            serveTimeEnd: cat.serveTimeEnd?.trim() ?? "",
+            serveDaysOfWeek: [...(cat.serveDaysOfWeek ?? [])],
+        });
+        setShowCatModal(true);
     }
 
     function closeBulkImportModal() {
@@ -417,7 +479,8 @@ export default function MenuPage() {
                         className="w-full sm:w-auto min-h-11 justify-center sm:justify-center"
                         onClick={() => {
                             selectNewCategoryInItemForm.current = false;
-                            setCatForm({ name: "", icon: "" });
+                            setEditingCategory(null);
+                            setCatForm({ name: "", icon: "", serveTimeStart: "", serveTimeEnd: "", serveDaysOfWeek: [] });
                             setShowCatModal(true);
                         }}
                     >
@@ -524,7 +587,7 @@ export default function MenuPage() {
                 ) : (
                     <motion.div key="categories" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
                         {categories.map((cat) => (
-                            <div key={cat.id} className="dashboard-card p-4 sm:p-8 flex flex-col items-center text-center cursor-pointer group hover:border-primary/50">
+                            <div key={cat.id} className="dashboard-card p-4 sm:p-8 flex flex-col items-center text-center group hover:border-primary/50">
                                 {hasCategoryIcon(cat.icon) ? (
                                     <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform duration-300 shadow-inner">
                                         <CategoryIconDisplay icon={cat.icon} size="xl" className="text-primary" />
@@ -534,16 +597,38 @@ export default function MenuPage() {
                                 )}
                                 <h3 className="font-semibold text-foreground">{cat.name}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">{cat._count?.items || 0} items active</p>
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        openDeleteCategoryModal(cat);
-                                    }}
-                                    className="mt-3 sm:mt-4 min-h-10 px-2 text-xs font-medium text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:underline"
-                                >
-                                    Delete
-                                </button>
+                                {(cat.serveTimeStart && cat.serveTimeEnd) || (cat.serveDaysOfWeek && cat.serveDaysOfWeek.length > 0) ? (
+                                    <p className="mt-1 text-[10px] text-muted-foreground/90 max-w-[200px]">
+                                        {cat.serveTimeStart && cat.serveTimeEnd
+                                            ? `${cat.serveTimeStart}–${cat.serveTimeEnd}`
+                                            : "All day"}
+                                        {cat.serveDaysOfWeek && cat.serveDaysOfWeek.length > 0
+                                            ? ` · ${cat.serveDaysOfWeek.map((d) => ISO_WEEKDAY_OPTIONS.find((o) => o.iso === d)?.label ?? d).join(", ")}`
+                                            : ""}
+                                    </p>
+                                ) : null}
+                                <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:mt-4">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openEditCategory(cat);
+                                        }}
+                                        className="min-h-10 px-3 text-xs font-medium text-primary opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:underline"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openDeleteCategoryModal(cat);
+                                        }}
+                                        className="min-h-10 px-3 text-xs font-medium text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:underline"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </motion.div>
@@ -604,7 +689,14 @@ export default function MenuPage() {
                                                         label: "Create new category",
                                                         onClick: (searchQuery) => {
                                                             selectNewCategoryInItemForm.current = true;
-                                                            setCatForm({ name: searchQuery.trim(), icon: "" });
+                                                            setEditingCategory(null);
+                                                            setCatForm({
+                                                                name: searchQuery.trim(),
+                                                                icon: "",
+                                                                serveTimeStart: "",
+                                                                serveTimeEnd: "",
+                                                                serveDaysOfWeek: [],
+                                                            });
                                                             setShowCatModal(true);
                                                         },
                                                     }}
@@ -1180,11 +1272,66 @@ export default function MenuPage() {
                     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)]" onClick={closeCatModal}>
                         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[90dvh] overflow-y-auto bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl">
                             <div className="flex justify-between items-center p-5 border-b border-border bg-muted/20">
-                                <h3 className="font-semibold text-foreground">New Category</h3>
+                                <h3 className="font-semibold text-foreground">{editingCategory ? "Edit category" : "New category"}</h3>
                                 <button type="button" onClick={closeCatModal}><X className="w-5 h-5 text-muted-foreground" /></button>
                             </div>
                             <form onSubmit={saveCategory} className="p-6 space-y-4">
                                 <Input placeholder="Category Name" value={catForm.name} onChange={e => setCatForm({ ...catForm, name: e.target.value })} required />
+                                <div className="rounded-xl border border-border/80 bg-secondary/20 p-4 space-y-3">
+                                    <p className="text-xs font-semibold text-foreground">Serving schedule (optional)</p>
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                        Times use your hotel&apos;s timezone from <strong className="text-foreground">Settings</strong> (default India IST). Leave times empty to show this category all day. Set both start and end for a daily window (supports overnight e.g. 22:00–02:00).
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-[10px] font-medium text-muted-foreground block mb-1">From (HH:mm)</label>
+                                            <Input
+                                                placeholder="07:00"
+                                                value={catForm.serveTimeStart}
+                                                onChange={(e) => setCatForm({ ...catForm, serveTimeStart: e.target.value })}
+                                                className="h-9 font-mono text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-medium text-muted-foreground block mb-1">To (HH:mm)</label>
+                                            <Input
+                                                placeholder="11:00"
+                                                value={catForm.serveTimeEnd}
+                                                onChange={(e) => setCatForm({ ...catForm, serveTimeEnd: e.target.value })}
+                                                className="h-9 font-mono text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-medium text-muted-foreground mb-1.5">Days (empty = every day)</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {ISO_WEEKDAY_OPTIONS.map(({ iso, label }) => {
+                                                const on = catForm.serveDaysOfWeek.includes(iso);
+                                                return (
+                                                    <button
+                                                        key={iso}
+                                                        type="button"
+                                                        aria-pressed={on}
+                                                        onClick={() =>
+                                                            setCatForm({
+                                                                ...catForm,
+                                                                serveDaysOfWeek: toggleIsoDay(catForm.serveDaysOfWeek, iso),
+                                                            })
+                                                        }
+                                                        className={cn(
+                                                            "rounded-md border px-2 py-1 text-[10px] font-semibold",
+                                                            on
+                                                                ? "border-primary/50 bg-primary/15 text-primary"
+                                                                : "border-border text-muted-foreground hover:border-primary/30",
+                                                        )}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-muted-foreground">Category icon</label>
                                     <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 p-3 rounded-xl bg-secondary/40 border border-border max-h-[240px] overflow-y-auto">
@@ -1218,7 +1365,9 @@ export default function MenuPage() {
                                 </div>
                                 <div className="flex gap-3 pt-2">
                                     <Button type="button" variant="outline" className="flex-1" onClick={closeCatModal}>Cancel</Button>
-                                    <Button type="submit" loading={saving} className="flex-1">Create</Button>
+                                    <Button type="submit" loading={saving} className="flex-1">
+                                        {editingCategory ? "Save" : "Create"}
+                                    </Button>
                                 </div>
                             </form>
                         </motion.div>

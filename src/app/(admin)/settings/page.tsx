@@ -21,6 +21,14 @@ import { LegalFooter } from "@/components/LegalFooter";
 
 const NOTIFICATION_SOUND_KEY = "hotel-admin-notification-sound";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+const HOTEL_TIMEZONE_OPTIONS = [
+    { value: "Asia/Kolkata", label: "India (IST) — Asia/Kolkata" },
+    { value: "Asia/Calcutta", label: "India (legacy) — Asia/Calcutta" },
+    { value: "Asia/Dubai", label: "UAE — Asia/Dubai" },
+    { value: "Asia/Singapore", label: "Singapore — Asia/Singapore" },
+] as const;
+
 function HotelProfileSection({
     hotel,
     refreshHotel,
@@ -35,6 +43,7 @@ function HotelProfileSection({
         logoUrl?: string | null;
         openTime?: string | null;
         closeTime?: string | null;
+        timezone?: string | null;
     };
     refreshHotel: () => Promise<void>;
 }) {
@@ -43,6 +52,7 @@ function HotelProfileSection({
     const [phone, setPhone] = useState(hotel?.phone ?? "");
     const [roomServicePhone, setRoomServicePhone] = useState(hotel?.roomServicePhone ?? "");
     const [logoUrl, setLogoUrl] = useState(hotel?.logoUrl ?? "");
+    const [timezone, setTimezone] = useState(hotel?.timezone ?? "Asia/Kolkata");
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [logoUnsaved, setLogoUnsaved] = useState(false);
@@ -54,6 +64,7 @@ function HotelProfileSection({
         setPhone(hotel?.phone ?? "");
         setRoomServicePhone(hotel?.roomServicePhone ?? "");
         setLogoUrl(hotel?.logoUrl ?? "");
+        setTimezone(hotel?.timezone?.trim() || "Asia/Kolkata");
         setLogoUnsaved(false);
     }, [hotel]);
 
@@ -103,6 +114,7 @@ function HotelProfileSection({
                 phone: phone || undefined,
                 roomServicePhone: roomServicePhone.trim(),
                 logoUrl: logoUrl || undefined,
+                timezone: timezone.trim() || "Asia/Kolkata",
             });
             await refreshHotel();
             setLogoUnsaved(false);
@@ -133,6 +145,26 @@ function HotelProfileSection({
                 <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
                     <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Reception / main contact" className="bg-secondary/50" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Hotel timezone</label>
+                    <select
+                        value={timezone}
+                        onChange={(e) => setTimezone(e.target.value)}
+                        className="w-full h-10 rounded-md border border-border bg-secondary/50 px-3 text-sm text-foreground"
+                    >
+                        {HOTEL_TIMEZONE_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                                {o.label}
+                            </option>
+                        ))}
+                        {!HOTEL_TIMEZONE_OPTIONS.some((o) => o.value === timezone) && timezone ? (
+                            <option value={timezone}>{timezone} (current)</option>
+                        ) : null}
+                    </select>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        Used for <span className="font-medium text-foreground">menu category serving hours</span> (breakfast / lunch windows). Default is India (IST).
+                    </p>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Room service number</label>

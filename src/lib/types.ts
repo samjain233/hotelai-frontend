@@ -22,6 +22,8 @@ export interface Hotel {
     qrCodeBackgroundHex?: string | null;
     /** When true, guest menu shows optional per-item insights (allergens, tags, spice, etc.). */
     guestMenuShowItemInsights?: boolean;
+    /** IANA timezone for category serving windows (default Asia/Kolkata). */
+    timezone?: string;
 }
 
 // ─── Admin ────────────────────────────────────────────────
@@ -68,6 +70,11 @@ export interface MenuCategory {
     icon?: string;
     sortOrder: number;
     hotelId: string;
+    /** HH:mm hotel local; both unset = category shown all day */
+    serveTimeStart?: string | null;
+    serveTimeEnd?: string | null;
+    /** ISO weekday 1=Mon … 7=Sun; empty = all days */
+    serveDaysOfWeek?: number[];
     _count?: { items: number };
     items?: MenuItem[];
 }

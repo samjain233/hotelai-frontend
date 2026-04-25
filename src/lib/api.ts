@@ -172,6 +172,7 @@ class ApiClient {
         logoUrl?: string;
         openTime?: string;
         closeTime?: string;
+        timezone?: string;
     }) {
         return this.request<Hotel>('/auth/hotel', {
             method: 'PATCH',
@@ -207,7 +208,13 @@ class ApiClient {
         return this.request('/admin/categories');
     }
 
-    async createCategory(data: { name: string; icon?: string }): Promise<MenuCategory> {
+    async createCategory(data: {
+        name: string;
+        icon?: string;
+        serveTimeStart?: string | null;
+        serveTimeEnd?: string | null;
+        serveDaysOfWeek?: number[];
+    }): Promise<MenuCategory> {
         return this.request('/admin/categories', {
             method: 'POST',
             body: JSON.stringify(data),
