@@ -20,6 +20,8 @@ export interface Hotel {
     qrCodeForegroundHex?: string | null;
     /** Room QR PNG: background; unset = #ffffff */
     qrCodeBackgroundHex?: string | null;
+    /** When true, guest menu shows optional per-item insights (allergens, tags, spice, etc.). */
+    guestMenuShowItemInsights?: boolean;
 }
 
 // ─── Admin ────────────────────────────────────────────────
@@ -82,6 +84,13 @@ export interface BulkMenuImportRow {
     searchAliases?: string[];
     dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
     available?: boolean;
+    spiceLevel?: 'NONE' | 'MILD' | 'MEDIUM' | 'HOT';
+    allergenCodes?: string[];
+    dietaryTags?: string[];
+    calories?: number | null;
+    portionLabel?: string | null;
+    chefRecommended?: boolean;
+    containsAlcohol?: boolean;
 }
 
 export interface BulkMenuImportErrorRow {
@@ -99,6 +108,13 @@ export interface MenuItem {
     imageUrl?: string;
     available: boolean;
     dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
+    spiceLevel?: 'NONE' | 'MILD' | 'MEDIUM' | 'HOT';
+    allergenCodes?: string[];
+    dietaryTags?: string[];
+    calories?: number | null;
+    portionLabel?: string | null;
+    chefRecommended?: boolean;
+    containsAlcohol?: boolean;
     categoryId: string;
     category?: MenuCategory;
     hotelId: string;

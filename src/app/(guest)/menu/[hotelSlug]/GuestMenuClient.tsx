@@ -39,6 +39,7 @@ import {
     findDidYouMeanItem,
 } from "@/lib/guestMenuSearch";
 import { IndianVegMark, IndianNonVegMark } from "./GuestMenuDietIcons";
+import { GuestMenuItemInsights } from "./GuestMenuItemInsights";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 
 const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
@@ -945,6 +946,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                         {item.name}
                                                     </h3>
                                                     <p className="mt-1 text-sm font-semibold text-[var(--guest-accent)]">{formatPrice(item.price)}</p>
+                                                    <GuestMenuItemInsights hotel={hotel} item={item} />
                                                     {desc ? (
                                                         <div className="mt-1.5">
                                                             <p

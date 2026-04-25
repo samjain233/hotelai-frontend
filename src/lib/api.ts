@@ -186,6 +186,7 @@ class ApiClient {
         guestMenuAccentHex?: string;
         qrCodeForegroundHex?: string;
         qrCodeBackgroundHex?: string;
+        guestMenuShowItemInsights?: boolean;
     }) {
         return this.request<Hotel>('/auth/hotel/guest-menu-theme', {
             method: 'PATCH',
@@ -253,6 +254,13 @@ class ApiClient {
         imageUrl?: string;
         dietaryPreference?: string;
         available?: boolean;
+        spiceLevel?: string;
+        allergenCodes?: string[];
+        dietaryTags?: string[];
+        calories?: number | null;
+        portionLabel?: string | null;
+        chefRecommended?: boolean;
+        containsAlcohol?: boolean;
     }): Promise<MenuItem> {
         return this.request('/admin/menu', {
             method: 'POST',

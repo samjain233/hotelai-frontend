@@ -177,6 +177,7 @@ export default function MenuDesignPage() {
     const [accentHex, setAccentHex] = useState("");
     const [qrFgHex, setQrFgHex] = useState("");
     const [qrBgHex, setQrBgHex] = useState("");
+    const [showItemInsights, setShowItemInsights] = useState(false);
     const [saving, setSaving] = useState(false);
     const [qrPreviewUrl, setQrPreviewUrl] = useState("https://example.com/menu");
 
@@ -192,12 +193,14 @@ export default function MenuDesignPage() {
         setAccentHex(hotel?.guestMenuAccentHex?.trim() ?? "");
         setQrFgHex(hotel?.qrCodeForegroundHex?.trim() ?? "");
         setQrBgHex(hotel?.qrCodeBackgroundHex?.trim() ?? "");
+        setShowItemInsights(Boolean(hotel?.guestMenuShowItemInsights));
     }, [
         hotel?.guestMenuBackgroundHex,
         hotel?.guestMenuTextHex,
         hotel?.guestMenuAccentHex,
         hotel?.qrCodeForegroundHex,
         hotel?.qrCodeBackgroundHex,
+        hotel?.guestMenuShowItemInsights,
     ]);
 
     useEffect(() => {
@@ -233,6 +236,7 @@ export default function MenuDesignPage() {
                 guestMenuAccentHex: accentHex.trim(),
                 qrCodeForegroundHex: qrFgHex.trim(),
                 qrCodeBackgroundHex: qrBgHex.trim(),
+                guestMenuShowItemInsights: showItemInsights,
             });
             await refreshHotel();
             toast.success("Guest menu appearance saved.");
@@ -395,6 +399,26 @@ export default function MenuDesignPage() {
                                         Sample URL; exported QRs use your real room link.
                                     </p>
                                 </div>
+                            </div>
+
+                            <div className="space-y-3 border-t border-border pt-6">
+                                <h3 className="text-base font-semibold text-foreground">Dish details on guest menu</h3>
+                                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/80 bg-secondary/10 p-4 transition-colors hover:bg-secondary/20">
+                                    <input
+                                        type="checkbox"
+                                        checked={showItemInsights}
+                                        onChange={(e) => setShowItemInsights(e.target.checked)}
+                                        className="mt-1 h-4 w-4 shrink-0 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                    />
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-medium text-foreground">Show extra dish details</span>
+                                        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                                            When enabled, guests see optional chips per dish for allergens, spice level, dietary tags,
+                                            portion, calories, chef&apos;s pick, and alcohol — only for fields you set on the{" "}
+                                            <strong className="font-medium text-foreground">Menu</strong> page.
+                                        </span>
+                                    </span>
+                                </label>
                             </div>
 
                             <div className="mt-auto flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap">

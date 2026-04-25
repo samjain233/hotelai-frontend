@@ -37,7 +37,14 @@ import {
     FileJson2,
     Download,
     Sparkles,
+    Flame,
+    Wine,
 } from "lucide-react";
+import { MENU_ALLERGEN_CODES, MENU_DIETARY_TAG_CODES } from "@/lib/menuItemInsights";
+
+function toggleStrList(list: string[], code: string): string[] {
+    return list.includes(code) ? list.filter((c) => c !== code) : [...list, code];
+}
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 /** Max size for Gemini menu photo (base64 request body). */
@@ -85,6 +92,13 @@ export default function MenuPage() {
         imageUrl: "",
         dietaryPreference: "NONE",
         available: true,
+        spiceLevel: "NONE" as "NONE" | "MILD" | "MEDIUM" | "HOT",
+        allergenCodes: [] as string[],
+        dietaryTags: [] as string[],
+        calories: "",
+        portionLabel: "",
+        chefRecommended: false,
+        containsAlcohol: false,
     });
     const [catForm, setCatForm] = useState({ name: "", icon: "" });
     const [saving, setSaving] = useState(false);
@@ -211,6 +225,13 @@ export default function MenuPage() {
             imageUrl: "",
             dietaryPreference: "NONE",
             available: true,
+            spiceLevel: "NONE",
+            allergenCodes: [],
+            dietaryTags: [],
+            calories: "",
+            portionLabel: "",
+            chefRecommended: false,
+            containsAlcohol: false,
         });
         setShowItemModal(true);
     }
@@ -224,6 +245,13 @@ export default function MenuPage() {
             imageUrl: item.imageUrl || "",
             dietaryPreference: item.dietaryPreference || "NONE",
             available: item.available,
+            spiceLevel: item.spiceLevel ?? "NONE",
+            allergenCodes: [...(item.allergenCodes ?? [])],
+            dietaryTags: [...(item.dietaryTags ?? [])],
+            calories: item.calories != null && item.calories > 0 ? String(item.calories) : "",
+            portionLabel: item.portionLabel ?? "",
+            chefRecommended: Boolean(item.chefRecommended),
+            containsAlcohol: Boolean(item.containsAlcohol),
         });
         setShowItemModal(true);
     }
@@ -232,6 +260,19 @@ export default function MenuPage() {
         if (uploading) return;
         setSaving(true);
         try {
+            const calRaw = itemForm.calories.trim();
+            let calories: number | null | undefined = undefined;
+            if (calRaw !== "") {
+                const n = Number(calRaw);
+                if (Number.isNaN(n) || n < 0 || n > 20000) {
+                    alert("Calories must be a number between 0 and 20000, or leave empty.");
+                    setSaving(false);
+                    return;
+                }
+                calories = n;
+            } else if (editingItem) {
+                calories = null;
+            }
             const data = {
                 name: itemForm.name,
                 description: itemForm.description || undefined,
@@ -240,6 +281,13 @@ export default function MenuPage() {
                 imageUrl: itemForm.imageUrl || undefined,
                 dietaryPreference: itemForm.dietaryPreference,
                 available: itemForm.available,
+                spiceLevel: itemForm.spiceLevel,
+                allergenCodes: itemForm.allergenCodes,
+                dietaryTags: itemForm.dietaryTags,
+                ...(calories !== undefined ? { calories } : {}),
+                portionLabel: itemForm.portionLabel.trim() || (editingItem ? null : undefined),
+                chefRecommended: itemForm.chefRecommended,
+                containsAlcohol: itemForm.containsAlcohol,
             };
             if (editingItem) {
                 await api.updateMenuItem(editingItem.id, data as Parameters<typeof api.updateMenuItem>[1]);
@@ -732,6 +780,157 @@ export default function MenuPage() {
                                                 })}
                                             </div>
                                         </div>
+
+                                        <div className="space-y-4 border-t border-white/10 pt-5">
+                                            <div>
+                                                <p className="text-sm font-medium text-foreground">Guest menu details</p>
+                                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                                    Shown on the guest menu only when{" "}
+                                                    <strong className="font-medium text-foreground">Menu design → Show extra dish details</strong>{" "}
+                                                    is enabled.
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-foreground block">Spice level</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {(
+                                                        [
+                                                            { value: "NONE" as const, label: "None" },
+                                                            { value: "MILD" as const, label: "Mild", icon: <Flame className="h-3.5 w-3.5" /> },
+                                                            { value: "MEDIUM" as const, label: "Medium", icon: <Flame className="h-3.5 w-3.5" /> },
+                                                            { value: "HOT" as const, label: "Hot", icon: <Flame className="h-3.5 w-3.5" /> },
+                                                        ] as const
+                                                    ).map((opt) => {
+                                                        const selected = itemForm.spiceLevel === opt.value;
+                                                        return (
+                                                            <button
+                                                                key={opt.value}
+                                                                type="button"
+                                                                aria-pressed={selected}
+                                                                onClick={() => setItemForm({ ...itemForm, spiceLevel: opt.value })}
+                                                                className={cn(
+                                                                    "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors",
+                                                                    selected
+                                                                        ? "border-amber-500/60 bg-amber-500/20 text-amber-100"
+                                                                        : "border-white/10 bg-white/[0.04] text-muted-foreground hover:border-white/20",
+                                                                )}
+                                                            >
+                                                                {"icon" in opt && opt.icon}
+                                                                {opt.label}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-foreground block">Allergens</label>
+                                                <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
+                                                    {MENU_ALLERGEN_CODES.map((code) => {
+                                                        const on = itemForm.allergenCodes.includes(code);
+                                                        return (
+                                                            <button
+                                                                key={code}
+                                                                type="button"
+                                                                aria-pressed={on}
+                                                                onClick={() =>
+                                                                    setItemForm({
+                                                                        ...itemForm,
+                                                                        allergenCodes: toggleStrList(itemForm.allergenCodes, code),
+                                                                    })
+                                                                }
+                                                                className={cn(
+                                                                    "rounded-md border px-2 py-1 text-[10px] font-medium uppercase tracking-wide",
+                                                                    on
+                                                                        ? "border-rose-500/50 bg-rose-500/15 text-rose-100"
+                                                                        : "border-white/10 text-muted-foreground hover:border-white/25",
+                                                                )}
+                                                            >
+                                                                {code.replace(/_/g, " ")}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-foreground block">Dietary tags</label>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {MENU_DIETARY_TAG_CODES.map((code) => {
+                                                        const on = itemForm.dietaryTags.includes(code);
+                                                        return (
+                                                            <button
+                                                                key={code}
+                                                                type="button"
+                                                                aria-pressed={on}
+                                                                onClick={() =>
+                                                                    setItemForm({
+                                                                        ...itemForm,
+                                                                        dietaryTags: toggleStrList(itemForm.dietaryTags, code),
+                                                                    })
+                                                                }
+                                                                className={cn(
+                                                                    "rounded-md border px-2 py-1 text-[10px] font-medium",
+                                                                    on
+                                                                        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100"
+                                                                        : "border-white/10 text-muted-foreground hover:border-white/25",
+                                                                )}
+                                                            >
+                                                                {code.replace(/_/g, " ")}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-sm font-medium text-foreground block" htmlFor="item-calories">
+                                                        Calories (optional)
+                                                    </label>
+                                                    <Input
+                                                        id="item-calories"
+                                                        inputMode="numeric"
+                                                        value={itemForm.calories}
+                                                        onChange={(e) => setItemForm({ ...itemForm, calories: e.target.value.replace(/\D/g, "") })}
+                                                        placeholder="e.g. 420"
+                                                        className="h-10 bg-background/60"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-sm font-medium text-foreground block" htmlFor="item-portion">
+                                                        Portion / serving note
+                                                    </label>
+                                                    <Input
+                                                        id="item-portion"
+                                                        value={itemForm.portionLabel}
+                                                        onChange={(e) => setItemForm({ ...itemForm, portionLabel: e.target.value })}
+                                                        placeholder="e.g. Serves 2"
+                                                        maxLength={80}
+                                                        className="h-10 bg-background/60"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                                                <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={itemForm.chefRecommended}
+                                                        onChange={(e) => setItemForm({ ...itemForm, chefRecommended: e.target.checked })}
+                                                        className="h-4 w-4 rounded border-border text-primary"
+                                                    />
+                                                    <Sparkles className="h-4 w-4 text-amber-400/90" aria-hidden />
+                                                    Chef&apos;s pick
+                                                </label>
+                                                <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={itemForm.containsAlcohol}
+                                                        onChange={(e) => setItemForm({ ...itemForm, containsAlcohol: e.target.checked })}
+                                                        className="h-4 w-4 rounded border-border text-primary"
+                                                    />
+                                                    <Wine className="h-4 w-4 text-muted-foreground" aria-hidden />
+                                                    Contains alcohol
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -795,8 +994,13 @@ export default function MenuPage() {
                                     <code className="text-foreground">categoryId</code>. Optional:{" "}
                                     <code className="text-foreground">description</code>, <code className="text-foreground">imageUrl</code>,{" "}
                                     <code className="text-foreground">dietaryPreference</code> (VEG | NON_VEG | EGGITARIAN | NONE),{" "}
-                                    <code className="text-foreground">available</code>. Max 500 items per import. Category names are
-                                    case-sensitive.
+                                    <code className="text-foreground">available</code>. Optional:{" "}
+                                    <code className="text-foreground">spiceLevel</code> (NONE | MILD | MEDIUM | HOT),{" "}
+                                    <code className="text-foreground">allergenCodes</code> (array of codes like GLUTEN, MILK, PEANUTS),{" "}
+                                    <code className="text-foreground">dietaryTags</code> (VEGAN, HALAL, JAIN, …),{" "}
+                                    <code className="text-foreground">calories</code>, <code className="text-foreground">portionLabel</code>,{" "}
+                                    <code className="text-foreground">chefRecommended</code>, <code className="text-foreground">containsAlcohol</code>.
+                                    Max 500 items per import. Category names are case-sensitive.
                                 </p>
                                 <div className="flex flex-wrap gap-2">
                                     <Button
