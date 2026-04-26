@@ -19,7 +19,7 @@ import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { ENABLE_ORDERING_ADMIN_NAV } from "@/lib/adminNavConfig";
 
 export default function DashboardPage() {
-    const { hotel } = useAuth();
+    const { hotel, admin } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [stats, setStats] = useState({ revenue: 0, activeOrders: 0, totalItems: 0, occupancy: 0 });
     const [loading, setLoading] = useState(true);
@@ -241,9 +241,10 @@ export default function DashboardPage() {
                         <ActionRow
                             icon={Users}
                             title="Staff & Access"
-                            subtitle="Manage permissions"
+                            subtitle="Invite team and manage access keys"
                             href="/staff"
-                            disabled={!ENABLE_ORDERING_ADMIN_NAV}
+                            disabled={admin?.role !== "OWNER"}
+                            disabledHint="Only the hotel owner can manage staff"
                         />
                     </div>
 
@@ -340,12 +341,15 @@ function ActionRow({
     subtitle,
     href,
     disabled,
+    disabledHint,
 }: {
     icon: ComponentType<{ className?: string }>;
     title: string;
     subtitle: string;
     href: string;
     disabled?: boolean;
+    /** Shown under subtitle when `disabled` is true */
+    disabledHint?: string;
 }) {
     const className = cn(
         "flex items-center gap-3 sm:gap-4 min-h-12 sm:min-h-0 p-3 rounded-xl transition-colors group",
@@ -366,9 +370,9 @@ function ActionRow({
             <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">{title}</p>
                 <p className="text-xs text-muted-foreground">{subtitle}</p>
-                {disabled && (
-                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">Available when ordering is enabled</p>
-                )}
+                {disabled && disabledHint ? (
+                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">{disabledHint}</p>
+                ) : null}
             </div>
             {!disabled && (
                 <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-foreground opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all transform sm:group-hover:translate-x-1 shrink-0" />
