@@ -27,7 +27,21 @@ function shouldUseSameOriginApiProxy(): boolean {
 }
 
 class ApiClient {
-    private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    /** One POST to `/auth/refresh` (or Next proxy). Used after 401 when a refresh cookie may exist. */
+    private async refreshSessionOnce(): Promise<boolean> {
+        if (typeof window === 'undefined') return false;
+        const refreshUrl = shouldUseSameOriginApiProxy()
+            ? '/api/auth/refresh'
+            : `${API_URL}/auth/refresh`;
+        try {
+            const ref = await fetch(refreshUrl, { method: 'POST', credentials: 'include' });
+            return ref.ok;
+        } catch {
+            return false;
+        }
+    }
+
+    private async request<T>(path: string, options: RequestInit = {}, allowRefreshRetry = true): Promise<T> {
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             ...(options.headers as Record<string, string>),
@@ -45,6 +59,22 @@ class ApiClient {
         if (!res.ok) {
             const error = await res.json().catch(() => ({ message: 'Request failed' }));
             const message = error.message || `HTTP ${res.status}`;
+
+            if (
+                res.status === 401 &&
+                allowRefreshRetry &&
+                typeof window !== 'undefined' &&
+                !path.includes('/auth/refresh') &&
+                !path.includes('/auth/login') &&
+                !path.includes('/auth/register') &&
+                !path.includes('/auth/verify-email') &&
+                !path.includes('/auth/staff/access') &&
+                !path.includes('/auth/staff-access')
+            ) {
+                if (await this.refreshSessionOnce()) {
+                    return this.request<T>(path, options, false);
+                }
+            }
 
             if (res.status === 401) {
                 // Avoid redirect loop: don't redirect when already on public routes
@@ -299,13 +329,26 @@ class ApiClient {
         const url = shouldUseSameOriginApiProxy()
             ? `/api/admin/menu/bulk`
             : `${API_URL}/admin/menu/bulk`;
-        const res = await fetch(url, {
+        const init: RequestInit = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify(payload),
-        });
-        const data = await res.json().catch(() => ({}));
+        };
+        let res = await fetch(url, init);
+        let data = await res.json().catch(() => ({}));
+
+        if (!res.ok && res.status === 401 && typeof window !== 'undefined') {
+            const path = window.location.pathname;
+            const isPublicRoute =
+                path === '/login' ||
+                path === '/register' ||
+                path.startsWith('/superadmin');
+            if (!isPublicRoute && (await this.refreshSessionOnce())) {
+                res = await fetch(url, init);
+                data = await res.json().catch(() => ({}));
+            }
+        }
 
         if (!res.ok) {
             if (res.status === 401 && typeof window !== 'undefined') {
@@ -474,9 +517,14 @@ class ApiClient {
         return this.request('/auth/staff/invitations');
     }
 
-    async inviteStaff(data: { name: string; role: string }): Promise<{
+    async inviteStaff(data: {
+        name: string;
+        role: string;
+        validity?: string;
+    }): Promise<{
         inviteKey: string;
-        expiresAt: string;
+        expiresAt: string | null;
+        validity?: string;
         name: string;
         role: string;
     }> {
@@ -486,7 +534,8 @@ class ApiClient {
         });
     }
 
-    async cancelStaffInvitation(id: string): Promise<{ message: string }> {
+    /** Owner revokes an access key (pending invite or key linked to an existing staff account). */
+    async revokeStaffInvitation(id: string): Promise<{ message: string }> {
         return this.request(`/auth/staff/invitations/${id}`, { method: 'DELETE' });
     }
 

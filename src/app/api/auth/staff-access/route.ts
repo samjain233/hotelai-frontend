@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { forwardNestSetCookies } from '@/lib/forwardNestSetCookies';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const AUTH_COOKIE_NAME = 'auth_token';
-const COOKIE_MAX_AGE = 90 * 24 * 60 * 60;
-
-function extractTokenFromSetCookie(setCookieHeaders: string[]): string | null {
-    const prefix = `${AUTH_COOKIE_NAME}=`;
-    for (const header of setCookieHeaders) {
-        const part = header.split(';')[0]?.trim();
-        if (part?.startsWith(prefix)) {
-            return part.slice(prefix.length).trim();
-        }
-    }
-    return null;
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -30,28 +18,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(data, { status: res.status });
         }
 
-        let token: string | null = data.token ?? null;
-        if (!token) {
-            const setCookies = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
-            token = extractTokenFromSetCookie(setCookies);
-        }
-        if (!token) {
-            const raw = res.headers.get('set-cookie');
-            if (raw) token = extractTokenFromSetCookie([raw]);
-        }
-
-        const response = NextResponse.json({ admin: data.admin, hotel: data.hotel });
-
-        if (token) {
-            response.cookies.set(AUTH_COOKIE_NAME, token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                maxAge: COOKIE_MAX_AGE,
-                path: '/',
-            });
-        }
-
+        const response = NextResponse.json({
+            token: data.token,
+            admin: data.admin,
+            hotel: data.hotel,
+        });
+        forwardNestSetCookies(res, response);
         return response;
     } catch (err) {
         console.error('Staff access proxy error:', err);

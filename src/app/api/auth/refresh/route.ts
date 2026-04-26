@@ -5,11 +5,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const res = await fetch(`${API_URL}/auth/login`, {
+        const cookie = request.headers.get('cookie') ?? '';
+        const res = await fetch(`${API_URL}/auth/refresh`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
+            headers: cookie ? { Cookie: cookie } : {},
         });
 
         const data = await res.json().catch(() => ({}));
@@ -26,7 +25,7 @@ export async function POST(request: NextRequest) {
         forwardNestSetCookies(res, response);
         return response;
     } catch (err) {
-        console.error('Auth proxy error:', err);
-        return NextResponse.json({ message: 'Login failed' }, { status: 500 });
+        console.error('Auth refresh proxy error:', err);
+        return NextResponse.json({ message: 'Refresh failed' }, { status: 500 });
     }
 }

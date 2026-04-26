@@ -48,10 +48,19 @@ export interface StaffListMember {
     name: string;
     role: string;
     createdAt: string;
+    /** Present for admins created via access key; owner can revoke the key while the account remains. */
+    staffInvitation?: {
+        id: string;
+        revokedAt: string | null;
+    } | null;
 }
 
 export interface AuthResponse {
     token?: string;
+    /** Present when JSON includes it (e.g. server flows); browser sessions use httpOnly cookies. */
+    refreshToken?: string;
+    accessMaxAgeMs?: number;
+    refreshMaxAgeMs?: number;
     admin: Admin;
     hotel: Hotel;
 }

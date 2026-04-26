@@ -5,7 +5,7 @@ import { OAuth2Client } from "google-auth-library";
 const STATE_COOKIE = "g_oauth_state";
 const REGISTER_COOKIE = "g_oauth_register";
 const AUTH_COOKIE = "auth_token";
-const COOKIE_MAX_AGE = 90 * 24 * 60 * 60; // ~3 months, match backend JWT
+const AUTH_REFRESH_COOKIE = "auth_refresh";
 
 function backendBaseUrl(): string {
     return (
@@ -148,9 +148,12 @@ export async function GET(request: NextRequest) {
 
     const data = (await syncRes.json()) as {
         token?: string;
+        refreshToken?: string;
+        accessMaxAgeMs?: number;
+        refreshMaxAgeMs?: number;
         admin?: { role?: string };
     };
-    if (!data.token) {
+    if (!data.token || !data.refreshToken) {
         const base = registerCtx ? "/register" : "/login";
         return fail(`${base}?error=${encodeURIComponent("sync_failed")}`);
     }
@@ -158,6 +161,8 @@ export async function GET(request: NextRequest) {
     const postAuthPath = data.admin?.role === "KITCHEN" ? "/orders" : "/dashboard";
 
     const isProd = process.env.NODE_ENV === "production";
+    const accessMaxAgeSec = Math.max(60, Math.ceil((data.accessMaxAgeMs ?? 15 * 60 * 1000) / 1000));
+    const refreshMaxAgeSec = Math.max(120, Math.ceil((data.refreshMaxAgeMs ?? 30 * 24 * 60 * 60 * 1000) / 1000));
     const nextRes = NextResponse.redirect(`${origin}${postAuthPath}`);
     nextRes.cookies.delete(STATE_COOKIE);
     nextRes.cookies.delete(REGISTER_COOKIE);
@@ -165,7 +170,14 @@ export async function GET(request: NextRequest) {
         httpOnly: true,
         secure: isProd,
         sameSite: isProd ? "none" : "lax",
-        maxAge: COOKIE_MAX_AGE,
+        maxAge: accessMaxAgeSec,
+        path: "/",
+    });
+    nextRes.cookies.set(AUTH_REFRESH_COOKIE, data.refreshToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
+        maxAge: refreshMaxAgeSec,
         path: "/",
     });
     return nextRes;

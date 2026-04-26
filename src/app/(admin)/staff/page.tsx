@@ -16,26 +16,20 @@ import {
     Check,
     KeyRound,
     Clock,
+    Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { toast } from "sonner";
-
-interface StaffMember {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    createdAt: string;
-}
+import type { StaffListMember } from "@/lib/types";
 
 interface PendingInvite {
     id: string;
     name: string;
     role: string;
-    expiresAt: string;
+    expiresAt: string | null;
     createdAt: string;
 }
 
@@ -54,27 +48,46 @@ const INVITABLE_ROLES = [
     { value: "FRONT_DESK", label: "Front Desk — Orders, Services, Rooms" },
 ];
 
+const INVITE_VALIDITY_OPTIONS: { value: string; label: string }[] = [
+    { value: "1d", label: "1 day" },
+    { value: "7d", label: "1 week" },
+    { value: "30d", label: "1 month" },
+    { value: "90d", label: "3 months" },
+    { value: "365d", label: "1 year" },
+    { value: "lifetime", label: "Lifetime (until you revoke)" },
+];
+
+function formatInviteExpiryLabel(iso: string | null): string {
+    if (iso == null) return "No calendar expiry — revoke the key anytime to disable it";
+    try {
+        return `Expires ${new Date(iso).toLocaleString()}`;
+    } catch {
+        return `Expires ${iso}`;
+    }
+}
+
 function isKeyOnlyStaffEmail(email: string) {
     return email.endsWith(STAFF_KEY_EMAIL_SUFFIX);
 }
 
 export default function StaffPage() {
     const { admin } = useAuth();
-    const [staff, setStaff] = useState<StaffMember[]>([]);
+    const [staff, setStaff] = useState<StaffListMember[]>([]);
     const [pending, setPending] = useState<PendingInvite[]>([]);
     const [loading, setLoading] = useState(true);
     const [showInvite, setShowInvite] = useState(false);
     const [removingId, setRemovingId] = useState<string | null>(null);
-    const [cancellingId, setCancellingId] = useState<string | null>(null);
+    const [revokingInvitationId, setRevokingInvitationId] = useState<string | null>(null);
 
     const [invName, setInvName] = useState("");
     const [invRole, setInvRole] = useState("MANAGER");
+    const [invValidity, setInvValidity] = useState("30d");
     const [inviting, setInviting] = useState(false);
     const [error, setError] = useState("");
 
     const [keyModal, setKeyModal] = useState<{
         inviteKey: string;
-        expiresAt: string;
+        expiresAt: string | null;
         name: string;
         role: string;
     } | null>(null);
@@ -105,9 +118,14 @@ export default function StaffPage() {
         setError("");
         setInviting(true);
         try {
-            const res = await api.inviteStaff({ name: invName.trim(), role: invRole });
+            const res = await api.inviteStaff({
+                name: invName.trim(),
+                role: invRole,
+                validity: invValidity,
+            });
             setInvName("");
             setInvRole("MANAGER");
+            setInvValidity("30d");
             setShowInvite(false);
             setKeyModal({
                 inviteKey: res.inviteKey,
@@ -151,17 +169,17 @@ export default function StaffPage() {
         }
     }
 
-    async function handleCancelPending(id: string) {
-        if (!confirm("Cancel this pending invite? The key will stop working.")) return;
-        setCancellingId(id);
+    async function handleRevokeInvitation(invitationId: string) {
+        if (!confirm("Revoke this access key? It will stop working immediately.")) return;
+        setRevokingInvitationId(invitationId);
         try {
-            await api.cancelStaffInvitation(id);
-            setPending((prev) => prev.filter((p) => p.id !== id));
-            toast.success("Invite cancelled");
+            await api.revokeStaffInvitation(invitationId);
+            await loadAll();
+            toast.success("Access key revoked");
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Failed to cancel");
+            toast.error(err instanceof Error ? err.message : "Failed to revoke");
         } finally {
-            setCancellingId(null);
+            setRevokingInvitationId(null);
         }
     }
 
@@ -238,6 +256,27 @@ export default function StaffPage() {
                                         ))}
                                     </select>
                                 </div>
+                                <div className="sm:col-span-2">
+                                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Key valid for
+                                    </label>
+                                    <select
+                                        value={invValidity}
+                                        onChange={(e) => setInvValidity(e.target.value)}
+                                        className="w-full rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    >
+                                        {INVITE_VALIDITY_OPTIONS.map((o) => (
+                                            <option key={o.value} value={o.value}>
+                                                {o.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                                        Timed options: the key stops working after this window (including for people
+                                        who already used it). Lifetime: the key works until you revoke it from the
+                                        staff list or pending keys.
+                                    </p>
+                                </div>
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <Button type="button" variant="outline" onClick={() => setShowInvite(false)}>
@@ -271,8 +310,8 @@ export default function StaffPage() {
                                 <div className="min-w-0 flex-1">
                                     <p className="font-semibold text-foreground">{p.name}</p>
                                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Clock className="h-3 w-3" />
-                                        Expires {new Date(p.expiresAt).toLocaleString()}
+                                        <Clock className="h-3 w-3 shrink-0" />
+                                        {formatInviteExpiryLabel(p.expiresAt)}
                                     </p>
                                 </div>
                                 <span
@@ -287,11 +326,13 @@ export default function StaffPage() {
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    disabled={cancellingId === p.id}
-                                    onClick={() => handleCancelPending(p.id)}
+                                    type="button"
+                                    title="Revoke access key"
+                                    disabled={revokingInvitationId === p.id}
+                                    onClick={() => handleRevokeInvitation(p.id)}
                                     className="shrink-0 text-destructive hover:bg-destructive/10"
                                 >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Ban className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
                         );
@@ -305,6 +346,8 @@ export default function StaffPage() {
                     const RoleIcon = config.icon;
                     const isCurrentUser = member.id === admin?.id;
                     const keyStaff = isKeyOnlyStaffEmail(member.email);
+                    const inv = member.staffInvitation;
+                    const canRevokeKey = Boolean(inv?.id && !inv.revokedAt);
 
                     return (
                         <motion.div
@@ -331,9 +374,16 @@ export default function StaffPage() {
                                 </div>
                                 <p className="truncate text-sm text-muted-foreground">
                                     {keyStaff ? (
-                                        <span className="flex items-center gap-1">
-                                            <KeyRound className="h-3.5 w-3.5 shrink-0" />
-                                            Signed in with access key
+                                        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                            <span className="inline-flex items-center gap-1">
+                                                <KeyRound className="h-3.5 w-3.5 shrink-0" />
+                                                Signed in with access key
+                                            </span>
+                                            {inv?.revokedAt ? (
+                                                <span className="text-[11px] text-amber-600 dark:text-amber-400">
+                                                    Key revoked — existing session may work until they sign out
+                                                </span>
+                                            ) : null}
                                         </span>
                                     ) : (
                                         member.email
@@ -353,15 +403,31 @@ export default function StaffPage() {
                                 Joined {new Date(member.createdAt).toLocaleDateString()}
                             </span>
                             {member.role !== "OWNER" && !isCurrentUser && (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={removingId === member.id}
-                                    onClick={() => handleRemove(member.id)}
-                                    className="shrink-0 text-destructive hover:bg-destructive/10"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
+                                <div className="flex shrink-0 items-center gap-1">
+                                    {canRevokeKey ? (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            type="button"
+                                            title="Revoke access key"
+                                            disabled={revokingInvitationId === inv!.id}
+                                            onClick={() => handleRevokeInvitation(inv!.id)}
+                                            className="text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+                                        >
+                                            <Ban className="h-3.5 w-3.5" />
+                                        </Button>
+                                    ) : null}
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        type="button"
+                                        disabled={removingId === member.id}
+                                        onClick={() => handleRemove(member.id)}
+                                        className="text-destructive hover:bg-destructive/10"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
                             )}
                         </motion.div>
                     );
@@ -402,8 +468,8 @@ export default function StaffPage() {
                                 {keyModal.inviteKey}
                             </div>
                             <p className="mb-4 text-xs text-muted-foreground">
-                                {keyModal.name} · {ROLE_CONFIG[keyModal.role]?.label ?? keyModal.role} · Expires{" "}
-                                {new Date(keyModal.expiresAt).toLocaleString()}
+                                {keyModal.name} · {ROLE_CONFIG[keyModal.role]?.label ?? keyModal.role} ·{" "}
+                                {formatInviteExpiryLabel(keyModal.expiresAt)}
                             </p>
                             <div className="flex gap-2">
                                 <Button type="button" variant="outline" className="flex-1" onClick={copyKey}>
