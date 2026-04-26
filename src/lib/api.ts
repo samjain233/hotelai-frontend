@@ -19,26 +19,30 @@ import {
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 /** Use same-origin /api proxy when not on localhost (e.g. Vercel) so cookies work for SSE */
-function shouldUseSameOriginApiProxy(): boolean {
+export function shouldUseSameOriginApiProxy(): boolean {
     if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_USE_PROXY === 'true';
     const host = window.location.hostname;
     const isLocal = host === 'localhost' || host === '127.0.0.1';
     return !isLocal || process.env.NEXT_PUBLIC_USE_PROXY === 'true';
 }
 
+/** POST `/auth/refresh` (or Next proxy). Shared by API client, SSE hooks, etc. */
+export async function refreshHotelSession(): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    const refreshUrl = shouldUseSameOriginApiProxy()
+        ? '/api/auth/refresh'
+        : `${API_URL}/auth/refresh`;
+    try {
+        const ref = await fetch(refreshUrl, { method: 'POST', credentials: 'include' });
+        return ref.ok;
+    } catch {
+        return false;
+    }
+}
+
 class ApiClient {
-    /** One POST to `/auth/refresh` (or Next proxy). Used after 401 when a refresh cookie may exist. */
     private async refreshSessionOnce(): Promise<boolean> {
-        if (typeof window === 'undefined') return false;
-        const refreshUrl = shouldUseSameOriginApiProxy()
-            ? '/api/auth/refresh'
-            : `${API_URL}/auth/refresh`;
-        try {
-            const ref = await fetch(refreshUrl, { method: 'POST', credentials: 'include' });
-            return ref.ok;
-        } catch {
-            return false;
-        }
+        return refreshHotelSession();
     }
 
     private async request<T>(path: string, options: RequestInit = {}, allowRefreshRetry = true): Promise<T> {
