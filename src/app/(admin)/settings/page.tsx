@@ -301,8 +301,8 @@ export default function SettingsPage() {
                     </div>
                 </section>
 
-                {/* Hotel Profile (Owner only) */}
-                {admin?.role === "OWNER" && hotel && (
+                {/* Hotel Profile (Owner & General Manager) */}
+                {(admin?.role === "OWNER" || admin?.role === "GENERAL_MANAGER") && hotel && (
                     <HotelProfileSection hotel={hotel} refreshHotel={refreshHotel} />
                 )}
 

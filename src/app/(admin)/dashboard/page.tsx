@@ -243,8 +243,8 @@ export default function DashboardPage() {
                             title="Staff & Access"
                             subtitle="Invite team and manage access keys"
                             href="/staff"
-                            disabled={admin?.role !== "OWNER"}
-                            disabledHint="Only the hotel owner can manage staff"
+                            disabled={admin?.role !== "OWNER" && admin?.role !== "GENERAL_MANAGER"}
+                            disabledHint="Only the owner or general manager can manage staff"
                         />
                     </div>
 

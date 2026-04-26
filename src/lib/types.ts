@@ -31,7 +31,7 @@ export interface Admin {
     id: string;
     email: string;
     name: string;
-    role: 'OWNER' | 'MANAGER' | 'KITCHEN' | 'FRONT_DESK';
+    role: 'OWNER' | 'GENERAL_MANAGER' | 'MANAGER' | 'KITCHEN' | 'FRONT_DESK';
 }
 
 /** GET /auth/me (hotel session; may include platform impersonation flag) */

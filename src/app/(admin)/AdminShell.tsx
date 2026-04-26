@@ -31,15 +31,15 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 const allNavItems = [
-    { name: "Overview", href: "/dashboard", icon: LayoutDashboard, roles: ["OWNER", "MANAGER", "FRONT_DESK"] },
-    { name: "Orders", href: "/orders", icon: ClipboardList, roles: ["OWNER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
-    { name: "Services", href: "/services", icon: Headset, roles: ["OWNER", "MANAGER", "FRONT_DESK"] },
-    { name: "Menu", href: "/menu", icon: UtensilsCrossed, roles: ["OWNER", "MANAGER"] },
-    { name: "Menu design", href: "/menu-design", icon: Palette, roles: ["OWNER", "MANAGER"] },
-    { name: "Rooms & QR", href: "/rooms", icon: BedDouble, roles: ["OWNER", "MANAGER", "FRONT_DESK"] },
-    { name: "Kitchen", href: "/kitchen", icon: ChefHat, roles: ["OWNER", "MANAGER", "KITCHEN"] },
-    { name: "Staff", href: "/staff", icon: Users, roles: ["OWNER"] },
-    { name: "Settings", href: "/settings", icon: Settings, roles: ["OWNER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
+    { name: "Overview", href: "/dashboard", icon: LayoutDashboard, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
+    { name: "Orders", href: "/orders", icon: ClipboardList, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
+    { name: "Services", href: "/services", icon: Headset, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
+    { name: "Menu", href: "/menu", icon: UtensilsCrossed, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
+    { name: "Menu design", href: "/menu-design", icon: Palette, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
+    { name: "Rooms & QR", href: "/rooms", icon: BedDouble, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
+    { name: "Kitchen", href: "/kitchen", icon: ChefHat, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN"] },
+    { name: "Staff", href: "/staff", icon: Users, roles: ["OWNER", "GENERAL_MANAGER"] },
+    { name: "Settings", href: "/settings", icon: Settings, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

@@ -214,7 +214,7 @@ class ApiClient {
         });
     }
 
-    /** OWNER or MANAGER — set hex like #RRGGBB, or "" to clear one field */
+    /** OWNER, GENERAL_MANAGER, or MANAGER — set hex like #RRGGBB, or "" to clear one field */
     async updateGuestMenuTheme(data: {
         guestMenuBackgroundHex?: string;
         guestMenuTextHex?: string;

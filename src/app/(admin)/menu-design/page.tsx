@@ -182,7 +182,13 @@ export default function MenuDesignPage() {
     const [qrPreviewUrl, setQrPreviewUrl] = useState("https://example.com/menu");
 
     useEffect(() => {
-        if (!loading && admin && admin.role !== "OWNER" && admin.role !== "MANAGER") {
+        if (
+            !loading &&
+            admin &&
+            admin.role !== "OWNER" &&
+            admin.role !== "GENERAL_MANAGER" &&
+            admin.role !== "MANAGER"
+        ) {
             router.replace("/dashboard");
         }
     }, [admin, loading, router]);
@@ -276,7 +282,7 @@ export default function MenuDesignPage() {
         return <AdminPageSkeleton cardCount={2} />;
     }
 
-    if (admin.role !== "OWNER" && admin.role !== "MANAGER") {
+    if (admin.role !== "OWNER" && admin.role !== "GENERAL_MANAGER" && admin.role !== "MANAGER") {
         return null;
     }
 

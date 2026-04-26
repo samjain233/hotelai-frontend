@@ -1,7 +1,7 @@
 /**
  * Phase 1 (default): hide ordering/ops tabs — hotels focus on menu + rooms + settings.
  * Set NEXT_PUBLIC_ENABLE_ORDERING_ADMIN_NAV=true to show Orders, Services, Kitchen.
- * Staff (/staff) is always in the nav for OWNER; it is not gated by this flag.
+ * Staff (/staff) is in the nav for OWNER and GENERAL_MANAGER; it is not gated by this flag.
  */
 export const ENABLE_ORDERING_ADMIN_NAV =
     process.env.NEXT_PUBLIC_ENABLE_ORDERING_ADMIN_NAV === "true";

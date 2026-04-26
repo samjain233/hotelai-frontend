@@ -17,6 +17,7 @@ import {
     KeyRound,
     Clock,
     Ban,
+    Briefcase,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -37,13 +38,24 @@ const STAFF_KEY_EMAIL_SUFFIX = "@staff.dreamcanvas.internal";
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof Shield }> = {
     OWNER: { label: "Owner", color: "text-purple-400", bg: "bg-purple-500/10", icon: Crown },
+    GENERAL_MANAGER: {
+        label: "General Manager",
+        color: "text-sky-400",
+        bg: "bg-sky-500/10",
+        icon: Briefcase,
+    },
     MANAGER: { label: "Manager", color: "text-blue-400", bg: "bg-blue-500/10", icon: Shield },
     KITCHEN: { label: "Kitchen", color: "text-amber-400", bg: "bg-amber-500/10", icon: ChefHat },
     FRONT_DESK: { label: "Front Desk", color: "text-emerald-400", bg: "bg-emerald-500/10", icon: Headset },
 };
 
-const INVITABLE_ROLES = [
-    { value: "MANAGER", label: "Manager — Full access except staff management" },
+const INVITABLE_ROLE_OPTIONS: { value: string; label: string; ownerOnly?: boolean }[] = [
+    {
+        value: "GENERAL_MANAGER",
+        label: "General Manager — Like owner, but cannot remove the owner (owner-only invite)",
+        ownerOnly: true,
+    },
+    { value: "MANAGER", label: "Manager — Operations & menu; no staff management" },
     { value: "KITCHEN", label: "Kitchen — Orders & Kitchen display only" },
     { value: "FRONT_DESK", label: "Front Desk — Orders, Services, Rooms" },
 ];
@@ -249,7 +261,9 @@ export default function StaffPage() {
                                         onChange={(e) => setInvRole(e.target.value)}
                                         className="w-full rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                     >
-                                        {INVITABLE_ROLES.map((r) => (
+                                        {INVITABLE_ROLE_OPTIONS.filter(
+                                            (r) => !r.ownerOnly || admin?.role === "OWNER",
+                                        ).map((r) => (
                                             <option key={r.value} value={r.value}>
                                                 {r.label}
                                             </option>
