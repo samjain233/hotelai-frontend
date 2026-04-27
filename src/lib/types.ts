@@ -122,7 +122,7 @@ export interface MenuItem {
     searchAliases?: string[];
     price: number;
     imageUrl?: string;
-    /** Guest public menu lists only available items; field may be omitted (treated as true). */
+    /** Guest menu includes sold-out items; omitted means orderable (`true`). */
     available?: boolean;
     dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
     spiceLevel?: 'NONE' | 'MILD' | 'MEDIUM' | 'HOT';

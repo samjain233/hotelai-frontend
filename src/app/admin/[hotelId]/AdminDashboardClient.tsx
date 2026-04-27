@@ -247,7 +247,7 @@ export function AdminDashboardClient({
                                                 </span>
                                                 {item.available === false && (
                                                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 shrink-0">
-                                                        Unavailable
+                                                        Sold out
                                                     </span>
                                                 )}
                                             </div>
@@ -554,7 +554,7 @@ function ItemModal({
                                 />
                             </button>
                             <span className="text-sm text-[var(--color-text-secondary)]">
-                                {available ? "Available on menu" : "Hidden from guests"}
+                                {available ? "Available on menu" : "Sold out (visible, not orderable)"}
                             </span>
                         </div>
                     )}

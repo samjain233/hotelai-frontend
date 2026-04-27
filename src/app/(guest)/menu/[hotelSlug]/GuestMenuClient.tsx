@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, type ReactNode } from "react";
-import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { MenuItem, CartItem, Order } from "@/lib/types";
@@ -24,10 +23,10 @@ import {
     SlidersHorizontal,
     Egg,
     Menu,
+    ShoppingBag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
-import { ENABLE_GUEST_ORDERING } from "@/lib/guestMenuConfig";
 import {
     type GuestDietFilterKey,
     type GuestMenuSort,
@@ -41,6 +40,7 @@ import {
 import { IndianVegMark, IndianNonVegMark } from "./GuestMenuDietIcons";
 import { GuestMenuItemInsights } from "./GuestMenuItemInsights";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
+import { AnimatedOverlays } from "./GuestMenuAnimated";
 
 const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
     { value: "default", label: "Menu order" },
@@ -49,12 +49,6 @@ const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
     { value: "price-asc", label: "Price (low to high)" },
     { value: "price-desc", label: "Price (high to low)" },
 ];
-
-// Lazy-load framer-motion overlays (cart, drawers, modals) - only when user interacts
-const AnimatedOverlays = dynamic(
-    () => import("./GuestMenuAnimated").then((m) => m.AnimatedOverlays),
-    { ssr: false }
-);
 
 function formatPrice(price: number) {
     return `₹${price.toLocaleString()}`;
@@ -305,7 +299,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     orderRef.current = order;
 
     const loadPastOrders = useCallback(async () => {
-        if (!ENABLE_GUEST_ORDERING || !resolvedRoomId) return;
+        if (!resolvedRoomId) return;
         try {
             const orders = await api.getGuestRoomOrders(resolvedRoomId);
             setPastOrders(orders);
@@ -320,7 +314,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }, [resolvedRoomId]);
 
     useEffect(() => {
-        if (ENABLE_GUEST_ORDERING && resolvedRoomId) loadPastOrders();
+        if (resolvedRoomId) loadPastOrders();
     }, [resolvedRoomId, loadPastOrders]);
 
     const handleOrderUpdated = useCallback((ord: Order) => {
@@ -335,13 +329,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     useActivityStreamGuest({
         hotelSlug,
         roomId: resolvedRoomId || "",
-        enabled: ENABLE_GUEST_ORDERING && !!resolvedRoomId,
+        enabled: !!resolvedRoomId,
         onOrderNew: loadPastOrders,
         onOrderUpdated: handleOrderUpdated,
     });
 
     function addToCart(item: MenuItem) {
-        if (!ENABLE_GUEST_ORDERING || !isOpen) return;
         setCart((prev) => {
             const existing = prev.find((ci) => ci.item.id === item.id);
             if (existing) return prev.map((ci) => (ci.item.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci));
@@ -366,7 +359,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const cartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
     function initiateOrder() {
-        if (!ENABLE_GUEST_ORDERING || !isOpen) return;
         if (!resolvedRoomId) {
             setShowCart(false);
             setShowRoomModal(true);
@@ -376,7 +368,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }
 
     async function placeOrder() {
-        if (!ENABLE_GUEST_ORDERING || !isOpen || !resolvedRoomId) return;
+        if (!isOpen || !resolvedRoomId) return;
         setPlacing(true);
         try {
             const result = await api.placeOrder({
@@ -480,7 +472,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         );
     }
 
-    if (ENABLE_GUEST_ORDERING && order) {
+    if (order) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[var(--guest-bg)] px-6 text-[var(--guest-text)]" style={themeStyle}>
                 <div className="animate-scale-in w-full max-w-sm text-center">
@@ -607,7 +599,20 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 </button>
                             ) : null}
                         </div>
-                        <div className="relative shrink-0">
+                        <div className="relative flex shrink-0 items-center gap-1.5">
+                            {cartCount > 0 ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCart(true)}
+                                    className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--guest-surface)] text-[var(--guest-accent)] ring-1 ring-[var(--guest-line)] hover:bg-[var(--guest-surface-2)]"
+                                    aria-label={`View cart, ${cartCount} items`}
+                                >
+                                    <ShoppingBag className="h-5 w-5" strokeWidth={2} />
+                                    <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--guest-cta)] px-1 text-[10px] font-bold text-[var(--guest-on-cta)] tabular-nums">
+                                        {cartCount > 99 ? "99+" : cartCount}
+                                    </span>
+                                </button>
+                            ) : null}
                             <button
                                 type="button"
                                 onClick={() => setShowHeaderMenu((v) => !v)}
@@ -707,7 +712,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                 Egg
                                             </button>
                                         </div>
-                                        {ENABLE_GUEST_ORDERING && pastOrders.length > 0 ? (
+                                        {pastOrders.length > 0 ? (
                                             <>
                                                 <div className="mx-2 border-t border-[var(--guest-line)]" />
                                                 <div className="px-2 pt-1">
@@ -816,7 +821,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             ) : null}
 
             <main className="mx-auto w-full min-w-0 max-w-md space-y-8 overflow-x-clip px-4 py-5">
-                {ENABLE_GUEST_ORDERING && !isOpen && (
+                {!isOpen && (
                     <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 flex items-center gap-3 animate-fade-in-up">
                         <Clock className="w-5 h-5 text-amber-400 flex-shrink-0" />
                         <div>
@@ -867,7 +872,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         </div>
                         <ul className="relative z-0 divide-y divide-dashed divide-[var(--guest-line)]">
                             {(cat.items ?? []).map((item, itemIndex) => {
-                                const qty = ENABLE_GUEST_ORDERING ? getCartQuantity(item.id) : 0;
+                                const qty = getCartQuantity(item.id);
                                 const itemIsAvailable = item.available !== false;
                                 const desc = item.description?.trim() ?? "";
                                 const descLong = desc.length > 72;
@@ -878,23 +883,17 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     hasImage && !searchNormalized && catIndex === 0 && itemIndex < 4;
 
                                 let actionBlock: ReactNode = null;
-                                if (!ENABLE_GUEST_ORDERING) {
-                                    if (!itemIsAvailable) {
-                                        actionBlock = (
-                                            <span className="text-center text-[10px] font-medium text-[var(--guest-muted)] sm:text-left">Unavailable</span>
-                                        );
-                                    }
-                                } else if (qty === 0) {
+                                if (qty === 0) {
                                     actionBlock = (
                                         <button
                                             type="button"
                                             onClick={() => addToCart(item)}
-                                            disabled={!itemIsAvailable || !isOpen}
+                                            disabled={!itemIsAvailable}
                                             className={cn(
                                                 "w-full rounded-md border-2 border-[var(--guest-accent-70)] bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-[var(--guest-accent)] transition-colors hover:bg-[var(--guest-accent-12)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-[108px]",
                                             )}
                                         >
-                                            {!isOpen ? "Closed" : itemIsAvailable ? "Add +" : "Sold out"}
+                                            {itemIsAvailable ? "Add +" : "Sold out"}
                                         </button>
                                     );
                                 } else {
@@ -1064,7 +1063,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 )}
             </main>
 
-            {ENABLE_GUEST_ORDERING && (cartCount > 0 || showCart || showHistory || showRoomModal) && (
+            {(cartCount > 0 || showCart || showHistory || showRoomModal) && (
                 <AnimatedOverlays
                     showCart={showCart}
                     showHistory={showHistory}
@@ -1135,13 +1134,13 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 </div>
             ) : null}
 
-            {(!ENABLE_GUEST_ORDERING || (!showCart && !showHistory && !showRoomModal)) && chipCategories.length > 0 ? (
+            {!showCart && !showHistory && !showRoomModal && chipCategories.length > 0 ? (
                 <button
                     type="button"
                     onClick={() => setShowCategoryNav(true)}
                     className={cn(
                         "fixed z-40 flex items-center gap-2 rounded-full border border-[var(--guest-line)] bg-[color-mix(in_srgb,var(--guest-surface-2)_92%,var(--guest-bg))] px-4 py-2.5 text-sm font-semibold text-[var(--guest-text)] shadow-lg shadow-black/40 backdrop-blur-md hover:opacity-90 active:scale-[0.98] transition-transform",
-                        ENABLE_GUEST_ORDERING && cartCount > 0 ? "bottom-[7.25rem] right-4" : "bottom-6 right-4",
+                        cartCount > 0 ? "bottom-[7.25rem] right-4" : "bottom-6 right-4",
                     )}
                 >
                     <Utensils className="h-4 w-4 text-[var(--guest-accent)]" />
