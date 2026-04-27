@@ -367,6 +367,17 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         placeOrder();
     }
 
+    /** Room modal primary action: persist room when closed; submit when open. */
+    function confirmRoomFromModal() {
+        if (!resolvedRoomId) return;
+        setShowRoomModal(false);
+        if (isOpen) {
+            void placeOrder();
+            return;
+        }
+        setShowCart(true);
+    }
+
     async function placeOrder() {
         if (!isOpen || !resolvedRoomId) return;
         setPlacing(true);
@@ -1083,7 +1094,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     onCloseHistory={() => setShowHistory(false)}
                     onCloseRoomModal={() => setShowRoomModal(false)}
                     onShowCart={() => setShowCart(true)}
-                    onPlaceOrder={placeOrder}
+                    onConfirmRoom={confirmRoomFromModal}
                     onInitiateOrder={initiateOrder}
                     onRemoveFromCart={removeFromCart}
                     onAddToCart={addToCart}

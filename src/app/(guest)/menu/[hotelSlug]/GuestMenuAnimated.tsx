@@ -56,7 +56,8 @@ interface AnimatedOverlaysProps {
     onCloseHistory: () => void;
     onCloseRoomModal: () => void;
     onShowCart: () => void;
-    onPlaceOrder: () => void;
+    /** Room picker: save room when closed, or submit order when open (parent owns logic). */
+    onConfirmRoom: () => void;
     onInitiateOrder: () => void;
     onRemoveFromCart: (itemId: string) => void;
     onAddToCart: (item: CartItem["item"]) => void;
@@ -68,7 +69,7 @@ interface AnimatedOverlaysProps {
 export function AnimatedOverlays({
     showCart, showHistory, showRoomModal, cartCount, cart, cartTotal, cartAnimKey,
     guestName, notes, placing, pastOrders, availableRooms, selectedRoomId, isOpen = true,
-    onCloseCart, onCloseHistory, onCloseRoomModal, onShowCart, onPlaceOrder, onInitiateOrder,
+    onCloseCart, onCloseHistory, onCloseRoomModal, onShowCart, onConfirmRoom, onInitiateOrder,
     onRemoveFromCart, onAddToCart, setGuestName, setNotes, setSelectedRoomId,
 }: AnimatedOverlaysProps) {
     return (
@@ -93,7 +94,7 @@ export function AnimatedOverlays({
                 {showRoomModal && (
                     <RoomModal
                         availableRooms={availableRooms} selectedRoomId={selectedRoomId} isOpen={isOpen}
-                        onClose={onCloseRoomModal} onConfirm={onPlaceOrder} setSelectedRoomId={setSelectedRoomId}
+                        onClose={onCloseRoomModal} onConfirm={onConfirmRoom} setSelectedRoomId={setSelectedRoomId}
                     />
                 )}
             </AnimatePresence>
@@ -298,8 +299,8 @@ export function RoomModal({ availableRooms, selectedRoomId, isOpen = true, onClo
                     <Button variant="outline" className="flex-1" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button className="flex-1" disabled={!selectedRoomId || !isOpen} onClick={onConfirm}>
-                        {!isOpen ? "Closed" : "Confirm & Order"}
+                    <Button className="flex-1" disabled={!selectedRoomId} onClick={onConfirm}>
+                        {isOpen ? "Confirm & Order" : "Save room"}
                     </Button>
                 </div>
             </motion.div>
