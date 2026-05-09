@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { MapPin, Plus, Minus, X, Receipt, Clock } from "lucide-react";
 import type { Order, CartItem } from "@/lib/types";
+import {
+    guestOrderDayHeading,
+    guestOrderStatusBadgeVariant,
+    guestOrderStatusLabel,
+    guestOrderTimeLabel,
+} from "@/lib/guestOrderLabels";
 import { cn } from "@/lib/utils";
 
 function formatPrice(price: number) {
@@ -191,6 +197,21 @@ interface HistoryDrawerProps {
     formatPrice: (p: number) => string;
 }
 export function HistoryDrawer({ pastOrders, onClose, formatPrice }: HistoryDrawerProps) {
+    const grandTotal = pastOrders.reduce((sum, o) => sum + (o.status !== "CANCELLED" ? o.totalAmount : 0), 0);
+
+    /* Newest-first API order; group consecutive orders under the same calendar-day heading. */
+    let lastHeading = "";
+    const sections: { heading: string; orders: Order[] }[] = [];
+    for (const o of pastOrders) {
+        const heading = guestOrderDayHeading(o.createdAt) || "Orders";
+        if (sections.length === 0 || heading !== lastHeading) {
+            sections.push({ heading, orders: [o] });
+            lastHeading = heading;
+        } else {
+            sections[sections.length - 1].orders.push(o);
+        }
+    }
+
     return (
         <motion.div
             key="history-drawer"
@@ -207,49 +228,62 @@ export function HistoryDrawer({ pastOrders, onClose, formatPrice }: HistoryDrawe
                 <div className="px-6 py-4 border-b border-border flex justify-between items-center">
                     <div>
                         <h3 className="text-lg font-bold text-foreground">Room Bill</h3>
-                        <p className="text-xs text-muted-foreground">Recent orders for this room</p>
+                        <p className="text-xs text-muted-foreground">Orders and total for this room</p>
                     </div>
                     <button onClick={onClose} className="p-2 bg-secondary rounded-full text-muted-foreground">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-secondary/20">
-                    {pastOrders.map((o) => (
-                        <div key={o.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
-                            <div className="flex justify-between items-center mb-3">
-                                <span className="font-mono text-sm font-bold text-foreground">#{o.orderNumber}</span>
-                                <Badge variant={o.status === "DELIVERED" ? "success" : o.status === "CANCELLED" ? "danger" : "warning"}>{o.status}</Badge>
-                            </div>
-                            <div className="space-y-2 mb-3">
-                                {o.items.map((oi) => (
-                                    <div key={oi.id} className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                            <span className="font-medium mr-1">{oi.quantity}x</span> {oi.itemName}
-                                        </span>
-                                        <span>{formatPrice(oi.price * oi.quantity)}</span>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="flex items-center justify-between pt-3 border-t border-border">
-                                <span className="text-xs text-muted-foreground flex items-center">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                                <span className="font-bold text-primary">{formatPrice(o.totalAmount)}</span>
-                            </div>
-                        </div>
-                    ))}
-                    {pastOrders.length === 0 && (
+                <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-secondary/20">
+                    {pastOrders.length === 0 ? (
                         <div className="text-center py-10 text-muted-foreground">
                             <Receipt className="w-10 h-10 mx-auto mb-3 opacity-20" />
                             <p>No orders yet</p>
+                            <p className="mt-2 text-xs">When you place an order, it will show up here.</p>
                         </div>
+                    ) : (
+                        sections.map((section, sectionIndex) => (
+                            <div key={`${section.heading}-${sectionIndex}`}>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-0.5">
+                                    {section.heading}
+                                </p>
+                                <div className="space-y-4">
+                                    {section.orders.map((o) => (
+                                        <div key={o.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className="font-mono text-sm font-bold text-foreground">#{o.orderNumber}</span>
+                                                <Badge variant={guestOrderStatusBadgeVariant(o.status)}>
+                                                    {guestOrderStatusLabel(o.status)}
+                                                </Badge>
+                                            </div>
+                                            <div className="space-y-2 mb-3">
+                                                {o.items.map((oi) => (
+                                                    <div key={oi.id} className="flex justify-between text-sm">
+                                                        <span className="text-muted-foreground">
+                                                            <span className="font-medium mr-1">{oi.quantity}x</span> {oi.itemName}
+                                                        </span>
+                                                        <span>{formatPrice(oi.price * oi.quantity)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex items-center justify-between pt-3 border-t border-border">
+                                                <span className="text-xs text-muted-foreground flex items-center">
+                                                    <Clock className="w-3 h-3 mr-1 shrink-0" />
+                                                    {guestOrderTimeLabel(o.createdAt)}
+                                                </span>
+                                                <span className="font-bold text-primary">{formatPrice(o.totalAmount)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))
                     )}
                 </div>
                 {pastOrders.length > 0 && (
                     <div className="p-4 bg-card border-t border-border flex justify-between items-center safe-area-bottom">
-                        <span className="font-bold text-foreground">Total Grand Amount</span>
-                        <span className="text-xl font-bold text-primary">{formatPrice(pastOrders.reduce((sum, o) => sum + (o.status !== "CANCELLED" ? o.totalAmount : 0), 0))}</span>
+                        <span className="font-bold text-foreground">Total bill</span>
+                        <span className="text-xl font-bold text-primary">{formatPrice(grandTotal)}</span>
                     </div>
                 )}
             </motion.div>

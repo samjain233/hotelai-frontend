@@ -24,6 +24,7 @@ import {
     Egg,
     Menu,
     ShoppingBag,
+    ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
@@ -313,9 +314,20 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         }
     }, [resolvedRoomId]);
 
+    const roomBillGrandTotal = useMemo(
+        () => pastOrders.reduce((sum, o) => sum + (o.status !== "CANCELLED" ? o.totalAmount : 0), 0),
+        [pastOrders],
+    );
+
     useEffect(() => {
         if (resolvedRoomId) loadPastOrders();
     }, [resolvedRoomId, loadPastOrders]);
+
+    useEffect(() => {
+        if (showHistory && resolvedRoomId) {
+            void loadPastOrders();
+        }
+    }, [showHistory, resolvedRoomId, loadPastOrders]);
 
     const handleOrderUpdated = useCallback((ord: Order) => {
         setPastOrders((prev) => {
@@ -723,7 +735,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                 Egg
                                             </button>
                                         </div>
-                                        {pastOrders.length > 0 ? (
+                                        {resolvedRoomId ? (
                                             <>
                                                 <div className="mx-2 border-t border-[var(--guest-line)]" />
                                                 <div className="px-2 pt-1">
@@ -737,7 +749,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                         }}
                                                     >
                                                         <Receipt className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" />
-                                                        Bills &amp; history
+                                                        My bill &amp; orders
                                                     </button>
                                                 </div>
                                             </>
@@ -841,6 +853,26 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         </div>
                     </div>
                 )}
+                {resolvedRoomId ? (
+                    <button
+                        type="button"
+                        onClick={() => setShowHistory(true)}
+                        className="flex w-full items-center gap-3 rounded-xl border border-[var(--guest-line)] bg-[var(--guest-text-12)] px-4 py-3 text-left transition-colors hover:border-[var(--guest-accent-35)] hover:bg-[var(--guest-surface-2)]"
+                    >
+                        <Receipt className="h-5 w-5 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-[var(--guest-text)]">Room bill</p>
+                            <p className="text-xs text-[var(--guest-muted)]">
+                                {pastOrders.length === 0
+                                    ? "No orders yet — tap to view"
+                                    : roomBillGrandTotal > 0
+                                      ? `${formatPrice(roomBillGrandTotal)} total so far`
+                                      : "No active charges — tap for history"}
+                            </p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 shrink-0 text-[var(--guest-muted)]" aria-hidden />
+                    </button>
+                ) : null}
                 {hasActiveFilters && resultCount > 0 && (
                     <div className="text-xs text-[var(--guest-muted)]">
                         <span className="font-semibold text-[var(--guest-muted)]">{resultCount}</span>{" "}
