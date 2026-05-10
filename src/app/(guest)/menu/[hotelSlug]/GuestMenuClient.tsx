@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, type ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MenuItem, CartItem, Order } from "@/lib/types";
 import type { PublicMenuFullData } from "@/lib/types";
@@ -25,6 +26,7 @@ import {
     Menu,
     ShoppingBag,
     ChevronRight,
+    Headset,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
@@ -109,6 +111,14 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }, [roomParam, availableRooms]);
     const currentRoom = availableRooms.find((r) => r.id === resolvedRoomId);
     const roomDisplayName = currentRoom?.number || "";
+
+    /** Guest services (complaints / requests) — same slug + room hint as menu URL when known. */
+    const guestServicesHref = useMemo(() => {
+        const base = `/services/${hotelSlug}`;
+        const r = roomParam?.trim();
+        if (!r) return base;
+        return `${base}?room=${encodeURIComponent(r)}`;
+    }, [hotelSlug, roomParam]);
 
     /** Room service line: dedicated number, else main hotel phone (Settings). */
     const guestCallNumber = useMemo(
@@ -735,6 +745,18 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                 Egg
                                             </button>
                                         </div>
+                                        <div className="mx-2 border-t border-[var(--guest-line)]" />
+                                        <div className="px-2 pt-1">
+                                            <Link
+                                                href={guestServicesHref}
+                                                role="menuitem"
+                                                className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
+                                                onClick={() => setShowHeaderMenu(false)}
+                                            >
+                                                <Headset className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                                                Guest services
+                                            </Link>
+                                        </div>
                                         {resolvedRoomId ? (
                                             <>
                                                 <div className="mx-2 border-t border-[var(--guest-line)]" />
@@ -873,6 +895,17 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         <ChevronRight className="h-5 w-5 shrink-0 text-[var(--guest-muted)]" aria-hidden />
                     </button>
                 ) : null}
+                <Link
+                    href={guestServicesHref}
+                    className="flex w-full items-center gap-3 rounded-xl border border-[var(--guest-line)] bg-[var(--guest-text-12)] px-4 py-3 text-left transition-colors hover:border-[var(--guest-accent-35)] hover:bg-[var(--guest-surface-2)]"
+                >
+                    <Headset className="h-5 w-5 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[var(--guest-text)]">Guest services</p>
+                        <p className="text-xs text-[var(--guest-muted)]">Complaints, housekeeping &amp; room requests</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-[var(--guest-muted)]" aria-hidden />
+                </Link>
                 {hasActiveFilters && resultCount > 0 && (
                     <div className="text-xs text-[var(--guest-muted)]">
                         <span className="font-semibold text-[var(--guest-muted)]">{resultCount}</span>{" "}

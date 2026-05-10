@@ -196,7 +196,10 @@ export default function GuestServicesClient() {
             {/* Header */}
             <div className="sticky top-0 z-20 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/5 px-4 py-3">
                 <div className="max-w-lg mx-auto flex items-center gap-3">
-                    <Link href={`/menu/${hotelSlug}`} className="p-1.5 rounded-lg hover:bg-white/5">
+                    <Link
+                        href={`/menu/${hotelSlug}${roomFromUrl ? `?room=${encodeURIComponent(roomFromUrl)}` : ""}`}
+                        className="p-1.5 rounded-lg hover:bg-white/5"
+                    >
                         <ArrowLeft className="w-5 h-5 text-white/60" />
                     </Link>
                     <div>
