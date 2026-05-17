@@ -1,10 +1,10 @@
 /**
- * Phase 1 (default): hide ordering/ops tabs — hotels focus on menu + rooms + settings.
- * Set NEXT_PUBLIC_ENABLE_ORDERING_ADMIN_NAV=true to show Orders, Services, Kitchen.
- * Staff (/staff) is in the nav for OWNER and GENERAL_MANAGER; it is not gated by this flag.
+ * Orders, Services, and Kitchen in the admin sidebar (on by default).
+ * Set NEXT_PUBLIC_ENABLE_ORDERING_ADMIN_NAV=false to hide them (e.g. menu-only pilot).
+ * Staff (/staff) is not gated by this flag.
  */
 export const ENABLE_ORDERING_ADMIN_NAV =
-    process.env.NEXT_PUBLIC_ENABLE_ORDERING_ADMIN_NAV === "true";
+    process.env.NEXT_PUBLIC_ENABLE_ORDERING_ADMIN_NAV !== "false";
 
 /** Admin sidebar hrefs hidden when ordering nav is disabled (staff management is separate). */
 export const ORDERING_ADMIN_NAV_HREFS = ["/orders", "/services", "/kitchen"] as const;
