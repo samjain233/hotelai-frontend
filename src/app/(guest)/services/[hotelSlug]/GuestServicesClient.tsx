@@ -7,13 +7,13 @@ import { usePublicRooms } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { ServiceRequest } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import {
     AlertTriangle,
     Bed,
     Sparkles,
     Send,
     CheckCircle,
-    Clock,
     ShowerHead,
     Wine,
     Shirt,
@@ -25,19 +25,23 @@ import {
     ArrowLeft,
     Utensils,
     Headset,
+    Building2,
+    UtensilsCrossed,
+    UserRound,
+    Brush,
+    Volume2,
+    ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { GuestServicesSkeleton } from "@/components/ui/Skeleton";
 
-// ΓöÇΓöÇΓöÇ Config ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-
-const COMPLAINT_CATEGORIES = [
-    { label: "Room Issue", icon: "≡ƒÅá", desc: "AC, plumbing, electricity" },
-    { label: "Food Quality", icon: "≡ƒì╜∩╕Å", desc: "Taste, temperature, hygiene" },
-    { label: "Staff Behavior", icon: "≡ƒæñ", desc: "Rudeness, slow service" },
-    { label: "Cleanliness", icon: "≡ƒº╣", desc: "Room, bathroom, lobby" },
-    { label: "Noise", icon: "≡ƒöè", desc: "Other guests, construction" },
-    { label: "Other", icon: "≡ƒôï", desc: "Any other concern" },
+const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] = [
+    { label: "Room Issue", Icon: Building2, desc: "AC, plumbing, electricity" },
+    { label: "Food Quality", Icon: UtensilsCrossed, desc: "Taste, temperature, hygiene" },
+    { label: "Staff Behavior", Icon: UserRound, desc: "Rudeness, slow service" },
+    { label: "Cleanliness", Icon: Brush, desc: "Room, bathroom, lobby" },
+    { label: "Noise", Icon: Volume2, desc: "Other guests, construction" },
+    { label: "Other", Icon: ClipboardList, desc: "Any other concern" },
 ];
 
 const ROOM_SERVICE_ITEMS = [
@@ -191,8 +195,11 @@ export default function GuestServicesClient() {
         return r.type === "HOUSEKEEPING";
     });
 
+    const bottomNavOffsetClass =
+        "pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))]";
+
     return (
-        <div className="min-h-screen pb-20 bg-[#0a0a0a] text-white">
+        <div className="min-h-screen bg-[#0a0a0a] text-white">
             {/* Header */}
             <div className="sticky top-0 z-20 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/5 px-4 py-3">
                 <div className="max-w-lg mx-auto flex items-center gap-3">
@@ -209,7 +216,7 @@ export default function GuestServicesClient() {
                 </div>
             </div>
 
-            <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
+            <div className={`max-w-lg mx-auto px-4 py-4 space-y-4 ${bottomNavOffsetClass}`}>
                 {/* Room & Name */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -274,20 +281,41 @@ export default function GuestServicesClient() {
                             <div className="space-y-3">
                                 <p className="text-xs text-white/40">Select a category:</p>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {COMPLAINT_CATEGORIES.map(cat => (
-                                        <button
-                                            key={cat.label}
-                                            onClick={() => setComplaintCategory(cat.label)}
-                                            className={`text-left p-3 rounded-xl border transition-all ${complaintCategory === cat.label
-                                                ? "border-red-500/50 bg-red-500/10"
-                                                : "border-white/10 bg-white/5 hover:border-white/20"
+                                    {COMPLAINT_CATEGORIES.map((cat) => {
+                                        const isSel = complaintCategory === cat.label;
+                                        const CatIcon = cat.Icon;
+                                        return (
+                                            <button
+                                                key={cat.label}
+                                                type="button"
+                                                onClick={() => setComplaintCategory(cat.label)}
+                                                aria-pressed={isSel}
+                                                className={`text-left rounded-xl border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
+                                                    isSel
+                                                        ? "border-red-400 bg-red-500/15 shadow-[0_0_0_1px_rgba(248,113,113,0.35)]"
+                                                        : "border-white/10 bg-white/5 hover:border-white/25"
                                                 }`}
-                                        >
-                                            <span className="text-lg">{cat.icon}</span>
-                                            <p className="text-sm font-medium mt-1">{cat.label}</p>
-                                            <p className="text-[10px] text-white/30">{cat.desc}</p>
-                                        </button>
-                                    ))}
+                                            >
+                                                <div
+                                                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                                                        isSel ? "bg-red-500/25 text-red-300" : "bg-white/10 text-white/70"
+                                                    }`}
+                                                >
+                                                    <CatIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                                                </div>
+                                                <p className={`mt-2 text-sm font-semibold ${isSel ? "text-white" : "text-white/90"}`}>
+                                                    {cat.label}
+                                                </p>
+                                                <p className="mt-0.5 text-[10px] leading-snug text-white/45">{cat.desc}</p>
+                                                {isSel ? (
+                                                    <p className="mt-1.5 flex items-center gap-1 text-[10px] font-medium text-red-300/90">
+                                                        <CheckCircle className="h-3 w-3" aria-hidden />
+                                                        Selected
+                                                    </p>
+                                                ) : null}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 <div>
@@ -329,13 +357,16 @@ export default function GuestServicesClient() {
                                         return (
                                             <button
                                                 key={item.label}
+                                                type="button"
                                                 onClick={() => setRoomServiceItem(item.category)}
-                                                className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${roomServiceItem === item.category
-                                                    ? "border-blue-500/50 bg-blue-500/10"
-                                                    : "border-white/10 bg-white/5 hover:border-white/20"
-                                                    }`}
+                                                aria-pressed={roomServiceItem === item.category}
+                                                className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
+                                                    roomServiceItem === item.category
+                                                        ? "border-blue-400 bg-blue-500/15 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]"
+                                                        : "border-white/10 bg-white/5 hover:border-white/25"
+                                                }`}
                                             >
-                                                <Icon className="w-6 h-6 text-white/60" />
+                                                <Icon className={`h-6 w-6 shrink-0 ${roomServiceItem === item.category ? "text-blue-300" : "text-white/60"}`} />
                                                 <span className="text-xs text-center font-medium">{item.label}</span>
                                             </button>
                                         );
@@ -361,11 +392,14 @@ export default function GuestServicesClient() {
                                         return (
                                             <button
                                                 key={item.label}
+                                                type="button"
                                                 onClick={() => setHkCategory(item.label)}
-                                                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${hkCategory === item.label
-                                                    ? "border-emerald-500/50 bg-emerald-500/10"
-                                                    : "border-white/10 bg-white/5 hover:border-white/20"
-                                                    }`}
+                                                aria-pressed={hkCategory === item.label}
+                                                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
+                                                    hkCategory === item.label
+                                                        ? "border-emerald-400 bg-emerald-500/15 shadow-[0_0_0_1px_rgba(52,211,153,0.35)]"
+                                                        : "border-white/10 bg-white/5 hover:border-white/25"
+                                                }`}
                                             >
                                                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${hkCategory === item.label ? "bg-emerald-500/20" : "bg-white/5"
                                                     }`}>
@@ -394,18 +428,20 @@ export default function GuestServicesClient() {
 
                 {/* Submit Button */}
                 {!selectedRoom && (
-                    <p className="text-xs text-amber-400/80 text-center flex items-center justify-center gap-1.5">
-                        <span>ΓÜá</span> Please select your room before submitting
+                    <p className="text-xs text-amber-400/90 flex items-center justify-center gap-1.5 text-center">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        Please select your room before submitting
                     </p>
                 )}
                 <motion.button
+                    type="button"
                     whileTap={{ scale: selectedRoom ? 0.97 : 1 }}
                     onClick={handleSubmit}
                     disabled={submitting || submitted || !selectedRoom}
-                    className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${submitted
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold shadow-lg shadow-black/30 transition-all ${submitted
                             ? "bg-emerald-500 text-white"
                             : !selectedRoom
-                                ? "bg-white/10 text-white/30 cursor-not-allowed"
+                                ? "cursor-not-allowed bg-white/10 text-white/35"
                                 : "bg-white text-black hover:bg-white/90 disabled:opacity-50"
                         }`}
                 >
@@ -449,20 +485,30 @@ export default function GuestServicesClient() {
                 )}
             </div>
 
-            {/* ΓöÇΓöÇ Bottom Navigation Bar ΓöÇΓöÇ */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-white/10">
-                <div className="max-w-lg mx-auto flex">
-                    <a
-                        href={`/menu/${hotelSlug}${selectedRoom ? `?room=${selectedRoom}` : ''}`}
-                        className="flex-1 flex flex-col items-center gap-0.5 py-3 text-white/40 hover:text-white/80 transition-colors"
+            {/* Bottom nav + safe area (home indicator on phones) */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#0a0a0a]/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-xl">
+                <div className="mx-auto flex max-w-lg">
+                    <Link
+                        href={`/menu/${hotelSlug}${
+                            selectedRoom
+                                ? `?room=${encodeURIComponent(
+                                      rooms.find((r) => r.id === selectedRoom)?.scanCode ?? selectedRoom,
+                                  )}`
+                                : roomFromUrl
+                                  ? `?room=${encodeURIComponent(roomFromUrl)}`
+                                  : ""
+                        }`}
+                        className="flex flex-1 flex-col items-center gap-0.5 py-3 text-white/45 transition-colors hover:text-white/85"
                     >
-                        <Utensils className="w-5 h-5" />
+                        <Utensils className="h-5 w-5 shrink-0" aria-hidden />
                         <span className="text-[10px] font-medium">Food Menu</span>
-                    </a>
-                    <div
-                        className="flex-1 flex flex-col items-center gap-0.5 py-3 text-white cursor-default"
-                    >
-                        <Headset className="w-5 h-5" />
+                    </Link>
+                    <div className="relative flex flex-1 flex-col items-center gap-0.5 py-3 text-white">
+                        <span
+                            className="absolute left-1/2 top-0 h-0.5 w-10 -translate-x-1/2 rounded-full bg-white"
+                            aria-hidden
+                        />
+                        <Headset className="h-5 w-5 shrink-0" aria-hidden />
                         <span className="text-[10px] font-semibold">Services</span>
                     </div>
                 </div>
