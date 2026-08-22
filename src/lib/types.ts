@@ -147,6 +147,9 @@ export interface Room {
     type: string | null;
     /** Short public id for QR URLs; unique per hotel when set */
     scanCode?: string | null;
+    isOccupied?: boolean;
+    currentPin?: string | null;
+    checkedInAt?: string | null;
     hotelId: string;
     _count?: { orders: number };
 }

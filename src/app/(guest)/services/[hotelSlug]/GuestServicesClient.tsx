@@ -34,6 +34,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { GuestServicesSkeleton } from "@/components/ui/Skeleton";
+import { StayPinModal } from "@/components/guest/StayPinModal";
+import { getStayToken, clearStayToken } from "@/lib/staySession";
+import { toast } from "sonner";
+
+
 
 const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] = [
     { label: "Room Issue", Icon: Building2, desc: "AC, plumbing, electricity" },
@@ -87,6 +92,7 @@ export default function GuestServicesClient() {
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [showPinModal, setShowPinModal] = useState(false);
 
     // Complaint form state
     const [complaintCategory, setComplaintCategory] = useState("");
@@ -131,8 +137,17 @@ export default function GuestServicesClient() {
         onServiceRequestUpdated: loadRequests,
     });
 
-    async function handleSubmit() {
-        if (!selectedRoom) return;
+    async function handleSubmit(stayTokenOverride?: string) {
+        if (!selectedRoom) {
+            toast.error("Please select your room number first");
+            return;
+        }
+
+        const token = stayTokenOverride || getStayToken(selectedRoom);
+        if (!token) {
+            setShowPinModal(true);
+            return;
+        }
 
         let type = "";
         let category = "";
@@ -166,20 +181,34 @@ export default function GuestServicesClient() {
                 priority,
                 roomId: selectedRoom,
                 guestName: guestName || undefined,
+                stayToken: token,
             });
             setSubmitted(true);
+            toast.success("Request submitted successfully");
             // Reset forms
             setComplaintCategory(""); setComplaintDesc(""); setComplaintPriority("NORMAL");
             setRoomServiceItem(""); setRoomServiceNote("");
             setHkCategory(""); setHkNote("");
             loadRequests();
             setTimeout(() => setSubmitted(false), 3000);
-        } catch (err: any) {
-            alert(err.message || "Failed to submit");
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Failed to submit request";
+            if (
+                msg.toLowerCase().includes("pin") ||
+                msg.toLowerCase().includes("vacant") ||
+                msg.toLowerCase().includes("checked out") ||
+                msg.toLowerCase().includes("stay") ||
+                msg.toLowerCase().includes("session")
+            ) {
+                clearStayToken(selectedRoom);
+                setShowPinModal(true);
+            }
+            toast.error(msg);
         } finally {
             setSubmitting(false);
         }
     }
+
 
     if (loading) return <GuestServicesSkeleton />;
 
@@ -436,7 +465,7 @@ export default function GuestServicesClient() {
                 <motion.button
                     type="button"
                     whileTap={{ scale: selectedRoom ? 0.97 : 1 }}
-                    onClick={handleSubmit}
+                    onClick={() => void handleSubmit()}
                     disabled={submitting || submitted || !selectedRoom}
                     className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold shadow-lg shadow-black/30 transition-all ${submitted
                             ? "bg-emerald-500 text-white"
@@ -513,6 +542,18 @@ export default function GuestServicesClient() {
                     </div>
                 </div>
             </div>
+
+            {/* In-Room Stay PIN Verification Modal */}
+            <StayPinModal
+                isOpen={showPinModal}
+                onClose={() => setShowPinModal(false)}
+                roomId={selectedRoom}
+                roomNumber={rooms.find((r) => r.id === selectedRoom)?.number || "Your Room"}
+                onSuccess={(newToken) => {
+                    setShowPinModal(false);
+                    void handleSubmit(newToken);
+                }}
+            />
         </div>
     );
 }

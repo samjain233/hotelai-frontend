@@ -44,6 +44,10 @@ import { IndianVegMark, IndianNonVegMark } from "./GuestMenuDietIcons";
 import { GuestMenuItemInsights } from "./GuestMenuItemInsights";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 import { AnimatedOverlays } from "./GuestMenuAnimated";
+import { StayPinModal } from "@/components/guest/StayPinModal";
+import { getStayToken, clearStayToken } from "@/lib/staySession";
+import { toast } from "sonner";
+
 
 const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
     { value: "default", label: "Menu order" },
@@ -87,6 +91,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const [sortBy, setSortBy] = useState<GuestMenuSort>("default");
     const [cartAnimKey, setCartAnimKey] = useState(0);
     const [showRoomModal, setShowRoomModal] = useState(false);
+    const [showPinModal, setShowPinModal] = useState(false);
     const [pastOrders, setPastOrders] = useState<Order[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [guestLogoFailed, setGuestLogoFailed] = useState(false);
@@ -386,7 +391,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             setShowRoomModal(true);
             return;
         }
-        placeOrder();
+        const existingToken = getStayToken(resolvedRoomId);
+        if (!existingToken) {
+            setShowPinModal(true);
+            return;
+        }
+        void placeOrder(existingToken);
     }
 
     /** Room modal primary action: persist room when closed; submit when open. */
@@ -394,14 +404,25 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         if (!resolvedRoomId) return;
         setShowRoomModal(false);
         if (isOpen) {
-            void placeOrder();
+            const existingToken = getStayToken(resolvedRoomId);
+            if (!existingToken) {
+                setShowPinModal(true);
+                return;
+            }
+            void placeOrder(existingToken);
             return;
         }
         setShowCart(true);
     }
 
-    async function placeOrder() {
+    async function placeOrder(stayTokenOverride?: string) {
         if (!isOpen || !resolvedRoomId) return;
+        const token = stayTokenOverride || getStayToken(resolvedRoomId);
+        if (!token) {
+            setShowPinModal(true);
+            return;
+        }
+
         setPlacing(true);
         try {
             const result = await api.placeOrder({
@@ -409,18 +430,33 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 items: cart.map((ci) => ({ itemId: ci.item.id, quantity: ci.quantity })),
                 notes: notes || undefined,
                 guestName: guestName || undefined,
+                stayToken: token,
             });
             setOrder(result);
             setCart([]);
             setShowCart(false);
             setShowRoomModal(false);
+            setShowPinModal(false);
             loadPastOrders();
+            toast.success(`Order #${result.orderNumber} placed successfully!`);
         } catch (err: unknown) {
-            alert(err instanceof Error ? err.message : "Failed to place order");
+            const msg = err instanceof Error ? err.message : "Failed to place order";
+            if (
+                msg.toLowerCase().includes("pin") ||
+                msg.toLowerCase().includes("vacant") ||
+                msg.toLowerCase().includes("checked out") ||
+                msg.toLowerCase().includes("stay") ||
+                msg.toLowerCase().includes("session")
+            ) {
+                clearStayToken(resolvedRoomId);
+                setShowPinModal(true);
+            }
+            toast.error(msg);
         } finally {
             setPlacing(false);
         }
     }
+
 
     function scrollToCategory(categoryId: string) {
         scrollSpySuspended.current = true;
@@ -1223,6 +1259,18 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     Menu
                 </button>
             ) : null}
+
+            {/* In-Room Stay PIN Verification Modal */}
+            <StayPinModal
+                isOpen={showPinModal}
+                onClose={() => setShowPinModal(false)}
+                roomId={resolvedRoomId}
+                roomNumber={roomDisplayName || "Your Room"}
+                onSuccess={(newToken) => {
+                    setShowPinModal(false);
+                    void placeOrder(newToken);
+                }}
+            />
         </div>
     );
 }
