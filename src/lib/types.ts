@@ -238,4 +238,5 @@ export type MenuTag = {
     id: number;
     name: string;
     type: "ALLERGEN" | "DIETARY";
+    hotelId?: string | null;
 };

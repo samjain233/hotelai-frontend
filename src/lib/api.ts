@@ -273,6 +273,34 @@ class ApiClient {
         return this.request<MenuTag[]>('/tags');
     }
 
+    async createTag(data: {
+        name: string;
+        type: 'ALLERGEN' | 'DIETARY';
+    }): Promise<MenuTag> {
+        return this.request<MenuTag>('/tags', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async updateTag(
+        id: number,
+        data: {
+            name: string;
+        },
+    ): Promise<MenuTag> {
+        return this.request<MenuTag>(`/tags/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteTag(id: number): Promise<void> {
+        return this.request<void>(`/tags/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getMenuItems(): Promise<MenuItem[]> {
         return this.request('/admin/menu');
     }

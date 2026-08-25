@@ -92,7 +92,6 @@ const SAMPLE_BULK_JSON = JSON.stringify(
 );
 
 export default function MenuPage() {
-     console.log("🔥🔥🔥 MENU PAGE IS RUNNING");
     const { data: categories = [], isLoading: categoriesLoading } = useCategories();
     const { data: items = [], isLoading: itemsLoading } = useMenuItems();
     const [tagsLoading, setTagsLoading] = useState(false);
@@ -100,6 +99,11 @@ export default function MenuPage() {
     const [tags, setTags] = useState<MenuTag[]>([]);
     const allergenTags = tags.filter((tag) => tag.type === "ALLERGEN");
     const dietaryTags = tags.filter((tag) => tag.type === "DIETARY");
+    const [tagModalOpen, setTagModalOpen] = useState(false);
+    const [editingTag, setEditingTag] = useState<MenuTag | null>(null);
+    const [tagName, setTagName] = useState("");
+    const [tagType, setTagType] = useState<"ALLERGEN" | "DIETARY">("ALLERGEN");
+    const [tagSaving, setTagSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<"items" | "categories">("items");
     const [search, setSearch] = useState("");
     const [showItemModal, setShowItemModal] = useState(false);
@@ -141,7 +145,7 @@ export default function MenuPage() {
     const [extractingMenuPhoto, setExtractingMenuPhoto] = useState(false);
     const [bulkImportError, setBulkImportError] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{
-        type: "item" | "category";
+        type: "item" | "category" | "tag";
         id: string;
         name: string;
     } | null>(null);
@@ -198,8 +202,16 @@ export default function MenuPage() {
         try {
             if (deleteConfirm.type === "item") {
                 await api.deleteMenuItem(deleteConfirm.id);
-            } else {
+            } else if (deleteConfirm.type === "category") {
                 await api.deleteCategory(deleteConfirm.id);
+            } else {
+                await api.deleteTag(Number(deleteConfirm.id));
+
+                setTags((prev) =>
+                    prev.filter(
+                        (tag) => String(tag.id) !== deleteConfirm.id,
+                    ),
+                );
             }
             invalidateMenuCache();
             closeDeleteModal();
@@ -282,6 +294,83 @@ export default function MenuPage() {
         });
         setShowItemModal(true);
     }
+
+    function openCreateTag(type: "ALLERGEN" | "DIETARY") {
+        setEditingTag(null);
+        setTagName("");
+        setTagType(type);
+        setTagModalOpen(true);
+    }
+
+    function openEditTag(tag: MenuTag) {
+        if (!tag.hotelId) {
+            return;
+        }
+
+        setEditingTag(tag);
+        setTagName(tag.name);
+        setTagType(tag.type);
+        setTagModalOpen(true);
+    }
+
+    async function saveTag() {
+        const name = tagName.trim();
+
+        if (!name) {
+            toast.error("Tag name is required");
+            return;
+        }
+
+        setTagSaving(true);
+
+        try {
+            if (editingTag) {
+                const updated = await api.updateTag(editingTag.id, {
+                    name,
+                });
+
+                setTags((prev) =>
+                    prev.map((tag) =>
+                        tag.id === updated.id ? updated : tag,
+                    ),
+                );
+
+                toast.success("Tag updated");
+            } else {
+                const created = await api.createTag({
+                    name,
+                    type: tagType,
+                });
+
+                setTags((prev) => [...prev, created]);
+
+                toast.success("Tag created");
+            }
+
+            setTagModalOpen(false);
+        } catch (err) {
+            console.error("Failed to save tag:", err);
+            toast.error("Failed to save tag");
+        } finally {
+            setTagSaving(false);
+        }
+    }
+
+    function openDeleteTagModal(tag: MenuTag) {
+        if (!tag.hotelId) {
+            return;
+        }
+
+        setDeleteConfirm({
+            type: "tag",
+            id: String(tag.id),
+            name: tag.name,
+        });
+
+        setDeleteInput("");
+        setDeleteError(null);
+    }
+
     function openEditItem(item: MenuItem) {
         setEditingItem(item);
         setItemForm({
@@ -947,32 +1036,69 @@ export default function MenuPage() {
                                                 <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
                                                     {allergenTags.map((tag) => {
                                                         const on = itemForm.allergenTagIds.includes(tag.id);
+                                                        const isCustom = Boolean(tag.hotelId);
 
                                                         return (
-                                                            <button
-                                                                key={tag.id}
-                                                                type="button"
-                                                                aria-pressed={on}
-                                                                onClick={() =>
-                                                                    setItemForm({
-                                                                        ...itemForm,
-                                                                        allergenTagIds: toggleNumberList(
-                                                                            itemForm.allergenTagIds,
-                                                                            tag.id
-                                                                        ),
-                                                                    })
-                                                                }
-                                                                className={cn(
-                                                                    "rounded-md border px-2 py-1 text-[10px] font-medium uppercase tracking-wide",
-                                                                    on
-                                                                        ? "border-rose-500/50 bg-rose-500/15 text-rose-100"
-                                                                        : "border-white/10 text-muted-foreground hover:border-white/25",
+                                                            <div key={tag.id} className="group relative">
+                                                                <button
+                                                                    type="button"
+                                                                    aria-pressed={on}
+                                                                    onClick={() =>
+                                                                        setItemForm({
+                                                                            ...itemForm,
+                                                                            allergenTagIds: toggleNumberList(
+                                                                                itemForm.allergenTagIds,
+                                                                                tag.id,
+                                                                            ),
+                                                                        })
+                                                                    }
+                                                                    className={cn(
+                                                                        "rounded-md border px-2 py-1 text-[10px] font-medium uppercase tracking-wide",
+                                                                        on
+                                                                            ? "border-rose-500/50 bg-rose-500/15 text-rose-100"
+                                                                            : "border-white/10 text-muted-foreground hover:border-white/25",
+                                                                    )}
+                                                                >
+                                                                    {tag.name.replace(/_/g, " ")}
+                                                                </button>
+
+                                                                {isCustom && (
+                                                                    <div className="absolute -right-1 -top-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                openEditTag(tag);
+                                                                            }}
+                                                                            aria-label={`Edit ${tag.name}`}
+                                                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm hover:bg-secondary hover:text-foreground"
+                                                                        >
+                                                                            <Edit2 className="h-3.5 w-3.5" />
+                                                                        </button>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                openDeleteTagModal(tag);
+                                                                            }}
+                                                                            aria-label={`Delete ${tag.name}`}
+                                                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-destructive/30 bg-card text-destructive shadow-sm hover:bg-destructive hover:text-destructive-foreground"
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </button>
+                                                                    </div>
                                                                 )}
-                                                            >
-                                                                {tag.name.replace(/_/g, " ")}
-                                                            </button>
+                                                            </div>
                                                         );
                                                     })}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openCreateTag("ALLERGEN")}
+                                                        className="rounded-md border border-dashed border-white/20 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:border-white/40 hover:text-foreground"
+                                                    >
+                                                        + Add allergen
+                                                    </button>
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
@@ -983,32 +1109,69 @@ export default function MenuPage() {
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {dietaryTags.map((tag) => {
                                                         const on = itemForm.dietaryTagIds.includes(tag.id);
+                                                        const isCustom = Boolean(tag.hotelId);
 
                                                         return (
-                                                            <button
-                                                                key={tag.id}
-                                                                type="button"
-                                                                aria-pressed={on}
-                                                                onClick={() =>
-                                                                    setItemForm({
-                                                                        ...itemForm,
-                                                                        dietaryTagIds: toggleNumberList(
-                                                                            itemForm.dietaryTagIds,
-                                                                            tag.id
-                                                                        ),
-                                                                    })
-                                                                }
-                                                                className={cn(
-                                                                    "rounded-md border px-2 py-1 text-[10px] font-medium",
-                                                                    on
-                                                                        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100"
-                                                                        : "border-white/10 text-muted-foreground hover:border-white/25",
+                                                            <div key={tag.id} className="group relative">
+                                                                <button
+                                                                    type="button"
+                                                                    aria-pressed={on}
+                                                                    onClick={() =>
+                                                                        setItemForm({
+                                                                            ...itemForm,
+                                                                            dietaryTagIds: toggleNumberList(
+                                                                                itemForm.dietaryTagIds,
+                                                                                tag.id,
+                                                                            ),
+                                                                        })
+                                                                    }
+                                                                    className={cn(
+                                                                        "rounded-md border px-2 py-1 text-[10px] font-medium",
+                                                                        on
+                                                                            ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100"
+                                                                            : "border-white/10 text-muted-foreground hover:border-white/25",
+                                                                    )}
+                                                                >
+                                                                    {tag.name.replace(/_/g, " ")}
+                                                                </button>
+
+                                                                {isCustom && (
+                                                                    <div className="absolute -right-1 -top-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                openEditTag(tag);
+                                                                            }}
+                                                                            aria-label={`Edit ${tag.name}`}
+                                                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm hover:bg-secondary hover:text-foreground"
+                                                                        >
+                                                                            <Edit2 className="h-3.5 w-3.5" />
+                                                                        </button>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                openDeleteTagModal(tag);
+                                                                            }}
+                                                                            aria-label={`Delete ${tag.name}`}
+                                                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-destructive/30 bg-card text-destructive shadow-sm hover:bg-destructive hover:text-destructive-foreground"
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </button>
+                                                                    </div>
                                                                 )}
-                                                            >
-                                                                {tag.name.replace(/_/g, " ")}
-                                                            </button>
+                                                            </div>
                                                         );
                                                     })}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openCreateTag("DIETARY")}
+                                                        className="rounded-md border border-dashed border-white/20 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:border-white/40 hover:text-foreground"
+                                                    >
+                                                        + Add dietary tag
+                                                    </button>
                                                 </div>
                                             </div>
                                             <div className="grid gap-3 sm:grid-cols-2">
@@ -1443,19 +1606,38 @@ export default function MenuPage() {
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <h3 id="delete-confirm-title" className="text-lg font-semibold text-foreground">
-                                            {deleteConfirm.type === "item" ? "Delete menu item?" : "Delete category?"}
+                                            {deleteConfirm.type === "item"
+                                            ? "Delete menu item?"
+                                            : deleteConfirm.type === "category"
+                                                ? "Delete category?"
+                                                : "Delete tag?"}
                                         </h3>
                                         <p id="delete-confirm-desc" className="mt-1 text-sm text-muted-foreground">
                                             {deleteConfirm.type === "item" ? (
                                                 <>
-                                                    <span className="font-medium text-foreground">&ldquo;{deleteConfirm.name}&rdquo;</span> will be
-                                                    removed from your menu. This cannot be undone.
+                                                    <span className="font-medium text-foreground">
+                                                        &ldquo;{deleteConfirm.name}&rdquo;
+                                                    </span>{" "}
+                                                    will be removed from your menu. This cannot be undone.
+                                                </>
+                                            ) : deleteConfirm.type === "category" ? (
+                                                <>
+                                                    <span className="font-medium text-foreground">
+                                                        &ldquo;{deleteConfirm.name}&rdquo;
+                                                    </span>{" "}
+                                                    and{" "}
+                                                    <strong className="text-foreground">
+                                                        all items in this category
+                                                    </strong>{" "}
+                                                    will be permanently removed. This cannot be undone.
                                                 </>
                                             ) : (
                                                 <>
-                                                    <span className="font-medium text-foreground">&ldquo;{deleteConfirm.name}&rdquo;</span> and{" "}
-                                                    <strong className="text-foreground">all items in this category</strong> will be permanently
-                                                    removed. This cannot be undone.
+                                                    <span className="font-medium text-foreground">
+                                                        &ldquo;{deleteConfirm.name}&rdquo;
+                                                    </span>{" "}
+                                                    will be permanently removed from your custom tags. This
+                                                    cannot be undone.
                                                 </>
                                             )}
                                         </p>
@@ -1521,6 +1703,96 @@ export default function MenuPage() {
                                     >
                                         <Trash2 className="w-4 h-4 mr-2" />
                                         Delete
+                                    </Button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Tag create / edit modal */}
+            <AnimatePresence>
+                {tagModalOpen && (
+                    <div
+                        className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-[env(safe-area-inset-bottom,0px)] bg-black/70 backdrop-blur-md overflow-y-auto"
+                        onClick={() => {
+                            if (!tagSaving) {
+                                setTagModalOpen(false);
+                            }
+                        }}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl"
+                        >
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                                <h3 className="text-lg font-semibold text-foreground">
+                                    {editingTag
+                                        ? "Edit tag"
+                                        : `Add ${
+                                              tagType === "ALLERGEN"
+                                                  ? "allergen"
+                                                  : "dietary tag"
+                                          }`}
+                                </h3>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!tagSaving) {
+                                            setTagModalOpen(false);
+                                        }
+                                    }}
+                                    className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
+                                    aria-label="Close"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">
+                                        Name
+                                    </label>
+
+                                    <Input
+                                        value={tagName}
+                                        onChange={(e) => setTagName(e.target.value)}
+                                        placeholder="Enter tag name"
+                                        className="h-11"
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 mt-6">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1 h-11"
+                                        onClick={() => {
+                                            if (!tagSaving) {
+                                                setTagModalOpen(false);
+                                            }
+                                        }}
+                                        disabled={tagSaving}
+                                    >
+                                        Cancel
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        className="flex-1 h-11"
+                                        loading={tagSaving}
+                                        disabled={!tagName.trim()}
+                                        onClick={() => void saveTag()}
+                                    >
+                                        {editingTag ? "Update" : "Create"}
                                     </Button>
                                 </div>
                             </div>
