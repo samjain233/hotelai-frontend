@@ -41,7 +41,7 @@ import { toast } from "sonner";
 
 
 const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] = [
-    { label: "Room Issue sanchit", Icon: Building2, desc: "AC, plumbing, electricity" },
+    { label: "Room Issue", Icon: Building2, desc: "AC, plumbing, electricity" },
     { label: "Food Quality", Icon: UtensilsCrossed, desc: "Taste, temperature, hygiene" },
     { label: "Staff Behavior", Icon: UserRound, desc: "Rudeness, slow service" },
     { label: "Cleanliness", Icon: Brush, desc: "Room, bathroom, lobby" },
@@ -319,16 +319,14 @@ export default function GuestServicesClient() {
                                                 type="button"
                                                 onClick={() => setComplaintCategory(cat.label)}
                                                 aria-pressed={isSel}
-                                                className={`text-left rounded-xl border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
-                                                    isSel
-                                                        ? "border-red-400 bg-red-500/15 shadow-[0_0_0_1px_rgba(248,113,113,0.35)]"
-                                                        : "border-white/10 bg-white/5 hover:border-white/25"
-                                                }`}
+                                                className={`text-left rounded-xl border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${isSel
+                                                    ? "border-red-400 bg-red-500/15 shadow-[0_0_0_1px_rgba(248,113,113,0.35)]"
+                                                    : "border-white/10 bg-white/5 hover:border-white/25"
+                                                    }`}
                                             >
                                                 <div
-                                                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                                                        isSel ? "bg-red-500/25 text-red-300" : "bg-white/10 text-white/70"
-                                                    }`}
+                                                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${isSel ? "bg-red-500/25 text-red-300" : "bg-white/10 text-white/70"
+                                                        }`}
                                                 >
                                                     <CatIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
                                                 </div>
@@ -389,11 +387,10 @@ export default function GuestServicesClient() {
                                                 type="button"
                                                 onClick={() => setRoomServiceItem(item.category)}
                                                 aria-pressed={roomServiceItem === item.category}
-                                                className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
-                                                    roomServiceItem === item.category
-                                                        ? "border-blue-400 bg-blue-500/15 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]"
-                                                        : "border-white/10 bg-white/5 hover:border-white/25"
-                                                }`}
+                                                className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${roomServiceItem === item.category
+                                                    ? "border-blue-400 bg-blue-500/15 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]"
+                                                    : "border-white/10 bg-white/5 hover:border-white/25"
+                                                    }`}
                                             >
                                                 <Icon className={`h-6 w-6 shrink-0 ${roomServiceItem === item.category ? "text-blue-300" : "text-white/60"}`} />
                                                 <span className="text-xs text-center font-medium">{item.label}</span>
@@ -424,11 +421,10 @@ export default function GuestServicesClient() {
                                                 type="button"
                                                 onClick={() => setHkCategory(item.label)}
                                                 aria-pressed={hkCategory === item.label}
-                                                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
-                                                    hkCategory === item.label
-                                                        ? "border-emerald-400 bg-emerald-500/15 shadow-[0_0_0_1px_rgba(52,211,153,0.35)]"
-                                                        : "border-white/10 bg-white/5 hover:border-white/25"
-                                                }`}
+                                                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${hkCategory === item.label
+                                                    ? "border-emerald-400 bg-emerald-500/15 shadow-[0_0_0_1px_rgba(52,211,153,0.35)]"
+                                                    : "border-white/10 bg-white/5 hover:border-white/25"
+                                                    }`}
                                             >
                                                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${hkCategory === item.label ? "bg-emerald-500/20" : "bg-white/5"
                                                     }`}>
@@ -468,10 +464,10 @@ export default function GuestServicesClient() {
                     onClick={() => void handleSubmit()}
                     disabled={submitting || submitted || !selectedRoom}
                     className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold shadow-lg shadow-black/30 transition-all ${submitted
-                            ? "bg-emerald-500 text-white"
-                            : !selectedRoom
-                                ? "cursor-not-allowed bg-white/10 text-white/35"
-                                : "bg-white text-black hover:bg-white/90 disabled:opacity-50"
+                        ? "bg-emerald-500 text-white"
+                        : !selectedRoom
+                            ? "cursor-not-allowed bg-white/10 text-white/35"
+                            : "bg-white text-black hover:bg-white/90 disabled:opacity-50"
                         }`}
                 >
                     {submitted ? (
@@ -518,15 +514,14 @@ export default function GuestServicesClient() {
             <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#0a0a0a]/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-xl">
                 <div className="mx-auto flex max-w-lg">
                     <Link
-                        href={`/menu/${hotelSlug}${
-                            selectedRoom
-                                ? `?room=${encodeURIComponent(
-                                      rooms.find((r) => r.id === selectedRoom)?.scanCode ?? selectedRoom,
-                                  )}`
-                                : roomFromUrl
-                                  ? `?room=${encodeURIComponent(roomFromUrl)}`
-                                  : ""
-                        }`}
+                        href={`/menu/${hotelSlug}${selectedRoom
+                            ? `?room=${encodeURIComponent(
+                                rooms.find((r) => r.id === selectedRoom)?.scanCode ?? selectedRoom,
+                            )}`
+                            : roomFromUrl
+                                ? `?room=${encodeURIComponent(roomFromUrl)}`
+                                : ""
+                            }`}
                         className="flex flex-1 flex-col items-center gap-0.5 py-3 text-white/45 transition-colors hover:text-white/85"
                     >
                         <Utensils className="h-5 w-5 shrink-0" aria-hidden />
