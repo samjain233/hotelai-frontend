@@ -41,7 +41,7 @@ import { toast } from "sonner";
 
 
 const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] = [
-    { label: "Room Issue", Icon: Building2, desc: "AC, plumbing, electricity" },
+    { label: "Room Issue sanchit", Icon: Building2, desc: "AC, plumbing, electricity" },
     { label: "Food Quality", Icon: UtensilsCrossed, desc: "Taste, temperature, hygiene" },
     { label: "Staff Behavior", Icon: UserRound, desc: "Rudeness, slow service" },
     { label: "Cleanliness", Icon: Brush, desc: "Room, bathroom, lobby" },
