@@ -444,8 +444,22 @@ class ApiClient {
         return this.request(`/admin/rooms/${id}`, { method: 'DELETE' });
     }
 
-    async checkoutRoom(id: string): Promise<{ message: string }> {
+    async checkoutRoom(id: string): Promise<{ message: string; room?: Room }> {
         return this.request(`/admin/rooms/${id}/checkout`, { method: 'POST' });
+    }
+
+    async checkinRoom(id: string, pin?: string): Promise<{ message: string; room: Room; pin: string }> {
+        return this.request(`/admin/rooms/${id}/checkin`, {
+            method: 'POST',
+            body: JSON.stringify({ pin }),
+        });
+    }
+
+    async regenerateRoomPin(id: string, pin?: string): Promise<{ message: string; room: Room; pin: string }> {
+        return this.request(`/admin/rooms/${id}/regenerate-pin`, {
+            method: 'POST',
+            body: JSON.stringify({ pin }),
+        });
     }
 
     async getRoomQr(id: string): Promise<RoomQr> {
@@ -481,12 +495,34 @@ class ApiClient {
         return this.request<import('./types').PublicMenuFullData>(`/guest/menu/${hotelSlug}/full`);
     }
 
+    async verifyGuestRoomPin(roomId: string, pin: string): Promise<{
+        success: boolean;
+        stayToken: string;
+        roomNumber: string;
+        hotelSlug?: string;
+    }> {
+        return this.request(`/guest/rooms/${roomId}/verify-pin`, {
+            method: 'POST',
+            body: JSON.stringify({ pin }),
+        });
+    }
+
+    async getGuestRoomStatus(roomId: string): Promise<{
+        id: string;
+        number: string;
+        isOccupied: boolean;
+    }> {
+        return this.request(`/guest/rooms/${roomId}/status`);
+    }
+
     async placeOrder(data: {
         roomId: string;
         items: { itemId: string; quantity: number }[];
         notes?: string;
         guestName?: string;
         guestPhone?: string;
+        stayToken?: string;
+        pin?: string;
     }): Promise<Order> {
         return this.request<Order>('/guest/orders', {
             method: 'POST',
@@ -516,6 +552,8 @@ class ApiClient {
         roomId: string;
         guestName?: string;
         guestPhone?: string;
+        stayToken?: string;
+        pin?: string;
     }): Promise<ServiceRequest> {
         return this.request<ServiceRequest>('/guest/service-requests', {
             method: 'POST',
