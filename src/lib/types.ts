@@ -126,8 +126,8 @@ export interface MenuItem {
     available?: boolean;
     dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
     spiceLevel?: 'NONE' | 'MILD' | 'MEDIUM' | 'HOT';
-    allergenCodes?: string[];
-    dietaryTags?: string[];
+    allergens?: MenuTag[];
+    dietaryTags?: MenuTag[];
     calories?: number | null;
     portionLabel?: string | null;
     chefRecommended?: boolean;
@@ -236,3 +236,10 @@ export interface ServiceRequest {
     createdAt: string;
     updatedAt: string;
 }
+
+export type MenuTag = {
+    id: number;
+    name: string;
+    type: "ALLERGEN" | "DIETARY";
+    hotelId?: string | null;
+};
