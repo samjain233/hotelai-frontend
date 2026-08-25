@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/api";
-import { BulkMenuImportRow, MenuItem, type MenuCategory } from "@/lib/types";
+import { BulkMenuImportRow, MenuItem, MenuTag, type MenuCategory } from "@/lib/types";
 import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwrApi";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
@@ -40,10 +40,11 @@ import {
     Flame,
     Wine,
 } from "lucide-react";
-import { MENU_ALLERGEN_CODES, MENU_DIETARY_TAG_CODES } from "@/lib/menuItemInsights";
 
-function toggleStrList(list: string[], code: string): string[] {
-    return list.includes(code) ? list.filter((c) => c !== code) : [...list, code];
+function toggleNumberList(list: number[], id: number): number[] {
+    return list.includes(id)
+        ? list.filter((value) => value !== id)
+        : [...list, id];
 }
 
 /** ISO weekday 1 = Monday … 7 = Sunday (matches backend category schedule). */
@@ -91,9 +92,14 @@ const SAMPLE_BULK_JSON = JSON.stringify(
 );
 
 export default function MenuPage() {
+     console.log("🔥🔥🔥 MENU PAGE IS RUNNING");
     const { data: categories = [], isLoading: categoriesLoading } = useCategories();
     const { data: items = [], isLoading: itemsLoading } = useMenuItems();
-    const loading = categoriesLoading || itemsLoading;
+    const [tagsLoading, setTagsLoading] = useState(false);
+    const loading = categoriesLoading || itemsLoading || tagsLoading;
+    const [tags, setTags] = useState<MenuTag[]>([]);
+    const allergenTags = tags.filter((tag) => tag.type === "ALLERGEN");
+    const dietaryTags = tags.filter((tag) => tag.type === "DIETARY");
     const [activeTab, setActiveTab] = useState<"items" | "categories">("items");
     const [search, setSearch] = useState("");
     const [showItemModal, setShowItemModal] = useState(false);
@@ -109,8 +115,8 @@ export default function MenuPage() {
         dietaryPreference: "NONE",
         available: true,
         spiceLevel: "NONE" as "NONE" | "MILD" | "MEDIUM" | "HOT",
-        allergenCodes: [] as string[],
-        dietaryTags: [] as string[],
+        allergenTagIds: [] as number[],
+        dietaryTagIds: [] as number[],
         calories: "",
         portionLabel: "",
         chefRecommended: false,
@@ -147,6 +153,25 @@ export default function MenuPage() {
 
     const deletePhraseMatches = deleteInput.trim().toLowerCase() === DELETE_CONFIRM_WORD;
 
+        useEffect(() => {
+        async function loadTags() {
+            setTagsLoading(true);
+
+            try {
+                const result = await api.getTags();
+                console.log("🔥 TAGS FROM /tags:", result);
+                setTags(result);
+            } catch (err) {
+                console.error("Failed to load menu tags:", err);
+                toast.error("Failed to load allergens and dietary tags");
+            } finally {
+                setTagsLoading(false);
+            }
+        }
+
+        void loadTags();
+    }, []);
+    
     function closeDeleteModal() {
         setDeleteConfirm(null);
         setDeleteInput("");
@@ -248,8 +273,8 @@ export default function MenuPage() {
             dietaryPreference: "NONE",
             available: true,
             spiceLevel: "NONE",
-            allergenCodes: [],
-            dietaryTags: [],
+            allergenTagIds: [],
+            dietaryTagIds: [],
             calories: "",
             portionLabel: "",
             chefRecommended: false,
@@ -268,8 +293,8 @@ export default function MenuPage() {
             dietaryPreference: item.dietaryPreference || "NONE",
             available: item.available ?? true,
             spiceLevel: item.spiceLevel ?? "NONE",
-            allergenCodes: [...(item.allergenCodes ?? [])],
-            dietaryTags: [...(item.dietaryTags ?? [])],
+            allergenTagIds: (item.allergens ?? []).map((tag) => tag.id),
+            dietaryTagIds: (item.dietaryTags ?? []).map((tag) => tag.id),
             calories: item.calories != null && item.calories > 0 ? String(item.calories) : "",
             portionLabel: item.portionLabel ?? "",
             chefRecommended: Boolean(item.chefRecommended),
@@ -304,8 +329,8 @@ export default function MenuPage() {
                 dietaryPreference: itemForm.dietaryPreference,
                 available: itemForm.available,
                 spiceLevel: itemForm.spiceLevel,
-                allergenCodes: itemForm.allergenCodes,
-                dietaryTags: itemForm.dietaryTags,
+                allergenTagIds: itemForm.allergenTagIds,
+                dietaryTagIds: itemForm.dietaryTagIds,
                 ...(calories !== undefined ? { calories } : {}),
                 portionLabel: itemForm.portionLabel.trim() || (editingItem ? null : undefined),
                 chefRecommended: itemForm.chefRecommended,
@@ -918,18 +943,23 @@ export default function MenuPage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium text-foreground block">Allergens</label>
+
                                                 <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
-                                                    {MENU_ALLERGEN_CODES.map((code) => {
-                                                        const on = itemForm.allergenCodes.includes(code);
+                                                    {allergenTags.map((tag) => {
+                                                        const on = itemForm.allergenTagIds.includes(tag.id);
+
                                                         return (
                                                             <button
-                                                                key={code}
+                                                                key={tag.id}
                                                                 type="button"
                                                                 aria-pressed={on}
                                                                 onClick={() =>
                                                                     setItemForm({
                                                                         ...itemForm,
-                                                                        allergenCodes: toggleStrList(itemForm.allergenCodes, code),
+                                                                        allergenTagIds: toggleNumberList(
+                                                                            itemForm.allergenTagIds,
+                                                                            tag.id
+                                                                        ),
                                                                     })
                                                                 }
                                                                 className={cn(
@@ -939,26 +969,33 @@ export default function MenuPage() {
                                                                         : "border-white/10 text-muted-foreground hover:border-white/25",
                                                                 )}
                                                             >
-                                                                {code.replace(/_/g, " ")}
+                                                                {tag.name.replace(/_/g, " ")}
                                                             </button>
                                                         );
                                                     })}
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-sm font-medium text-foreground block">Dietary tags</label>
+                                                <label className="text-sm font-medium text-foreground block">
+                                                    Dietary tags
+                                                </label>
+
                                                 <div className="flex flex-wrap gap-1.5">
-                                                    {MENU_DIETARY_TAG_CODES.map((code) => {
-                                                        const on = itemForm.dietaryTags.includes(code);
+                                                    {dietaryTags.map((tag) => {
+                                                        const on = itemForm.dietaryTagIds.includes(tag.id);
+
                                                         return (
                                                             <button
-                                                                key={code}
+                                                                key={tag.id}
                                                                 type="button"
                                                                 aria-pressed={on}
                                                                 onClick={() =>
                                                                     setItemForm({
                                                                         ...itemForm,
-                                                                        dietaryTags: toggleStrList(itemForm.dietaryTags, code),
+                                                                        dietaryTagIds: toggleNumberList(
+                                                                            itemForm.dietaryTagIds,
+                                                                            tag.id
+                                                                        ),
                                                                     })
                                                                 }
                                                                 className={cn(
@@ -968,7 +1005,7 @@ export default function MenuPage() {
                                                                         : "border-white/10 text-muted-foreground hover:border-white/25",
                                                                 )}
                                                             >
-                                                                {code.replace(/_/g, " ")}
+                                                                {tag.name.replace(/_/g, " ")}
                                                             </button>
                                                         );
                                                     })}

@@ -8,6 +8,7 @@ import {
     BulkMenuImportErrorRow,
     BulkMenuImportRow,
     MenuItem,
+    MenuTag,
     Room,
     RoomQr,
     Order,
@@ -268,6 +269,10 @@ class ApiClient {
 
     // ─── Menu Items ───────────────────────────────────────
 
+    async getTags(): Promise<MenuTag[]> {
+        return this.request<MenuTag[]>('/tags');
+    }
+
     async getMenuItems(): Promise<MenuItem[]> {
         return this.request('/admin/menu');
     }
@@ -296,8 +301,8 @@ class ApiClient {
         dietaryPreference?: string;
         available?: boolean;
         spiceLevel?: string;
-        allergenCodes?: string[];
-        dietaryTags?: string[];
+        allergenTagIds?: number[];
+        dietaryTagIds?: number[];
         calories?: number | null;
         portionLabel?: string | null;
         chefRecommended?: boolean;
