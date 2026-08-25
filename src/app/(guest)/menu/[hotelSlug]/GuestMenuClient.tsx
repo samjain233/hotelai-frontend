@@ -150,22 +150,37 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         return applySortToCategories(afterSearch, sortBy);
     }, [dietFilteredCategories, searchQuery, searchNormalized, sortBy]);
 
+    const searchResultCount = useMemo(() => flattenMenuItems(filteredCategories).length, [filteredCategories]);
+    const isSearchUnmatched = searchNormalized.length > 0 && searchResultCount === 0;
+    const isDietUnmatched = dietFilters.length > 0 && searchResultCount === 0 && !isSearchUnmatched;
+
+    const displayCategories = useMemo(() => {
+        if (searchResultCount > 0) {
+            return filteredCategories;
+        }
+        const fallback = applySortToCategories(dietFilteredCategories, sortBy);
+        if (flattenMenuItems(fallback).length > 0) {
+            return fallback;
+        }
+        return applySortToCategories(categories, sortBy);
+    }, [searchResultCount, filteredCategories, dietFilteredCategories, categories, sortBy]);
+
     const didYouMeanItem = useMemo(() => {
         if (searchNormalized.length < 3) return null;
-        if (flattenMenuItems(filteredCategories).length > 0) return null;
-        const pool = flattenMenuItems(dietFilteredCategories);
+        if (searchResultCount > 0) return null;
+        const pool = flattenMenuItems(dietFilteredCategories.length > 0 ? dietFilteredCategories : categories);
         return findDidYouMeanItem(searchQuery, pool);
-    }, [searchQuery, searchNormalized, filteredCategories, dietFilteredCategories]);
+    }, [searchQuery, searchNormalized, searchResultCount, dietFilteredCategories, categories]);
 
-    /** Categories for scroll-spy + bottom “Menu” sheet (same as filtered list). */
-    const chipCategories = filteredCategories;
+    /** Categories for scroll-spy + bottom “Menu” sheet (same as displayed list). */
+    const chipCategories = displayCategories;
 
     useEffect(() => {
-        if (filteredCategories.length === 0) return;
-        if (!filteredCategories.some((c) => c.id === activeCategory)) {
-            setActiveCategory(filteredCategories[0].id);
+        if (displayCategories.length === 0) return;
+        if (!displayCategories.some((c) => c.id === activeCategory)) {
+            setActiveCategory(displayCategories[0].id);
         }
-    }, [filteredCategories, activeCategory]);
+    }, [displayCategories, activeCategory]);
 
     function toggleDietFilter(key: GuestDietFilterKey) {
         setDietFilters((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -182,11 +197,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     const activeSortLabel = SORT_MENU_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Sort";
 
-    const resultCount = useMemo(() => flattenMenuItems(filteredCategories).length, [filteredCategories]);
+    const resultCount = searchResultCount;
     const hasActiveFilters = searchNormalized.length > 0 || dietFilters.length > 0 || sortBy !== "default";
     /** Sort or diet chosen from menu — show strip under search + adjust scroll offsets. */
     const menuFiltersActive = sortBy !== "default" || dietFilters.length > 0;
-    const showNoResultsPanel = !loading && !error && categories.length > 0 && resultCount === 0;
 
     const chipCategoryIdsKey = useMemo(() => chipCategories.map((c) => c.id).join("|"), [chipCategories]);
 
@@ -956,7 +970,73 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         {sortBy !== "default" ? <span> · sorted</span> : null}
                     </div>
                 )}
-                {filteredCategories.map((cat, catIndex) => (
+                {isSearchUnmatched && (
+                    <div className="rounded-2xl border border-[var(--guest-accent-25)] bg-[var(--guest-accent-12)] p-4 sm:p-5 transition-all animate-fade-in-up">
+                        <div className="flex items-start gap-3.5">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--guest-accent-20)] text-[var(--guest-accent)]">
+                                <Utensils className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-sm sm:text-base font-bold text-[var(--guest-text)]">
+                                    Item not available
+                                </h3>
+                                <p className="mt-1 text-xs sm:text-sm text-[var(--guest-muted)] leading-relaxed">
+                                    The food item &ldquo;<span className="font-semibold text-[var(--guest-text)]">{searchQuery.trim()}</span>&rdquo; is currently not available. You can try exploring our other delicious dishes below!
+                                </p>
+                                {didYouMeanItem && (
+                                    <div className="mt-2.5 flex items-center gap-2 text-xs">
+                                        <span className="text-[var(--guest-muted)]">Did you mean:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearchQuery(didYouMeanItem.name)}
+                                            className="font-semibold text-[var(--guest-accent)] hover:underline"
+                                        >
+                                            {didYouMeanItem.name}
+                                        </button>
+                                    </div>
+                                )}
+                                <div className="mt-3 flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery("")}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--guest-text)] shadow-sm hover:bg-[var(--guest-surface-2)] transition-colors"
+                                    >
+                                        <X className="h-3.5 w-3.5 text-[var(--guest-muted)]" />
+                                        Clear search
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {isDietUnmatched && (
+                    <div className="rounded-2xl border border-[var(--guest-accent-25)] bg-[var(--guest-accent-12)] p-4 sm:p-5 transition-all animate-fade-in-up">
+                        <div className="flex items-start gap-3.5">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--guest-accent-20)] text-[var(--guest-accent)]">
+                                <Utensils className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-sm sm:text-base font-bold text-[var(--guest-text)]">
+                                    No matching dishes
+                                </h3>
+                                <p className="mt-1 text-xs sm:text-sm text-[var(--guest-muted)] leading-relaxed">
+                                    No dishes match your selected diet filters. Exploring all other available menu options below!
+                                </p>
+                                <div className="mt-3 flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDietFilters([])}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--guest-text)] shadow-sm hover:bg-[var(--guest-surface-2)] transition-colors"
+                                    >
+                                        <X className="h-3.5 w-3.5 text-[var(--guest-muted)]" />
+                                        Clear diet filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {displayCategories.map((cat, catIndex) => (
                     <div
                         key={cat.id}
                         id={`cat-${cat.id}`}
@@ -1113,66 +1193,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         </ul>
                     </div>
                 ))}
-                {showNoResultsPanel && (
-                    <div className="rounded-2xl border border-[var(--guest-line)] bg-[color-mix(in_srgb,var(--guest-surface)_60%,var(--guest-bg))] px-5 py-10 text-center">
-                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--guest-surface-2)]">
-                            <Search className="h-7 w-7 text-[var(--guest-muted)]" />
-                        </div>
-                        <h3 className="text-base font-semibold text-[var(--guest-text)]">No dishes match</h3>
-                        <p className="mt-2 text-sm text-[var(--guest-muted)] leading-relaxed">
-                            {searchNormalized
-                                ? "Try a shorter search or clear filters — we also forgive small typos and extra spaces."
-                                : "Nothing in this menu matches the diet filters. Turn one off to see more."}
-                        </p>
-                        {didYouMeanItem && (
-                            <div className="mt-5 rounded-xl border border-[var(--guest-accent-20)] bg-[var(--guest-accent-12)] px-4 py-3">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--guest-muted)]">Did you mean</p>
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchQuery(didYouMeanItem.name)}
-                                    className="mt-1 text-base font-semibold text-[var(--guest-accent)] hover:underline"
-                                >
-                                    {didYouMeanItem.name}
-                                </button>
-                            </div>
-                        )}
-                        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                            {searchNormalized ? (
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    className="w-full border-[var(--guest-line)] bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90 sm:w-auto"
-                                    onClick={() => setSearchQuery("")}
-                                >
-                                    Clear search
-                                </Button>
-                            ) : null}
-                            {dietFilters.length > 0 ? (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full border-[var(--guest-line)] bg-transparent text-[var(--guest-text-70)] hover:bg-[var(--guest-text-12)] sm:w-auto"
-                                    onClick={() => setDietFilters([])}
-                                >
-                                    Clear diet filters
-                                </Button>
-                            ) : null}
-                            {searchNormalized && dietFilters.length > 0 ? (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full border-[var(--guest-line)] bg-transparent text-[var(--guest-text-70)] hover:bg-[var(--guest-text-12)] sm:w-auto"
-                                    onClick={() => {
-                                        setSearchQuery("");
-                                        setDietFilters([]);
-                                    }}
-                                >
-                                    Reset all
-                                </Button>
-                            ) : null}
-                        </div>
-                    </div>
-                )}
+
             </main>
 
             {(cartCount > 0 || showCart || showHistory || showRoomModal) && (
