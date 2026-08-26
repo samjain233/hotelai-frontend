@@ -35,10 +35,11 @@ import {
     Volume2,
     ClipboardList,
     ShieldCheck,
+    KeyRound,
 } from "lucide-react";
 import { GuestServicesSkeleton } from "@/components/ui/Skeleton";
 import { StayPinModal } from "@/components/guest/StayPinModal";
-import { getStayToken, clearStayToken, useStaySession } from "@/lib/staySession";
+import { getStayToken, getStayPin, clearStayToken, useStaySession } from "@/lib/staySession";
 import { toast } from "sonner";
 
 const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] = [
@@ -142,7 +143,8 @@ export default function GuestServicesClient() {
         if (!selectedRoom || loading) return;
         if (promptedRoomRef.current === selectedRoom) return;
         const token = getStayToken(selectedRoom);
-        if (!token) {
+        const pin = getStayPin(selectedRoom);
+        if (!token || !pin) {
             promptedRoomRef.current = selectedRoom;
             setShowPinModal(true);
         }
@@ -290,17 +292,29 @@ export default function GuestServicesClient() {
                             <p className="text-xs text-[var(--guest-muted)]">How can we help you?</p>
                         </div>
                     </div>
-                    {stayPin ? (
-                        <button
-                            type="button"
-                            onClick={() => setShowPinModal(true)}
-                            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
-                            title={`Room Stay PIN: ${stayPin} (Click to re-verify)`}
-                        >
-                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                            <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)]">PIN</span>
-                            <span className="font-mono font-bold tracking-wider">{stayPin}</span>
-                        </button>
+                    {selectedRoom ? (
+                        stayPin ? (
+                            <button
+                                type="button"
+                                onClick={() => setShowPinModal(true)}
+                                className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
+                                title={`Room Stay PIN: ${stayPin} (Click to re-verify)`}
+                            >
+                                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)]">PIN</span>
+                                <span className="font-mono font-bold tracking-wider">{stayPin}</span>
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setShowPinModal(true)}
+                                className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 shadow-sm transition hover:bg-amber-500/20 active:scale-95"
+                                title="Enter Stay PIN"
+                            >
+                                <KeyRound className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                <span>Enter PIN</span>
+                            </button>
+                        )
                     ) : null}
                 </div>
             </header>
