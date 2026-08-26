@@ -1122,7 +1122,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             onClick={() => addToCart(item)}
                                             disabled={!itemIsAvailable}
                                             className={cn(
-                                                "w-full rounded-md border-2 border-[var(--guest-accent-70)] bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-[var(--guest-accent)] transition-colors hover:bg-[var(--guest-accent-12)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-[108px]",
+                                                "w-full rounded-md border-2 border-[var(--guest-accent-70)] bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-[var(--guest-accent)] transition-colors hover:bg-[var(--guest-accent-12)] disabled:cursor-not-allowed disabled:opacity-40",
                                             )}
                                         >
                                             {itemIsAvailable ? "Add +" : "Sold out"}
@@ -1130,7 +1130,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     );
                                 } else {
                                     actionBlock = (
-                                        <div className="flex w-full items-center justify-between gap-1 rounded-md border border-[var(--guest-accent-40)] bg-[color-mix(in_srgb,var(--guest-surface)_85%,var(--guest-bg))] px-1 py-1 sm:w-[108px]">
+                                        <div className="flex w-full items-center justify-between gap-1 rounded-md border border-[var(--guest-accent-40)] bg-[color-mix(in_srgb,var(--guest-surface)_85%,var(--guest-bg))] px-1 py-1">
                                             <button
                                                 type="button"
                                                 onClick={() => removeFromCart(item.id)}
@@ -1157,7 +1157,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 return (
                                     <li
                                         key={item.id}
-                                        className="relative z-0 flex gap-3 py-4 first:pt-0 animate-fade-in-up"
+                                        className="relative z-0 flex items-center justify-between gap-3 py-4 first:pt-0 animate-fade-in-up"
                                         style={{ animationDelay: `${itemIndex * 40}ms` }}
                                     >
                                         <div className="min-w-0 flex-1">
@@ -1202,14 +1202,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                             ) : null}
                                                         </div>
                                                     ) : null}
-                                                    {!hasImage && actionBlock ? (
-                                                        <div className="mt-3 flex justify-end">{actionBlock}</div>
-                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
                                         {hasImage ? (
-                                            <div className="flex w-[108px] shrink-0 flex-col items-stretch gap-2">
+                                            <div className="flex w-[108px] shrink-0 flex-col items-stretch gap-2 self-start">
                                                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)]">
                                                     {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1226,7 +1223,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                 </div>
                                                 {actionBlock}
                                             </div>
-                                        ) : null}
+                                        ) : (
+                                            <div className="flex w-[108px] shrink-0 items-center justify-center self-center">
+                                                {actionBlock}
+                                            </div>
+                                        )}
                                     </li>
                                 );
                             })}
