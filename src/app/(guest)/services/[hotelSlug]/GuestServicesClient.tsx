@@ -34,10 +34,11 @@ import {
     Brush,
     Volume2,
     ClipboardList,
+    ShieldCheck,
 } from "lucide-react";
 import { GuestServicesSkeleton } from "@/components/ui/Skeleton";
 import { StayPinModal } from "@/components/guest/StayPinModal";
-import { getStayToken, clearStayToken } from "@/lib/staySession";
+import { getStayToken, clearStayToken, useStaySession } from "@/lib/staySession";
 import { toast } from "sonner";
 
 const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] = [
@@ -125,6 +126,7 @@ export default function GuestServicesClient() {
 
     const hasAutoSelectedRef = useRef(false);
     const promptedRoomRef = useRef<string | null>(null);
+    const { pin: stayPin } = useStaySession(selectedRoom);
 
     useEffect(() => {
         if (hasAutoSelectedRef.current || !roomFromUrl || rooms.length === 0) return;
@@ -257,35 +259,49 @@ export default function GuestServicesClient() {
         <div className="min-h-screen bg-[var(--guest-bg)] font-sans text-[var(--guest-text)] page-transition" style={themeStyle}>
             {/* Header */}
             <header className="sticky top-0 z-50 w-full border-b border-[var(--guest-line)] bg-[var(--guest-bg)]/95 backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--guest-bg)]/80 px-4 py-3">
-                <div className="max-w-lg mx-auto flex items-center gap-3">
-                    <Link
-                        href={`/menu/${hotelSlug}${roomFromUrl ? `?room=${encodeURIComponent(roomFromUrl)}` : ""}`}
-                        className="p-2 rounded-full border border-[var(--guest-line)] bg-[var(--guest-surface)] text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)] hover:text-[var(--guest-text)] transition-colors"
-                        aria-label="Back to food menu"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </Link>
-                    {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
-                        <Image
-                            src={hotel.logoUrl.trim()}
-                            alt=""
-                            width={36}
-                            height={36}
-                            priority
-                            className="h-9 w-9 shrink-0 rounded-lg bg-[var(--guest-surface)] object-cover ring-1 ring-[var(--guest-line)]"
-                            onError={() => setGuestLogoFailed(true)}
-                        />
-                    ) : hotel?.name ? (
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--guest-cta)] to-[var(--guest-cta-hover)] text-sm font-bold text-[var(--guest-on-cta)] ring-1 ring-[var(--guest-line)]">
-                            {hotel.name.charAt(0)}
+                <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Link
+                            href={`/menu/${hotelSlug}${roomFromUrl ? `?room=${encodeURIComponent(roomFromUrl)}` : ""}`}
+                            className="p-2 rounded-full border border-[var(--guest-line)] bg-[var(--guest-surface)] text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)] hover:text-[var(--guest-text)] transition-colors"
+                            aria-label="Back to food menu"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
+                            <Image
+                                src={hotel.logoUrl.trim()}
+                                alt=""
+                                width={36}
+                                height={36}
+                                priority
+                                className="h-9 w-9 shrink-0 rounded-lg bg-[var(--guest-surface)] object-cover ring-1 ring-[var(--guest-line)]"
+                                onError={() => setGuestLogoFailed(true)}
+                            />
+                        ) : hotel?.name ? (
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--guest-cta)] to-[var(--guest-cta-hover)] text-sm font-bold text-[var(--guest-on-cta)] ring-1 ring-[var(--guest-line)]">
+                                {hotel.name.charAt(0)}
+                            </div>
+                        ) : null}
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-base font-bold leading-tight text-[var(--guest-text)] truncate">
+                                {hotel?.name ? `${hotel.name} Services` : "Guest Services"}
+                            </h1>
+                            <p className="text-xs text-[var(--guest-muted)]">How can we help you?</p>
                         </div>
-                    ) : null}
-                    <div className="min-w-0 flex-1">
-                        <h1 className="text-base font-bold leading-tight text-[var(--guest-text)] truncate">
-                            {hotel?.name ? `${hotel.name} Services` : "Guest Services"}
-                        </h1>
-                        <p className="text-xs text-[var(--guest-muted)]">How can we help you?</p>
                     </div>
+                    {stayPin ? (
+                        <button
+                            type="button"
+                            onClick={() => setShowPinModal(true)}
+                            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
+                            title={`Room Stay PIN: ${stayPin} (Click to re-verify)`}
+                        >
+                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)]">PIN</span>
+                            <span className="font-mono font-bold tracking-wider">{stayPin}</span>
+                        </button>
+                    ) : null}
                 </div>
             </header>
 

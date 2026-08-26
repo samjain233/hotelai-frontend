@@ -27,6 +27,7 @@ import {
     ShoppingBag,
     ChevronRight,
     Headset,
+    ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
@@ -45,7 +46,7 @@ import { GuestMenuItemInsights } from "./GuestMenuItemInsights";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 import { AnimatedOverlays } from "./GuestMenuAnimated";
 import { StayPinModal } from "@/components/guest/StayPinModal";
-import { getStayToken, clearStayToken } from "@/lib/staySession";
+import { getStayToken, clearStayToken, useStaySession } from "@/lib/staySession";
 import { toast } from "sonner";
 
 
@@ -132,6 +133,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     );
 
     const promptedRoomRef = useRef<string | null>(null);
+    const { pin: stayPin } = useStaySession(resolvedRoomId);
 
     /** Auto-prompt guest for Stay PIN when scanning QR code if token is not saved yet */
     useEffect(() => {
@@ -631,7 +633,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         )}
                         aria-hidden={brandingBarHidden}
                     >
-                        <div className="flex items-center gap-2.5 pb-2.5">
+                        <div className="flex items-center justify-between gap-2.5 pb-2.5">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                 {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
                                     <Image
                                         src={hotel.logoUrl.trim()}
@@ -671,6 +674,19 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     ) : null}
                                 </div>
                             </div>
+                            {stayPin ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPinModal(true)}
+                                    className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
+                                    title={`Room ${roomDisplayName || ""} Stay PIN: ${stayPin} (Click to re-verify)`}
+                                >
+                                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                    <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)]">PIN</span>
+                                    <span className="font-mono font-bold tracking-wider">{stayPin}</span>
+                                </button>
+                            ) : null}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -696,6 +712,17 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             ) : null}
                         </div>
                         <div className="relative flex shrink-0 items-center gap-1.5">
+                            {brandingBarHidden && stayPin ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPinModal(true)}
+                                    className="flex h-10 items-center gap-1 px-2.5 rounded-full bg-[var(--guest-surface)] border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold hover:bg-[var(--guest-surface-2)] transition shadow-sm"
+                                    title={`Stay PIN: ${stayPin}`}
+                                >
+                                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                    <span>{stayPin}</span>
+                                </button>
+                            ) : null}
                             {cartCount > 0 ? (
                                 <button
                                     type="button"
@@ -724,12 +751,21 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     role="menu"
                                     className="absolute right-0 top-12 z-[60] w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] py-2 shadow-xl shadow-black/50"
                                 >
-                                        <div className="px-3 pb-1">
-                                            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">
-                                                <SlidersHorizontal className="h-3 w-3" aria-hidden />
-                                                Sort
-                                            </p>
+                                    {stayPin ? (
+                                        <div className="mx-3 mb-2 flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
+                                            <span className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
+                                                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                                Room {roomDisplayName || ""} PIN
+                                            </span>
+                                            <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300 tracking-wider">{stayPin}</span>
                                         </div>
+                                    ) : null}
+                                    <div className="px-3 pb-1">
+                                        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">
+                                            <SlidersHorizontal className="h-3 w-3" aria-hidden />
+                                            Sort
+                                        </p>
+                                    </div>
                                         <div className="px-2 pb-2">
                                             {SORT_MENU_OPTIONS.map((opt) => (
                                                 <button
