@@ -829,22 +829,43 @@ export default function MenuPage() {
                                         </div>
                                         <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
                                             <div className="min-w-0">
-                                                <p className="text-sm font-medium text-foreground">On menu</p>
+                                                <p className="text-sm font-medium text-foreground">
+                                                    {itemForm.available ? "On menu" : "Out of stock"}
+                                                </p>
+
                                                 <p className="text-xs text-muted-foreground">
-                                                    Sold out: guests still see the dish but cannot add it to the cart
+                                                    {itemForm.available
+                                                        ? "Guests can see and order this dish"
+                                                        : "Guests can see the dish but cannot add it to the cart"}
                                                 </p>
                                             </div>
+
                                             <button
                                                 type="button"
-                                                onClick={() => setItemForm({ ...itemForm, available: !itemForm.available })}
+                                                role="switch"
+                                                aria-checked={itemForm.available}
+                                                aria-label={itemForm.available ? "Mark item as out of stock" : "Mark item as available"}
+                                                onClick={() =>
+                                                    setItemForm((prev) => ({
+                                                        ...prev,
+                                                        available: !prev.available,
+                                                    }))
+                                                }
                                                 className={cn(
-                                                    "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
+                                                    "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
                                                     itemForm.available
-                                                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                                                        : "bg-secondary text-muted-foreground border-border",
+                                                        ? "border-emerald-500/40 bg-emerald-500"
+                                                        : "border-white/15 bg-secondary",
                                                 )}
                                             >
-                                                {itemForm.available ? "Available" : "Sold out"}
+                                                <span
+                                                    className={cn(
+                                                        "h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200",
+                                                        itemForm.available
+                                                            ? "translate-x-6"
+                                                            : "translate-x-1",
+                                                    )}
+                                                />
                                             </button>
                                         </div>
                                     </div>
