@@ -1122,33 +1122,41 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             onClick={() => addToCart(item)}
                                             disabled={!itemIsAvailable}
                                             className={cn(
-                                                "w-full rounded-md border-2 border-[var(--guest-accent-70)] bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-[var(--guest-accent)] transition-colors hover:bg-[var(--guest-accent-12)] disabled:cursor-not-allowed disabled:opacity-40",
+                                                "flex h-9 w-[100px] sm:w-28 items-center justify-center rounded-xl border-2 border-[var(--guest-accent-70)] bg-[var(--guest-surface)] text-center text-xs font-extrabold uppercase tracking-wider text-[var(--guest-accent)] shadow-md shadow-black/20 transition-all hover:bg-[var(--guest-accent-12)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
                                             )}
                                         >
-                                            {itemIsAvailable ? "Add +" : "Sold out"}
+                                            {itemIsAvailable ? (
+                                                <span className="flex items-center gap-1">
+                                                    ADD <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                                                </span>
+                                            ) : (
+                                                "Sold out"
+                                            )}
                                         </button>
                                     );
                                 } else {
                                     actionBlock = (
-                                        <div className="flex w-full items-center justify-between gap-1 rounded-md border border-[var(--guest-accent-40)] bg-[color-mix(in_srgb,var(--guest-surface)_85%,var(--guest-bg))] px-1 py-1">
+                                        <div className="flex h-9 w-[100px] sm:w-28 items-center justify-between rounded-xl border border-[var(--guest-accent-40)] bg-[var(--guest-surface)] px-1 shadow-md shadow-black/20">
                                             <button
                                                 type="button"
                                                 onClick={() => removeFromCart(item.id)}
-                                                className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90"
+                                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90 active:scale-90 transition"
+                                                aria-label="Decrease quantity"
                                             >
-                                                <Minus className="h-3.5 w-3.5" />
+                                                <Minus className="h-3.5 w-3.5 stroke-[2.5]" />
                                             </button>
-                                            <span className="min-w-[1.25rem] text-center text-sm font-bold text-[var(--guest-text)]">{qty}</span>
+                                            <span className="min-w-[1.25rem] text-center text-sm font-bold tabular-nums text-[var(--guest-text)]">{qty}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => addToCart(item)}
                                                 disabled={!isOpen}
                                                 className={cn(
-                                                    "flex h-8 w-8 items-center justify-center rounded-md bg-[var(--guest-cta)] text-[var(--guest-on-cta)] hover:bg-[var(--guest-cta-hover)]",
+                                                    "flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--guest-cta)] text-[var(--guest-on-cta)] hover:bg-[var(--guest-cta-hover)] active:scale-90 transition",
                                                     !isOpen && "opacity-40",
                                                 )}
+                                                aria-label="Increase quantity"
                                             >
-                                                <Plus className="h-3.5 w-3.5" />
+                                                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
                                             </button>
                                         </div>
                                     );
@@ -1157,7 +1165,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 return (
                                     <li
                                         key={item.id}
-                                        className="relative z-0 flex items-center justify-between gap-3 py-4 first:pt-0 animate-fade-in-up"
+                                        className="relative z-0 flex items-center justify-between gap-3.5 py-4 first:pt-0 animate-fade-in-up"
                                         style={{ animationDelay: `${itemIndex * 40}ms` }}
                                     >
                                         <div className="min-w-0 flex-1">
@@ -1206,25 +1214,27 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             </div>
                                         </div>
                                         {hasImage ? (
-                                            <div className="flex w-[108px] shrink-0 flex-col items-stretch gap-2 self-start">
-                                                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)]">
+                                            <div className="relative flex w-[114px] sm:w-[124px] shrink-0 flex-col items-center pb-3 self-start">
+                                                <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)] shadow-sm">
                                                     {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                                     <img
                                                         src={imageSrc}
                                                         alt=""
-                                                        width={216}
-                                                        height={162}
+                                                        width={240}
+                                                        height={240}
                                                         loading={isPriorityImage ? "eager" : "lazy"}
                                                         decoding="async"
                                                         fetchPriority={isPriorityImage ? "high" : "auto"}
                                                         className="h-full w-full object-cover"
                                                     />
                                                 </div>
-                                                {actionBlock}
+                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-10">
+                                                    {actionBlock}
+                                                </div>
                                             </div>
                                         ) : (
-                                            <div className="flex w-[108px] shrink-0 items-center justify-center self-center">
+                                            <div className="flex w-[114px] sm:w-[124px] shrink-0 items-center justify-center self-center">
                                                 {actionBlock}
                                             </div>
                                         )}
