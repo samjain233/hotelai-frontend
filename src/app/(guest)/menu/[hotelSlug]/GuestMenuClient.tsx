@@ -125,6 +125,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         return `${base}?room=${encodeURIComponent(r)}`;
     }, [hotelSlug, roomParam]);
 
+    /** Room service line: dedicated number, else main hotel phone (Settings). */
+    const guestCallNumber = useMemo(
+        () => hotel?.roomServicePhone?.trim() || hotel?.phone?.trim() || "",
+        [hotel?.roomServicePhone, hotel?.phone],
+    );
+
     const promptedRoomRef = useRef<string | null>(null);
 
     /** Auto-prompt guest for Stay PIN when scanning QR code if token is not saved yet */
