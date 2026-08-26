@@ -660,12 +660,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             <>
                                                 <MapPin className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" />
                                                 <span>Room {roomDisplayName}</span>
-                                                {stayPin ? (
-                                                    <>
-                                                        <span className="text-[var(--guest-subtle)]">·</span>
-                                                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">PIN: {stayPin}</span>
-                                                    </>
-                                                ) : null}
                                             </>
                                         ) : (
                                             <span className="italic text-[var(--guest-subtle)]">Digital menu</span>
@@ -720,30 +714,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             ) : null}
                         </div>
                         <div className="relative flex shrink-0 items-center gap-1.5">
-                            {resolvedRoomId ? (
-                                stayPin ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPinModal(true)}
-                                        className="flex h-10 items-center gap-1.5 px-2.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold hover:bg-emerald-500/20 active:scale-95 transition shadow-sm"
-                                        title={`Room ${roomDisplayName || ""} Stay PIN: ${stayPin} (Click to re-verify)`}
-                                    >
-                                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                        <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)] hidden sm:inline">PIN</span>
-                                        <span>{stayPin}</span>
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPinModal(true)}
-                                        className="flex h-10 items-center gap-1.5 px-2.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-medium hover:bg-amber-500/20 active:scale-95 transition shadow-sm"
-                                        title="Enter Stay PIN"
-                                    >
-                                        <KeyRound className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                                        <span className="text-[11px] font-medium">PIN</span>
-                                    </button>
-                                )
-                            ) : null}
                             {cartCount > 0 ? (
                                 <button
                                     type="button"
