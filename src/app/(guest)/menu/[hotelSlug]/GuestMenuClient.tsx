@@ -28,6 +28,7 @@ import {
     ChevronRight,
     Headset,
     ShieldCheck,
+    KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
@@ -46,7 +47,7 @@ import { GuestMenuItemInsights } from "./GuestMenuItemInsights";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 import { AnimatedOverlays } from "./GuestMenuAnimated";
 import { StayPinModal } from "@/components/guest/StayPinModal";
-import { getStayToken, clearStayToken, useStaySession } from "@/lib/staySession";
+import { getStayToken, getStayPin, clearStayToken, useStaySession } from "@/lib/staySession";
 import { toast } from "sonner";
 
 
@@ -140,7 +141,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         if (!resolvedRoomId || loading) return;
         if (promptedRoomRef.current === resolvedRoomId) return;
         const token = getStayToken(resolvedRoomId);
-        if (!token) {
+        const pin = getStayPin(resolvedRoomId);
+        if (!token || !pin) {
             promptedRoomRef.current = resolvedRoomId;
             setShowPinModal(true);
         }
@@ -658,6 +660,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             <>
                                                 <MapPin className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" />
                                                 <span>Room {roomDisplayName}</span>
+                                                {stayPin ? (
+                                                    <>
+                                                        <span className="text-[var(--guest-subtle)]">·</span>
+                                                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">PIN: {stayPin}</span>
+                                                    </>
+                                                ) : null}
                                             </>
                                         ) : (
                                             <span className="italic text-[var(--guest-subtle)]">Digital menu</span>
@@ -712,16 +720,29 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             ) : null}
                         </div>
                         <div className="relative flex shrink-0 items-center gap-1.5">
-                            {brandingBarHidden && stayPin ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPinModal(true)}
-                                    className="flex h-10 items-center gap-1 px-2.5 rounded-full bg-[var(--guest-surface)] border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold hover:bg-[var(--guest-surface-2)] transition shadow-sm"
-                                    title={`Stay PIN: ${stayPin}`}
-                                >
-                                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                    <span>{stayPin}</span>
-                                </button>
+                            {resolvedRoomId ? (
+                                stayPin ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPinModal(true)}
+                                        className="flex h-10 items-center gap-1.5 px-2.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold hover:bg-emerald-500/20 active:scale-95 transition shadow-sm"
+                                        title={`Room ${roomDisplayName || ""} Stay PIN: ${stayPin} (Click to re-verify)`}
+                                    >
+                                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                        <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)] hidden sm:inline">PIN</span>
+                                        <span>{stayPin}</span>
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPinModal(true)}
+                                        className="flex h-10 items-center gap-1.5 px-2.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-medium hover:bg-amber-500/20 active:scale-95 transition shadow-sm"
+                                        title="Enter Stay PIN"
+                                    >
+                                        <KeyRound className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                        <span className="text-[11px] font-medium">PIN</span>
+                                    </button>
+                                )
                             ) : null}
                             {cartCount > 0 ? (
                                 <button
