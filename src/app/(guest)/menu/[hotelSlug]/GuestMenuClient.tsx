@@ -757,115 +757,115 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             Sort
                                         </p>
                                     </div>
-                                        <div className="px-2 pb-2">
-                                            {SORT_MENU_OPTIONS.map((opt) => (
-                                                <button
-                                                    key={opt.value}
-                                                    type="button"
-                                                    role="menuitemradio"
-                                                    aria-checked={sortBy === opt.value}
+                                    <div className="px-2 pb-2">
+                                        {SORT_MENU_OPTIONS.map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                role="menuitemradio"
+                                                aria-checked={sortBy === opt.value}
+                                                className={cn(
+                                                    "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors",
+                                                    sortBy === opt.value ? "bg-[var(--guest-accent-20)] text-[var(--guest-accent-90)]" : "text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)]",
+                                                )}
+                                                onClick={() => setSortBy(opt.value)}
+                                            >
+                                                <span
                                                     className={cn(
-                                                        "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors",
-                                                        sortBy === opt.value ? "bg-[var(--guest-accent-20)] text-[var(--guest-accent-90)]" : "text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)]",
+                                                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                                                        sortBy === opt.value ? "border-[var(--guest-accent-40)] bg-[var(--guest-accent-30)]" : "border-[var(--guest-border)]",
                                                     )}
-                                                    onClick={() => setSortBy(opt.value)}
+                                                    aria-hidden
                                                 >
-                                                    <span
-                                                        className={cn(
-                                                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                                                            sortBy === opt.value ? "border-[var(--guest-accent-40)] bg-[var(--guest-accent-30)]" : "border-[var(--guest-border)]",
-                                                        )}
-                                                        aria-hidden
-                                                    >
-                                                        {sortBy === opt.value ? <span className="h-2 w-2 rounded-full bg-[var(--guest-accent)]" /> : null}
-                                                    </span>
-                                                    {opt.label}
+                                                    {sortBy === opt.value ? <span className="h-2 w-2 rounded-full bg-[var(--guest-accent)]" /> : null}
+                                                </span>
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="mx-2 border-t border-[var(--guest-line)]" />
+                                    <div className="px-3 pt-2 pb-1">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">Diet filters</p>
+                                        <p className="mt-0.5 text-[11px] text-[var(--guest-subtle)]">Tap to show only matching dishes</p>
+                                    </div>
+                                    <div className="flex flex-col gap-1.5 px-2 pb-2">
+                                        <button
+                                            type="button"
+                                            role="menuitemcheckbox"
+                                            aria-checked={dietFilters.includes("VEG")}
+                                            className={cn(
+                                                "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                dietFilters.includes("VEG")
+                                                    ? "border-green-500/40 bg-green-500/10 text-green-200"
+                                                    : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
+                                            )}
+                                            onClick={() => toggleDietFilter("VEG")}
+                                        >
+                                            <IndianVegMark className="h-4 w-4 shrink-0" />
+                                            Vegetarian
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitemcheckbox"
+                                            aria-checked={dietFilters.includes("NON_VEG")}
+                                            className={cn(
+                                                "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                dietFilters.includes("NON_VEG")
+                                                    ? "border-red-500/40 bg-red-500/10 text-red-200"
+                                                    : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
+                                            )}
+                                            onClick={() => toggleDietFilter("NON_VEG")}
+                                        >
+                                            <IndianNonVegMark className="h-4 w-4 shrink-0" />
+                                            Non-vegetarian
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitemcheckbox"
+                                            aria-checked={dietFilters.includes("EGGITARIAN")}
+                                            className={cn(
+                                                "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                dietFilters.includes("EGGITARIAN")
+                                                    ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                                                    : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
+                                            )}
+                                            onClick={() => toggleDietFilter("EGGITARIAN")}
+                                        >
+                                            <Egg className="h-4 w-4 shrink-0 text-amber-400" />
+                                            Egg
+                                        </button>
+                                    </div>
+                                    <div className="mx-2 border-t border-[var(--guest-line)]" />
+                                    <div className="px-2 pt-1">
+                                        <Link
+                                            href={guestServicesHref}
+                                            role="menuitem"
+                                            className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
+                                            onClick={() => setShowHeaderMenu(false)}
+                                        >
+                                            <Headset className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                                            Guest services
+                                        </Link>
+                                    </div>
+                                    {resolvedRoomId ? (
+                                        <>
+                                            <div className="mx-2 border-t border-[var(--guest-line)]" />
+                                            <div className="px-2 pt-1">
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
+                                                    onClick={() => {
+                                                        setShowHeaderMenu(false);
+                                                        setShowHistory(true);
+                                                    }}
+                                                >
+                                                    <Receipt className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" />
+                                                    My bill &amp; orders
                                                 </button>
-                                            ))}
-                                        </div>
-                                        <div className="mx-2 border-t border-[var(--guest-line)]" />
-                                        <div className="px-3 pt-2 pb-1">
-                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">Diet filters</p>
-                                            <p className="mt-0.5 text-[11px] text-[var(--guest-subtle)]">Tap to show only matching dishes</p>
-                                        </div>
-                                        <div className="flex flex-col gap-1.5 px-2 pb-2">
-                                            <button
-                                                type="button"
-                                                role="menuitemcheckbox"
-                                                aria-checked={dietFilters.includes("VEG")}
-                                                className={cn(
-                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                                                    dietFilters.includes("VEG")
-                                                        ? "border-green-500/40 bg-green-500/10 text-green-200"
-                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
-                                                )}
-                                                onClick={() => toggleDietFilter("VEG")}
-                                            >
-                                                <IndianVegMark className="h-4 w-4 shrink-0" />
-                                                Vegetarian
-                                            </button>
-                                            <button
-                                                type="button"
-                                                role="menuitemcheckbox"
-                                                aria-checked={dietFilters.includes("NON_VEG")}
-                                                className={cn(
-                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                                                    dietFilters.includes("NON_VEG")
-                                                        ? "border-red-500/40 bg-red-500/10 text-red-200"
-                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
-                                                )}
-                                                onClick={() => toggleDietFilter("NON_VEG")}
-                                            >
-                                                <IndianNonVegMark className="h-4 w-4 shrink-0" />
-                                                Non-vegetarian
-                                            </button>
-                                            <button
-                                                type="button"
-                                                role="menuitemcheckbox"
-                                                aria-checked={dietFilters.includes("EGGITARIAN")}
-                                                className={cn(
-                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                                                    dietFilters.includes("EGGITARIAN")
-                                                        ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
-                                                )}
-                                                onClick={() => toggleDietFilter("EGGITARIAN")}
-                                            >
-                                                <Egg className="h-4 w-4 shrink-0 text-amber-400" />
-                                                Egg
-                                            </button>
-                                        </div>
-                                        <div className="mx-2 border-t border-[var(--guest-line)]" />
-                                        <div className="px-2 pt-1">
-                                            <Link
-                                                href={guestServicesHref}
-                                                role="menuitem"
-                                                className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
-                                                onClick={() => setShowHeaderMenu(false)}
-                                            >
-                                                <Headset className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" aria-hidden />
-                                                Guest services
-                                            </Link>
-                                        </div>
-                                        {resolvedRoomId ? (
-                                            <>
-                                                <div className="mx-2 border-t border-[var(--guest-line)]" />
-                                                <div className="px-2 pt-1">
-                                                    <button
-                                                        type="button"
-                                                        role="menuitem"
-                                                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
-                                                        onClick={() => {
-                                                            setShowHeaderMenu(false);
-                                                            setShowHistory(true);
-                                                        }}
-                                                    >
-                                                        <Receipt className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" />
-                                                        My bill &amp; orders
-                                                    </button>
-                                                </div>
-                                            </>
-                                        ) : null}
+                                            </div>
+                                        </>
+                                    ) : null}
                                 </div>
                             ) : null}
                         </div>
@@ -978,8 +978,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 {pastOrders.length === 0
                                     ? "No orders yet — tap to view"
                                     : roomBillGrandTotal > 0
-                                      ? `${formatPrice(roomBillGrandTotal)} total so far`
-                                      : "No active charges — tap for history"}
+                                        ? `${formatPrice(roomBillGrandTotal)} total so far`
+                                        : "No active charges — tap for history"}
                             </p>
                         </div>
                         <ChevronRight className="h-5 w-5 shrink-0 text-[var(--guest-muted)]" aria-hidden />
@@ -1021,7 +1021,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     Item not available
                                 </h3>
                                 <p className="mt-1 text-xs sm:text-sm text-[var(--guest-muted)] leading-relaxed">
-                                    The food item &ldquo;<span className="font-semibold text-[var(--guest-text)]">{searchQuery.trim()}</span>&rdquo; is currently not available. You can try exploring our other delicious dishes below!
+                                    The food item &ldquo;<span className="font-semibold text-[var(--guest-text)]">{searchQuery.trim()}</span>&rdquo; is not available. You can try exploring our other delicious dishes below!
                                 </p>
                                 {didYouMeanItem && (
                                     <div className="mt-2.5 flex items-center gap-2 text-xs">
