@@ -125,11 +125,18 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         return `${base}?room=${encodeURIComponent(r)}`;
     }, [hotelSlug, roomParam]);
 
-    /** Room service line: dedicated number, else main hotel phone (Settings). */
-    const guestCallNumber = useMemo(
-        () => hotel?.roomServicePhone?.trim() || hotel?.phone?.trim() || "",
-        [hotel?.roomServicePhone, hotel?.phone],
-    );
+    const promptedRoomRef = useRef<string | null>(null);
+
+    /** Auto-prompt guest for Stay PIN when scanning QR code if token is not saved yet */
+    useEffect(() => {
+        if (!resolvedRoomId || loading) return;
+        if (promptedRoomRef.current === resolvedRoomId) return;
+        const token = getStayToken(resolvedRoomId);
+        if (!token) {
+            promptedRoomRef.current = resolvedRoomId;
+            setShowPinModal(true);
+        }
+    }, [resolvedRoomId, loading]);
 
     useEffect(() => {
         if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0].id);
@@ -1289,7 +1296,9 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 roomNumber={roomDisplayName || "Your Room"}
                 onSuccess={(newToken) => {
                     setShowPinModal(false);
-                    void placeOrder(newToken);
+                    if (cart.length > 0 && showCart) {
+                        void placeOrder(newToken);
+                    }
                 }}
             />
         </div>

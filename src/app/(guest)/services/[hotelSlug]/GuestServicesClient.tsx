@@ -124,6 +124,8 @@ export default function GuestServicesClient() {
     }, [hotel?.name, hotelSlug, loading]);
 
     const hasAutoSelectedRef = useRef(false);
+    const promptedRoomRef = useRef<string | null>(null);
+
     useEffect(() => {
         if (hasAutoSelectedRef.current || !roomFromUrl || rooms.length === 0) return;
         const match = rooms.find((r) => r.id === roomFromUrl || (r.scanCode != null && r.scanCode === roomFromUrl));
@@ -132,6 +134,17 @@ export default function GuestServicesClient() {
             hasAutoSelectedRef.current = true;
         }
     }, [rooms, roomFromUrl]);
+
+    /** Auto-prompt guest for Stay PIN when scanning QR code / selecting room if token is not saved yet */
+    useEffect(() => {
+        if (!selectedRoom || loading) return;
+        if (promptedRoomRef.current === selectedRoom) return;
+        const token = getStayToken(selectedRoom);
+        if (!token) {
+            promptedRoomRef.current = selectedRoom;
+            setShowPinModal(true);
+        }
+    }, [selectedRoom, loading]);
 
     const loadRequests = useCallback(async () => {
         if (!selectedRoom) return;
@@ -579,7 +592,9 @@ export default function GuestServicesClient() {
                 roomNumber={rooms.find((r) => r.id === selectedRoom)?.number || "Your Room"}
                 onSuccess={(newToken) => {
                     setShowPinModal(false);
-                    void handleSubmit(newToken);
+                    if (submitting) {
+                        void handleSubmit(newToken);
+                    }
                 }}
             />
         </div>
