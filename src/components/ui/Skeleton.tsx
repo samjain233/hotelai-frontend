@@ -115,28 +115,30 @@ export function RoomsSkeleton() {
 }
 
 /** Guest services: simpler card list */
-export function GuestServicesSkeleton() {
+export function GuestServicesSkeleton({ style }: { style?: React.CSSProperties }) {
     return (
-        <div className="min-h-screen bg-[#0a0a0a]">
-            <div className="sticky top-0 z-20 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/5 px-4 py-3">
+        <div className="min-h-screen bg-[var(--guest-bg)] text-[var(--guest-text)]" style={style}>
+            <div className="sticky top-0 z-20 bg-[var(--guest-bg)]/90 backdrop-blur-md border-b border-[var(--guest-line)] px-4 py-3">
                 <div className="max-w-lg mx-auto flex items-center gap-3">
-                    <Skeleton className="h-9 w-9 rounded-lg" />
+                    <div className="h-9 w-9 rounded-lg animate-shimmer bg-[var(--guest-shimmer)]/80" />
                     <div className="space-y-1">
-                        <Skeleton className="h-5 w-32" />
-                        <Skeleton className="h-3 w-40" />
+                        <div className="h-5 w-32 rounded animate-shimmer bg-[var(--guest-shimmer)]/80" />
+                        <div className="h-3 w-40 rounded animate-shimmer bg-[var(--guest-shimmer)]/80" />
                     </div>
                 </div>
             </div>
             <div className="max-w-lg mx-auto p-4 space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-10 w-full rounded-full" />
-                ))}
-                <div className="pt-6 space-y-3">
+                <div className="flex gap-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="h-10 flex-1 rounded-xl animate-shimmer bg-[var(--guest-shimmer)]/80" />
+                    ))}
+                </div>
+                <div className="pt-4 space-y-3">
                     {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="rounded-xl border border-white/5 p-4 space-y-2">
-                            <Skeleton className="h-4 w-3/4" />
-                            <Skeleton className="h-3 w-full" />
-                            <Skeleton className="h-3 w-1/2" />
+                        <div key={i} className="rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-4 space-y-2">
+                            <div className="h-4 w-3/4 rounded animate-shimmer bg-[var(--guest-shimmer)]/80" />
+                            <div className="h-3 w-full rounded animate-shimmer bg-[var(--guest-shimmer)]/80" />
+                            <div className="h-3 w-1/2 rounded animate-shimmer bg-[var(--guest-shimmer)]/80" />
                         </div>
                     ))}
                 </div>
