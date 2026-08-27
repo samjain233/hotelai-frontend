@@ -8,6 +8,7 @@ import {
     BulkMenuImportErrorRow,
     BulkMenuImportRow,
     MenuItem,
+    MenuTag,
     Room,
     RoomQr,
     Order,
@@ -269,6 +270,38 @@ class ApiClient {
 
     // ─── Menu Items ───────────────────────────────────────
 
+    async getTags(): Promise<MenuTag[]> {
+        return this.request<MenuTag[]>('/tags');
+    }
+
+    async createTag(data: {
+        name: string;
+        type: 'ALLERGEN' | 'DIETARY';
+    }): Promise<MenuTag> {
+        return this.request<MenuTag>('/tags', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async updateTag(
+        id: number,
+        data: {
+            name: string;
+        },
+    ): Promise<MenuTag> {
+        return this.request<MenuTag>(`/tags/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteTag(id: number): Promise<void> {
+        return this.request<void>(`/tags/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getMenuItems(): Promise<MenuItem[]> {
         return this.request('/admin/menu');
     }
@@ -297,8 +330,8 @@ class ApiClient {
         dietaryPreference?: string;
         available?: boolean;
         spiceLevel?: string;
-        allergenCodes?: string[];
-        dietaryTags?: string[];
+        allergenTagIds?: number[];
+        dietaryTagIds?: number[];
         calories?: number | null;
         portionLabel?: string | null;
         chefRecommended?: boolean;
@@ -412,8 +445,22 @@ class ApiClient {
         return this.request(`/admin/rooms/${id}`, { method: 'DELETE' });
     }
 
-    async checkoutRoom(id: string): Promise<{ message: string }> {
+    async checkoutRoom(id: string): Promise<{ message: string; room?: Room }> {
         return this.request(`/admin/rooms/${id}/checkout`, { method: 'POST' });
+    }
+
+    async checkinRoom(id: string, pin?: string): Promise<{ message: string; room: Room; pin: string }> {
+        return this.request(`/admin/rooms/${id}/checkin`, {
+            method: 'POST',
+            body: JSON.stringify({ pin }),
+        });
+    }
+
+    async regenerateRoomPin(id: string, pin?: string): Promise<{ message: string; room: Room; pin: string }> {
+        return this.request(`/admin/rooms/${id}/regenerate-pin`, {
+            method: 'POST',
+            body: JSON.stringify({ pin }),
+        });
     }
 
     async getRoomQr(id: string): Promise<RoomQr> {
@@ -449,12 +496,34 @@ class ApiClient {
         return this.request<import('./types').PublicMenuFullData>(`/guest/menu/${hotelSlug}/full`);
     }
 
+    async verifyGuestRoomPin(roomId: string, pin: string): Promise<{
+        success: boolean;
+        stayToken: string;
+        roomNumber: string;
+        hotelSlug?: string;
+    }> {
+        return this.request(`/guest/rooms/${roomId}/verify-pin`, {
+            method: 'POST',
+            body: JSON.stringify({ pin }),
+        });
+    }
+
+    async getGuestRoomStatus(roomId: string): Promise<{
+        id: string;
+        number: string;
+        isOccupied: boolean;
+    }> {
+        return this.request(`/guest/rooms/${roomId}/status`);
+    }
+
     async placeOrder(data: {
         roomId: string;
         items: { itemId: string; quantity: number }[];
         notes?: string;
         guestName?: string;
         guestPhone?: string;
+        stayToken?: string;
+        pin?: string;
     }): Promise<Order> {
         return this.request<Order>('/guest/orders', {
             method: 'POST',
@@ -525,6 +594,8 @@ class ApiClient {
         roomId: string;
         guestName?: string;
         guestPhone?: string;
+        stayToken?: string;
+        pin?: string;
     }): Promise<ServiceRequest> {
         return this.request<ServiceRequest>('/guest/service-requests', {
             method: 'POST',

@@ -126,8 +126,8 @@ export interface MenuItem {
     available?: boolean;
     dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
     spiceLevel?: 'NONE' | 'MILD' | 'MEDIUM' | 'HOT';
-    allergenCodes?: string[];
-    dietaryTags?: string[];
+    allergens?: MenuTag[];
+    dietaryTags?: MenuTag[];
     calories?: number | null;
     portionLabel?: string | null;
     chefRecommended?: boolean;
@@ -147,6 +147,9 @@ export interface Room {
     type: string | null;
     /** Short public id for QR URLs; unique per hotel when set */
     scanCode?: string | null;
+    isOccupied?: boolean;
+    currentPin?: string | null;
+    checkedInAt?: string | null;
     hotelId: string;
     _count?: { orders: number };
 }
@@ -234,6 +237,12 @@ export interface ServiceRequest {
     updatedAt: string;
 }
 
+export type MenuTag = {
+    id: number;
+    name: string;
+    type: "ALLERGEN" | "DIETARY";
+    hotelId?: string | null;
+};
 export interface Service {
     id: string;
     name: string;

@@ -26,6 +26,11 @@ import {
     CheckSquare,
     Square,
     MinusSquare,
+    KeyRound,
+    LogIn,
+    LogOut,
+    RefreshCw,
+    Copy,
 } from "lucide-react";
 import { parseRoomNumbersInput } from "@/lib/parseRoomNumbersInput";
 import { useAuth } from "@/context/AuthContext";
@@ -106,6 +111,12 @@ export default function RoomsPage() {
     // Single room QR
     const [singleQr, setSingleQr] = useState<RoomQr | null>(null);
 
+    // ─── Check-In & PIN States ───
+    const [checkinModalRoom, setCheckinModalRoom] = useState<Room | null>(null);
+    const [checkinPin, setCheckinPin] = useState("");
+    const [checkinLoading, setCheckinLoading] = useState(false);
+    const [pinCopiedRoomId, setPinCopiedRoomId] = useState<string | null>(null);
+
     useEffect(() => { loadRooms(); }, []);
 
     useEffect(() => {
@@ -122,6 +133,72 @@ export default function RoomsPage() {
         try { const r = await api.getRooms(); setRooms(r); }
         catch (err) { console.error(err); }
         finally { setLoading(false); }
+    }
+
+    function openCheckinModal(room: Room) {
+        const randomPin = String(Math.floor(1000 + Math.random() * 9000));
+        setCheckinPin(randomPin);
+        setCheckinModalRoom(room);
+    }
+
+    async function handleCheckinSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!checkinModalRoom) return;
+        if (!/^\d{4}$/.test(checkinPin.trim())) {
+            toast.error("PIN must be a 4-digit number");
+            return;
+        }
+
+        setCheckinLoading(true);
+        try {
+            const res = await api.checkinRoom(checkinModalRoom.id, checkinPin.trim());
+            toast.success(`Room ${checkinModalRoom.number} checked in! PIN: ${res.pin}`);
+            setCheckinModalRoom(null);
+            await loadRooms();
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Failed to check in room");
+        } finally {
+            setCheckinLoading(false);
+        }
+    }
+
+    async function handleCheckout(room: Room) {
+        if (!confirm(`Check out Room ${room.number}? This will invalidate any active guest PIN and stay sessions.`)) return;
+        try {
+            await api.checkoutRoom(room.id);
+            toast.success(`Room ${room.number} checked out`);
+            await loadRooms();
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Failed to check out room");
+        }
+    }
+
+    async function handleRegeneratePin(room: Room) {
+        const newPin = String(Math.floor(1000 + Math.random() * 9000));
+        const custom = prompt(`Enter new 4-digit PIN for Room ${room.number}:`, newPin);
+        if (custom === null) return;
+        if (!/^\d{4}$/.test(custom.trim())) {
+            toast.error("PIN must be a 4-digit number");
+            return;
+        }
+        try {
+            const res = await api.regenerateRoomPin(room.id, custom.trim());
+            toast.success(`New PIN for Room ${room.number}: ${res.pin}`);
+            await loadRooms();
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Failed to update PIN");
+        }
+    }
+
+    async function copyRoomPin(roomId: string, pin: string) {
+        try {
+            await navigator.clipboard.writeText(pin);
+            setPinCopiedRoomId(roomId);
+            toast.success(`PIN ${pin} copied to clipboard`);
+            setTimeout(() => setPinCopiedRoomId(null), 2000);
+        } catch {
+            toast.error("Failed to copy PIN");
+        }
     }
 
     async function handleCreateRoom(e: React.FormEvent) {
@@ -293,46 +370,178 @@ export default function RoomsPage() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 key={room.id}
-                                className="dashboard-card p-4 sm:p-6 flex flex-col items-center text-center group relative hover:border-primary/50"
+                                className="dashboard-card p-4 sm:p-5 flex flex-col items-center text-center group relative hover:border-primary/50"
                             >
-                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-secondary flex items-center justify-center text-xl sm:text-2xl font-bold text-primary mb-2 sm:mb-3 shadow-inner tabular-nums">
+                                {/* Occupancy status badge */}
+                                <div className="mb-2">
+                                    {room.isOccupied ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Occupied
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-secondary text-muted-foreground border border-border">
+                                            Vacant
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-secondary flex items-center justify-center text-xl sm:text-2xl font-bold text-primary mb-2 shadow-inner tabular-nums">
                                     {room.number}
                                 </div>
                                 <h3 className="font-semibold text-foreground text-sm sm:text-base">Room {room.number}</h3>
                                 {room.type?.trim() ? (
-                                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{room.type}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wider">{room.type}</p>
                                 ) : null}
                                 {room.floor && (
-                                    <span className="mt-3 text-xs bg-secondary px-2 py-0.5 rounded text-muted-foreground">
+                                    <span className="mt-1.5 text-[11px] bg-secondary px-2 py-0.5 rounded text-muted-foreground">
                                         Floor {room.floor}
                                     </span>
                                 )}
 
-                                {/* Actions area - inline flex on bottom for mobile, absolute hover on desktop */}
-                                <div className="flex justify-center gap-4 w-full mt-auto pt-4 sm:absolute sm:top-3 sm:left-0 sm:right-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pt-0 sm:mt-0 pointer-events-none">
+                                {/* PIN & Check-in / Checkout status controls */}
+                                <div className="w-full mt-3 pt-2 border-t border-border/60">
+                                    {room.isOccupied ? (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300">
+                                                <KeyRound className="w-3.5 h-3.5 shrink-0" />
+                                                <span className="text-xs font-mono font-bold tracking-wider">
+                                                    PIN: {room.currentPin || "—"}
+                                                </span>
+                                                {room.currentPin && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => copyRoomPin(room.id, room.currentPin!)}
+                                                        className="p-1 hover:bg-amber-500/20 rounded transition-colors text-amber-700 dark:text-amber-300"
+                                                        title="Copy PIN"
+                                                    >
+                                                        {pinCopiedRoomId === room.id ? (
+                                                            <Check className="w-3 h-3 text-emerald-500" />
+                                                        ) : (
+                                                            <Copy className="w-3 h-3" />
+                                                        )}
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRegeneratePin(room)}
+                                                    className="p-1 hover:bg-amber-500/20 rounded transition-colors text-amber-700 dark:text-amber-300"
+                                                    title="New PIN"
+                                                >
+                                                    <RefreshCw className="w-3 h-3" />
+                                                </button>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCheckout(room)}
+                                                className="w-full py-1.5 px-2.5 rounded-lg border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                                            >
+                                                <LogOut className="w-3.5 h-3.5" /> Check Out
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => openCheckinModal(room)}
+                                            className="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                                        >
+                                            <LogIn className="w-3.5 h-3.5" /> Check In
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Actions area - Print QR & Delete */}
+                                <div className="flex justify-center gap-4 w-full mt-2 pt-2 sm:absolute sm:top-2 sm:left-0 sm:right-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pt-0 sm:mt-0 pointer-events-none">
                                     <button
                                         type="button"
                                         onClick={() => handleSinglePrint(room.id)}
                                         title="Print QR"
                                         aria-label={`Print QR for room ${room.number}`}
-                                        className="p-2 w-full max-w-[120px] sm:max-w-none sm:w-auto sm:absolute sm:left-3 sm:top-0 min-h-10 min-w-10 sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded-lg bg-secondary/90 border border-border text-muted-foreground hover:text-primary transition-opacity shadow-sm pointer-events-auto"
+                                        className="p-1.5 min-h-8 min-w-8 sm:min-h-0 sm:min-w-0 sm:absolute sm:left-3 sm:top-0 flex items-center justify-center rounded-lg bg-secondary/90 border border-border text-muted-foreground hover:text-primary transition-opacity shadow-sm pointer-events-auto"
                                     >
-                                        <QrCode className="w-4 h-4" />
+                                        <QrCode className="w-3.5 h-3.5" />
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => deleteRoom(room.id)}
                                         title="Delete room"
                                         aria-label={`Delete room ${room.number}`}
-                                        className="p-2 w-full max-w-[120px] sm:max-w-none sm:w-auto sm:absolute sm:right-3 sm:top-0 min-h-10 min-w-10 sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded-lg bg-secondary/90 border border-border text-muted-foreground hover:text-red-500 transition-opacity shadow-sm pointer-events-auto"
+                                        className="p-1.5 min-h-8 min-w-8 sm:min-h-0 sm:min-w-0 sm:absolute sm:right-3 sm:top-0 flex items-center justify-center rounded-lg bg-secondary/90 border border-border text-muted-foreground hover:text-red-500 transition-opacity shadow-sm pointer-events-auto"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             </motion.div>
                         ))}
                     </AnimatePresence>
                 </div>
+
+                {/* Check-In Modal */}
+                <AnimatePresence>
+                    {checkinModalRoom && (
+                        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)]" onClick={() => setCheckinModalRoom(null)}>
+                            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overflow-hidden bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl p-5 text-foreground">
+                                <div className="flex justify-between items-center pb-3 border-b border-border">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                                            <LogIn className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-base">Check In Room {checkinModalRoom.number}</h3>
+                                            <p className="text-xs text-muted-foreground">Assign 4-digit Stay PIN for guest</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground" onClick={() => setCheckinModalRoom(null)}>
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleCheckinSubmit} className="pt-4 space-y-4">
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                                            4-Digit Stay PIN
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="text"
+                                                maxLength={4}
+                                                value={checkinPin}
+                                                onChange={(e) => setCheckinPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                                                className="text-center font-mono text-xl font-bold tracking-widest h-12"
+                                                placeholder="e.g. 4829"
+                                                required
+                                                autoFocus
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => setCheckinPin(String(Math.floor(1000 + Math.random() * 9000)))}
+                                                className="h-12 px-3"
+                                                title="Generate Random PIN"
+                                            >
+                                                <RefreshCw className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground mt-1.5">
+                                            Provide this PIN to the guest on their keycard. They will use it to order food and request services.
+                                        </p>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-2">
+                                        <Button type="button" variant="outline" className="flex-1" onClick={() => setCheckinModalRoom(null)}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" loading={checkinLoading} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                            Confirm Check-In
+                                        </Button>
+                                    </div>
+                                </form>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
 
                 {/* Add Room Modal */}
                 <AnimatePresence>

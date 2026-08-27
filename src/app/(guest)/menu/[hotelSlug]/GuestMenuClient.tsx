@@ -27,6 +27,8 @@ import {
     ShoppingBag,
     ChevronRight,
     Headset,
+    ShieldCheck,
+    KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
@@ -44,6 +46,10 @@ import { IndianVegMark, IndianNonVegMark } from "./GuestMenuDietIcons";
 import { GuestMenuItemInsights } from "./GuestMenuItemInsights";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 import { AnimatedOverlays } from "./GuestMenuAnimated";
+import { StayPinModal } from "@/components/guest/StayPinModal";
+import { getStayToken, getStayPin, clearStayToken, useStaySession } from "@/lib/staySession";
+import { toast } from "sonner";
+
 
 const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
     { value: "default", label: "Menu order" },
@@ -87,6 +93,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const [sortBy, setSortBy] = useState<GuestMenuSort>("default");
     const [cartAnimKey, setCartAnimKey] = useState(0);
     const [showRoomModal, setShowRoomModal] = useState(false);
+    const [showPinModal, setShowPinModal] = useState(false);
     const [pastOrders, setPastOrders] = useState<Order[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [guestLogoFailed, setGuestLogoFailed] = useState(false);
@@ -126,6 +133,21 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         [hotel?.roomServicePhone, hotel?.phone],
     );
 
+    const promptedRoomRef = useRef<string | null>(null);
+    const { pin: stayPin } = useStaySession(resolvedRoomId);
+
+    /** Auto-prompt guest for Stay PIN when scanning QR code if token is not saved yet */
+    useEffect(() => {
+        if (!resolvedRoomId || loading) return;
+        if (promptedRoomRef.current === resolvedRoomId) return;
+        const token = getStayToken(resolvedRoomId);
+        const pin = getStayPin(resolvedRoomId);
+        if (!token || !pin) {
+            promptedRoomRef.current = resolvedRoomId;
+            setShowPinModal(true);
+        }
+    }, [resolvedRoomId, loading]);
+
     useEffect(() => {
         if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0].id);
     }, [categories, activeCategory]);
@@ -145,22 +167,37 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         return applySortToCategories(afterSearch, sortBy);
     }, [dietFilteredCategories, searchQuery, searchNormalized, sortBy]);
 
+    const searchResultCount = useMemo(() => flattenMenuItems(filteredCategories).length, [filteredCategories]);
+    const isSearchUnmatched = searchNormalized.length > 0 && searchResultCount === 0;
+    const isDietUnmatched = dietFilters.length > 0 && searchResultCount === 0 && !isSearchUnmatched;
+
+    const displayCategories = useMemo(() => {
+        if (searchResultCount > 0) {
+            return filteredCategories;
+        }
+        const fallback = applySortToCategories(dietFilteredCategories, sortBy);
+        if (flattenMenuItems(fallback).length > 0) {
+            return fallback;
+        }
+        return applySortToCategories(categories, sortBy);
+    }, [searchResultCount, filteredCategories, dietFilteredCategories, categories, sortBy]);
+
     const didYouMeanItem = useMemo(() => {
         if (searchNormalized.length < 3) return null;
-        if (flattenMenuItems(filteredCategories).length > 0) return null;
-        const pool = flattenMenuItems(dietFilteredCategories);
+        if (searchResultCount > 0) return null;
+        const pool = flattenMenuItems(dietFilteredCategories.length > 0 ? dietFilteredCategories : categories);
         return findDidYouMeanItem(searchQuery, pool);
-    }, [searchQuery, searchNormalized, filteredCategories, dietFilteredCategories]);
+    }, [searchQuery, searchNormalized, searchResultCount, dietFilteredCategories, categories]);
 
-    /** Categories for scroll-spy + bottom “Menu” sheet (same as filtered list). */
-    const chipCategories = filteredCategories;
+    /** Categories for scroll-spy + bottom “Menu” sheet (same as displayed list). */
+    const chipCategories = displayCategories;
 
     useEffect(() => {
-        if (filteredCategories.length === 0) return;
-        if (!filteredCategories.some((c) => c.id === activeCategory)) {
-            setActiveCategory(filteredCategories[0].id);
+        if (displayCategories.length === 0) return;
+        if (!displayCategories.some((c) => c.id === activeCategory)) {
+            setActiveCategory(displayCategories[0].id);
         }
-    }, [filteredCategories, activeCategory]);
+    }, [displayCategories, activeCategory]);
 
     function toggleDietFilter(key: GuestDietFilterKey) {
         setDietFilters((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -177,11 +214,10 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     const activeSortLabel = SORT_MENU_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Sort";
 
-    const resultCount = useMemo(() => flattenMenuItems(filteredCategories).length, [filteredCategories]);
+    const resultCount = searchResultCount;
     const hasActiveFilters = searchNormalized.length > 0 || dietFilters.length > 0 || sortBy !== "default";
     /** Sort or diet chosen from menu — show strip under search + adjust scroll offsets. */
     const menuFiltersActive = sortBy !== "default" || dietFilters.length > 0;
-    const showNoResultsPanel = !loading && !error && categories.length > 0 && resultCount === 0;
 
     const chipCategoryIdsKey = useMemo(() => chipCategories.map((c) => c.id).join("|"), [chipCategories]);
 
@@ -386,7 +422,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             setShowRoomModal(true);
             return;
         }
-        placeOrder();
+        const existingToken = getStayToken(resolvedRoomId);
+        if (!existingToken) {
+            setShowPinModal(true);
+            return;
+        }
+        void placeOrder(existingToken);
     }
 
     /** Room modal primary action: persist room when closed; submit when open. */
@@ -394,14 +435,25 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         if (!resolvedRoomId) return;
         setShowRoomModal(false);
         if (isOpen) {
-            void placeOrder();
+            const existingToken = getStayToken(resolvedRoomId);
+            if (!existingToken) {
+                setShowPinModal(true);
+                return;
+            }
+            void placeOrder(existingToken);
             return;
         }
         setShowCart(true);
     }
 
-    async function placeOrder() {
+    async function placeOrder(stayTokenOverride?: string) {
         if (!isOpen || !resolvedRoomId) return;
+        const token = stayTokenOverride || getStayToken(resolvedRoomId);
+        if (!token) {
+            setShowPinModal(true);
+            return;
+        }
+
         setPlacing(true);
         try {
             const result = await api.placeOrder({
@@ -409,18 +461,33 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 items: cart.map((ci) => ({ itemId: ci.item.id, quantity: ci.quantity })),
                 notes: notes || undefined,
                 guestName: guestName || undefined,
+                stayToken: token,
             });
             setOrder(result);
             setCart([]);
             setShowCart(false);
             setShowRoomModal(false);
+            setShowPinModal(false);
             loadPastOrders();
+            toast.success(`Order #${result.orderNumber} placed successfully!`);
         } catch (err: unknown) {
-            alert(err instanceof Error ? err.message : "Failed to place order");
+            const msg = err instanceof Error ? err.message : "Failed to place order";
+            if (
+                msg.toLowerCase().includes("pin") ||
+                msg.toLowerCase().includes("vacant") ||
+                msg.toLowerCase().includes("checked out") ||
+                msg.toLowerCase().includes("stay") ||
+                msg.toLowerCase().includes("session")
+            ) {
+                clearStayToken(resolvedRoomId);
+                setShowPinModal(true);
+            }
+            toast.error(msg);
         } finally {
             setPlacing(false);
         }
     }
+
 
     function scrollToCategory(categoryId: string) {
         scrollSpySuspended.current = true;
@@ -568,7 +635,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         )}
                         aria-hidden={brandingBarHidden}
                     >
-                        <div className="flex items-center gap-2.5 pb-2.5">
+                        <div className="flex items-center justify-between gap-2.5 pb-2.5">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                 {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
                                     <Image
                                         src={hotel.logoUrl.trim()}
@@ -608,6 +676,19 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     ) : null}
                                 </div>
                             </div>
+                            {stayPin ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPinModal(true)}
+                                    className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
+                                    title={`Room ${roomDisplayName || ""} Stay PIN: ${stayPin} (Click to re-verify)`}
+                                >
+                                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                    <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)]">PIN</span>
+                                    <span className="font-mono font-bold tracking-wider">{stayPin}</span>
+                                </button>
+                            ) : null}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -661,121 +742,130 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     role="menu"
                                     className="absolute right-0 top-12 z-[60] w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] py-2 shadow-xl shadow-black/50"
                                 >
-                                        <div className="px-3 pb-1">
-                                            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">
-                                                <SlidersHorizontal className="h-3 w-3" aria-hidden />
-                                                Sort
-                                            </p>
+                                    {stayPin ? (
+                                        <div className="mx-3 mb-2 flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
+                                            <span className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
+                                                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                                Room {roomDisplayName || ""} PIN
+                                            </span>
+                                            <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300 tracking-wider">{stayPin}</span>
                                         </div>
-                                        <div className="px-2 pb-2">
-                                            {SORT_MENU_OPTIONS.map((opt) => (
-                                                <button
-                                                    key={opt.value}
-                                                    type="button"
-                                                    role="menuitemradio"
-                                                    aria-checked={sortBy === opt.value}
+                                    ) : null}
+                                    <div className="px-3 pb-1">
+                                        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">
+                                            <SlidersHorizontal className="h-3 w-3" aria-hidden />
+                                            Sort
+                                        </p>
+                                    </div>
+                                    <div className="px-2 pb-2">
+                                        {SORT_MENU_OPTIONS.map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                role="menuitemradio"
+                                                aria-checked={sortBy === opt.value}
+                                                className={cn(
+                                                    "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors",
+                                                    sortBy === opt.value ? "bg-[var(--guest-accent-20)] text-[var(--guest-accent-90)]" : "text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)]",
+                                                )}
+                                                onClick={() => setSortBy(opt.value)}
+                                            >
+                                                <span
                                                     className={cn(
-                                                        "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors",
-                                                        sortBy === opt.value ? "bg-[var(--guest-accent-20)] text-[var(--guest-accent-90)]" : "text-[var(--guest-muted)] hover:bg-[var(--guest-surface-2)]",
+                                                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                                                        sortBy === opt.value ? "border-[var(--guest-accent-40)] bg-[var(--guest-accent-30)]" : "border-[var(--guest-border)]",
                                                     )}
-                                                    onClick={() => setSortBy(opt.value)}
+                                                    aria-hidden
                                                 >
-                                                    <span
-                                                        className={cn(
-                                                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                                                            sortBy === opt.value ? "border-[var(--guest-accent-40)] bg-[var(--guest-accent-30)]" : "border-[var(--guest-border)]",
-                                                        )}
-                                                        aria-hidden
-                                                    >
-                                                        {sortBy === opt.value ? <span className="h-2 w-2 rounded-full bg-[var(--guest-accent)]" /> : null}
-                                                    </span>
-                                                    {opt.label}
+                                                    {sortBy === opt.value ? <span className="h-2 w-2 rounded-full bg-[var(--guest-accent)]" /> : null}
+                                                </span>
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="mx-2 border-t border-[var(--guest-line)]" />
+                                    <div className="px-3 pt-2 pb-1">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">Diet filters</p>
+                                        <p className="mt-0.5 text-[11px] text-[var(--guest-subtle)]">Tap to show only matching dishes</p>
+                                    </div>
+                                    <div className="flex flex-col gap-1.5 px-2 pb-2">
+                                        <button
+                                            type="button"
+                                            role="menuitemcheckbox"
+                                            aria-checked={dietFilters.includes("VEG")}
+                                            className={cn(
+                                                "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                dietFilters.includes("VEG")
+                                                    ? "border-green-500/40 bg-green-500/10 text-green-200"
+                                                    : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
+                                            )}
+                                            onClick={() => toggleDietFilter("VEG")}
+                                        >
+                                            <IndianVegMark className="h-4 w-4 shrink-0" />
+                                            Vegetarian
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitemcheckbox"
+                                            aria-checked={dietFilters.includes("NON_VEG")}
+                                            className={cn(
+                                                "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                dietFilters.includes("NON_VEG")
+                                                    ? "border-red-500/40 bg-red-500/10 text-red-200"
+                                                    : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
+                                            )}
+                                            onClick={() => toggleDietFilter("NON_VEG")}
+                                        >
+                                            <IndianNonVegMark className="h-4 w-4 shrink-0" />
+                                            Non-vegetarian
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitemcheckbox"
+                                            aria-checked={dietFilters.includes("EGGITARIAN")}
+                                            className={cn(
+                                                "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                                                dietFilters.includes("EGGITARIAN")
+                                                    ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                                                    : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
+                                            )}
+                                            onClick={() => toggleDietFilter("EGGITARIAN")}
+                                        >
+                                            <Egg className="h-4 w-4 shrink-0 text-amber-400" />
+                                            Egg
+                                        </button>
+                                    </div>
+                                    <div className="mx-2 border-t border-[var(--guest-line)]" />
+                                    <div className="px-2 pt-1">
+                                        <Link
+                                            href={guestServicesHref}
+                                            role="menuitem"
+                                            className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
+                                            onClick={() => setShowHeaderMenu(false)}
+                                        >
+                                            <Headset className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                                            Guest services
+                                        </Link>
+                                    </div>
+                                    {resolvedRoomId ? (
+                                        <>
+                                            <div className="mx-2 border-t border-[var(--guest-line)]" />
+                                            <div className="px-2 pt-1">
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
+                                                    onClick={() => {
+                                                        setShowHeaderMenu(false);
+                                                        setShowHistory(true);
+                                                    }}
+                                                >
+                                                    <Receipt className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" />
+                                                    My bill &amp; orders
                                                 </button>
-                                            ))}
-                                        </div>
-                                        <div className="mx-2 border-t border-[var(--guest-line)]" />
-                                        <div className="px-3 pt-2 pb-1">
-                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--guest-muted)]">Diet filters</p>
-                                            <p className="mt-0.5 text-[11px] text-[var(--guest-subtle)]">Tap to show only matching dishes</p>
-                                        </div>
-                                        <div className="flex flex-col gap-1.5 px-2 pb-2">
-                                            <button
-                                                type="button"
-                                                role="menuitemcheckbox"
-                                                aria-checked={dietFilters.includes("VEG")}
-                                                className={cn(
-                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                                                    dietFilters.includes("VEG")
-                                                        ? "border-green-500/40 bg-green-500/10 text-green-200"
-                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
-                                                )}
-                                                onClick={() => toggleDietFilter("VEG")}
-                                            >
-                                                <IndianVegMark className="h-4 w-4 shrink-0" />
-                                                Vegetarian
-                                            </button>
-                                            <button
-                                                type="button"
-                                                role="menuitemcheckbox"
-                                                aria-checked={dietFilters.includes("NON_VEG")}
-                                                className={cn(
-                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                                                    dietFilters.includes("NON_VEG")
-                                                        ? "border-red-500/40 bg-red-500/10 text-red-200"
-                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
-                                                )}
-                                                onClick={() => toggleDietFilter("NON_VEG")}
-                                            >
-                                                <IndianNonVegMark className="h-4 w-4 shrink-0" />
-                                                Non-vegetarian
-                                            </button>
-                                            <button
-                                                type="button"
-                                                role="menuitemcheckbox"
-                                                aria-checked={dietFilters.includes("EGGITARIAN")}
-                                                className={cn(
-                                                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                                                    dietFilters.includes("EGGITARIAN")
-                                                        ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                                                        : "border-[var(--guest-line)] bg-[var(--guest-text-12)] text-[var(--guest-muted)] hover:border-[var(--guest-line)]",
-                                                )}
-                                                onClick={() => toggleDietFilter("EGGITARIAN")}
-                                            >
-                                                <Egg className="h-4 w-4 shrink-0 text-amber-400" />
-                                                Egg
-                                            </button>
-                                        </div>
-                                        <div className="mx-2 border-t border-[var(--guest-line)]" />
-                                        <div className="px-2 pt-1">
-                                            <Link
-                                                href={guestServicesHref}
-                                                role="menuitem"
-                                                className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
-                                                onClick={() => setShowHeaderMenu(false)}
-                                            >
-                                                <Headset className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" aria-hidden />
-                                                Guest services
-                                            </Link>
-                                        </div>
-                                        {resolvedRoomId ? (
-                                            <>
-                                                <div className="mx-2 border-t border-[var(--guest-line)]" />
-                                                <div className="px-2 pt-1">
-                                                    <button
-                                                        type="button"
-                                                        role="menuitem"
-                                                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
-                                                        onClick={() => {
-                                                            setShowHeaderMenu(false);
-                                                            setShowHistory(true);
-                                                        }}
-                                                    >
-                                                        <Receipt className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" />
-                                                        My bill &amp; orders
-                                                    </button>
-                                                </div>
-                                            </>
-                                        ) : null}
+                                            </div>
+                                        </>
+                                    ) : null}
                                 </div>
                             ) : null}
                         </div>
@@ -888,8 +978,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 {pastOrders.length === 0
                                     ? "No orders yet — tap to view"
                                     : roomBillGrandTotal > 0
-                                      ? `${formatPrice(roomBillGrandTotal)} total so far`
-                                      : "No active charges — tap for history"}
+                                        ? `${formatPrice(roomBillGrandTotal)} total so far`
+                                        : "No active charges — tap for history"}
                             </p>
                         </div>
                         <ChevronRight className="h-5 w-5 shrink-0 text-[var(--guest-muted)]" aria-hidden />
@@ -920,7 +1010,73 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         {sortBy !== "default" ? <span> · sorted</span> : null}
                     </div>
                 )}
-                {filteredCategories.map((cat, catIndex) => (
+                {isSearchUnmatched && (
+                    <div className="rounded-2xl border border-[var(--guest-accent-25)] bg-[var(--guest-accent-12)] p-4 sm:p-5 transition-all animate-fade-in-up">
+                        <div className="flex items-start gap-3.5">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--guest-accent-20)] text-[var(--guest-accent)]">
+                                <Utensils className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-sm sm:text-base font-bold text-[var(--guest-text)]">
+                                    Item not available
+                                </h3>
+                                <p className="mt-1 text-xs sm:text-sm text-[var(--guest-muted)] leading-relaxed">
+                                    The food item &ldquo;<span className="font-semibold text-[var(--guest-text)]">{searchQuery.trim()}</span>&rdquo; is not available. You can try exploring our other delicious dishes below!
+                                </p>
+                                {didYouMeanItem && (
+                                    <div className="mt-2.5 flex items-center gap-2 text-xs">
+                                        <span className="text-[var(--guest-muted)]">Did you mean:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearchQuery(didYouMeanItem.name)}
+                                            className="font-semibold text-[var(--guest-accent)] hover:underline"
+                                        >
+                                            {didYouMeanItem.name}
+                                        </button>
+                                    </div>
+                                )}
+                                <div className="mt-3 flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery("")}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--guest-text)] shadow-sm hover:bg-[var(--guest-surface-2)] transition-colors"
+                                    >
+                                        <X className="h-3.5 w-3.5 text-[var(--guest-muted)]" />
+                                        Clear search
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {isDietUnmatched && (
+                    <div className="rounded-2xl border border-[var(--guest-accent-25)] bg-[var(--guest-accent-12)] p-4 sm:p-5 transition-all animate-fade-in-up">
+                        <div className="flex items-start gap-3.5">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--guest-accent-20)] text-[var(--guest-accent)]">
+                                <Utensils className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-sm sm:text-base font-bold text-[var(--guest-text)]">
+                                    No matching dishes
+                                </h3>
+                                <p className="mt-1 text-xs sm:text-sm text-[var(--guest-muted)] leading-relaxed">
+                                    No dishes match your selected diet filters. Exploring all other available menu options below!
+                                </p>
+                                <div className="mt-3 flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDietFilters([])}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--guest-text)] shadow-sm hover:bg-[var(--guest-surface-2)] transition-colors"
+                                    >
+                                        <X className="h-3.5 w-3.5 text-[var(--guest-muted)]" />
+                                        Clear diet filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {displayCategories.map((cat, catIndex) => (
                     <div
                         key={cat.id}
                         id={`cat-${cat.id}`}
@@ -966,33 +1122,41 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                             onClick={() => addToCart(item)}
                                             disabled={!itemIsAvailable}
                                             className={cn(
-                                                "w-full rounded-md border-2 border-[var(--guest-accent-70)] bg-transparent py-2 text-center text-xs font-bold uppercase tracking-wide text-[var(--guest-accent)] transition-colors hover:bg-[var(--guest-accent-12)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-[108px]",
+                                                "flex h-9 w-[100px] sm:w-28 items-center justify-center rounded-xl border-2 border-[var(--guest-accent-70)] bg-[var(--guest-surface)] text-center text-xs font-extrabold uppercase tracking-wider text-[var(--guest-accent)] shadow-md shadow-black/20 transition-all hover:bg-[var(--guest-accent-12)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
                                             )}
                                         >
-                                            {itemIsAvailable ? "Add +" : "Sold out"}
+                                            {itemIsAvailable ? (
+                                                <span className="flex items-center gap-1">
+                                                    ADD <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                                                </span>
+                                            ) : (
+                                                "Sold out"
+                                            )}
                                         </button>
                                     );
                                 } else {
                                     actionBlock = (
-                                        <div className="flex w-full items-center justify-between gap-1 rounded-md border border-[var(--guest-accent-40)] bg-[color-mix(in_srgb,var(--guest-surface)_85%,var(--guest-bg))] px-1 py-1 sm:w-[108px]">
+                                        <div className="flex h-9 w-[100px] sm:w-28 items-center justify-between rounded-xl border border-[var(--guest-accent-40)] bg-[var(--guest-surface)] px-1 shadow-md shadow-black/20">
                                             <button
                                                 type="button"
                                                 onClick={() => removeFromCart(item.id)}
-                                                className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90"
+                                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90 active:scale-90 transition"
+                                                aria-label="Decrease quantity"
                                             >
-                                                <Minus className="h-3.5 w-3.5" />
+                                                <Minus className="h-3.5 w-3.5 stroke-[2.5]" />
                                             </button>
-                                            <span className="min-w-[1.25rem] text-center text-sm font-bold text-[var(--guest-text)]">{qty}</span>
+                                            <span className="min-w-[1.25rem] text-center text-sm font-bold tabular-nums text-[var(--guest-text)]">{qty}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => addToCart(item)}
                                                 disabled={!isOpen}
                                                 className={cn(
-                                                    "flex h-8 w-8 items-center justify-center rounded-md bg-[var(--guest-cta)] text-[var(--guest-on-cta)] hover:bg-[var(--guest-cta-hover)]",
+                                                    "flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--guest-cta)] text-[var(--guest-on-cta)] hover:bg-[var(--guest-cta-hover)] active:scale-90 transition",
                                                     !isOpen && "opacity-40",
                                                 )}
+                                                aria-label="Increase quantity"
                                             >
-                                                <Plus className="h-3.5 w-3.5" />
+                                                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
                                             </button>
                                         </div>
                                     );
@@ -1001,7 +1165,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                 return (
                                     <li
                                         key={item.id}
-                                        className="relative z-0 flex gap-3 py-4 first:pt-0 animate-fade-in-up"
+                                        className="relative z-0 flex items-center justify-between gap-3.5 py-4 first:pt-0 animate-fade-in-up"
                                         style={{ animationDelay: `${itemIndex * 40}ms` }}
                                     >
                                         <div className="min-w-0 flex-1">
@@ -1046,97 +1210,41 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                             ) : null}
                                                         </div>
                                                     ) : null}
-                                                    {!hasImage && actionBlock ? (
-                                                        <div className="mt-3 flex justify-end">{actionBlock}</div>
-                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
                                         {hasImage ? (
-                                            <div className="flex w-[108px] shrink-0 flex-col items-stretch gap-2">
-                                                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)]">
+                                            <div className="relative flex w-[114px] sm:w-[124px] shrink-0 flex-col items-center pb-3 self-start">
+                                                <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)] shadow-sm">
                                                     {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                                     <img
                                                         src={imageSrc}
                                                         alt=""
-                                                        width={216}
-                                                        height={162}
+                                                        width={240}
+                                                        height={240}
                                                         loading={isPriorityImage ? "eager" : "lazy"}
                                                         decoding="async"
                                                         fetchPriority={isPriorityImage ? "high" : "auto"}
                                                         className="h-full w-full object-cover"
                                                     />
                                                 </div>
+                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-10">
+                                                    {actionBlock}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex w-[114px] sm:w-[124px] shrink-0 items-center justify-center self-center">
                                                 {actionBlock}
                                             </div>
-                                        ) : null}
+                                        )}
                                     </li>
                                 );
                             })}
                         </ul>
                     </div>
                 ))}
-                {showNoResultsPanel && (
-                    <div className="rounded-2xl border border-[var(--guest-line)] bg-[color-mix(in_srgb,var(--guest-surface)_60%,var(--guest-bg))] px-5 py-10 text-center">
-                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--guest-surface-2)]">
-                            <Search className="h-7 w-7 text-[var(--guest-muted)]" />
-                        </div>
-                        <h3 className="text-base font-semibold text-[var(--guest-text)]">No dishes match</h3>
-                        <p className="mt-2 text-sm text-[var(--guest-muted)] leading-relaxed">
-                            {searchNormalized
-                                ? "Try a shorter search or clear filters — we also forgive small typos and extra spaces."
-                                : "Nothing in this menu matches the diet filters. Turn one off to see more."}
-                        </p>
-                        {didYouMeanItem && (
-                            <div className="mt-5 rounded-xl border border-[var(--guest-accent-20)] bg-[var(--guest-accent-12)] px-4 py-3">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--guest-muted)]">Did you mean</p>
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchQuery(didYouMeanItem.name)}
-                                    className="mt-1 text-base font-semibold text-[var(--guest-accent)] hover:underline"
-                                >
-                                    {didYouMeanItem.name}
-                                </button>
-                            </div>
-                        )}
-                        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                            {searchNormalized ? (
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    className="w-full border-[var(--guest-line)] bg-[var(--guest-surface-2)] text-[var(--guest-text)] hover:opacity-90 sm:w-auto"
-                                    onClick={() => setSearchQuery("")}
-                                >
-                                    Clear search
-                                </Button>
-                            ) : null}
-                            {dietFilters.length > 0 ? (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full border-[var(--guest-line)] bg-transparent text-[var(--guest-text-70)] hover:bg-[var(--guest-text-12)] sm:w-auto"
-                                    onClick={() => setDietFilters([])}
-                                >
-                                    Clear diet filters
-                                </Button>
-                            ) : null}
-                            {searchNormalized && dietFilters.length > 0 ? (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full border-[var(--guest-line)] bg-transparent text-[var(--guest-text-70)] hover:bg-[var(--guest-text-12)] sm:w-auto"
-                                    onClick={() => {
-                                        setSearchQuery("");
-                                        setDietFilters([]);
-                                    }}
-                                >
-                                    Reset all
-                                </Button>
-                            ) : null}
-                        </div>
-                    </div>
-                )}
+
             </main>
 
             {(cartCount > 0 || showCart || showHistory || showRoomModal) && (
@@ -1223,6 +1331,20 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     Menu
                 </button>
             ) : null}
+
+            {/* In-Room Stay PIN Verification Modal */}
+            <StayPinModal
+                isOpen={showPinModal}
+                onClose={() => setShowPinModal(false)}
+                roomId={resolvedRoomId}
+                roomNumber={roomDisplayName || "Your Room"}
+                onSuccess={(newToken) => {
+                    setShowPinModal(false);
+                    if (cart.length > 0 && showCart) {
+                        void placeOrder(newToken);
+                    }
+                }}
+            />
         </div>
     );
 }
