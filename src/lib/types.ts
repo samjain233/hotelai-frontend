@@ -233,3 +233,14 @@ export interface ServiceRequest {
     createdAt: string;
     updatedAt: string;
 }
+
+export interface Service {
+    id: string;
+    name: string;
+    description?: string | null;
+    icon?: string | null;
+    price: number;
+    available: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}

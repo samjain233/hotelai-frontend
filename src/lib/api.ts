@@ -12,6 +12,7 @@ import {
     RoomQr,
     Order,
     PublicMenuData,
+    Service,
     ServiceRequest,
     RegisterPendingResponse,
 } from './types';
@@ -471,6 +472,47 @@ class ApiClient {
 
     async getPublicRooms(hotelSlug: string): Promise<{ id: string; number: string; floor?: string; type?: string }[]> {
         return this.request(`/guest/rooms/${hotelSlug}`);
+    }
+
+    // ─── Services (Admin) ───────────────────────────────────
+
+    async getServices(): Promise<Service[]> {
+        return this.request<Service[]>('/admin/services');
+    }
+
+    async createService(data: {
+        name: string;
+        description?: string;
+        price?: number;
+        icon?: string;
+        available?: boolean;
+    }): Promise<Service> {
+        return this.request<Service>('/admin/services', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async updateService(
+        id: string,
+        data: {
+            name?: string;
+            description?: string | null;
+            price?: number;
+            icon?: string | null;
+            available?: boolean;
+        },
+    ): Promise<Service> {
+        return this.request<Service>(`/admin/services/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteService(id: string): Promise<void> {
+        return this.request(`/admin/services/${id}`, {
+            method: 'DELETE',
+        });
     }
 
     // ─── Service Requests (Guest & Admin) ────────────────────
