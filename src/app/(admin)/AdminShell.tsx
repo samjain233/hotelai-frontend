@@ -21,6 +21,7 @@ import {
     Settings,
     ShieldAlert,
     Palette,
+    Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,7 @@ const allNavItems = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
     { name: "Orders", href: "/orders", icon: ClipboardList, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
     { name: "Services", href: "/services", icon: Headset, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
+    { name: "Manage Services", href: "/service-catalogue", icon: Wrench, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
     { name: "Menu", href: "/menu", icon: UtensilsCrossed, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
     { name: "Menu design", href: "/menu-design", icon: Palette, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
     { name: "Rooms & QR", href: "/rooms", icon: BedDouble, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },

@@ -243,3 +243,13 @@ export type MenuTag = {
     type: "ALLERGEN" | "DIETARY";
     hotelId?: string | null;
 };
+export interface Service {
+    id: string;
+    name: string;
+    description?: string | null;
+    icon?: string | null;
+    price: number;
+    available: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
