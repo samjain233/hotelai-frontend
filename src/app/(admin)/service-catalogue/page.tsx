@@ -14,10 +14,14 @@ import {
     Edit2,
     Trash2,
     X,
-    Check,
     Loader2,
     Wrench,
 } from "lucide-react";
+import { ServiceIconPicker } from "@/components/admin/ServiceIconPicker";
+import {
+    DEFAULT_SERVICE_ICON,
+    SERVICE_ICON_OPTIONS,
+} from "@/lib/serviceIcons";
 
 type Service = {
     id: string;
@@ -65,7 +69,9 @@ export default function ServiceCataloguePage() {
             setServices(data);
         } catch (err) {
             toast.error(
-                err instanceof Error ? err.message : "Failed to load services",
+                err instanceof Error
+                    ? err.message
+                    : "Failed to load services",
             );
         } finally {
             setLoading(false);
@@ -80,10 +86,11 @@ export default function ServiceCataloguePage() {
         setForm({
             name: "",
             description: "",
-            icon: "",
+            icon: DEFAULT_SERVICE_ICON,
             price: "",
             available: true,
         });
+
         setEditingService(null);
     }
 
@@ -98,7 +105,7 @@ export default function ServiceCataloguePage() {
         setForm({
             name: service.name,
             description: service.description ?? "",
-            icon: service.icon ?? "",
+            icon: service.icon ?? DEFAULT_SERVICE_ICON,
             price: service.price > 0 ? String(service.price) : "",
             available: service.available ?? true,
         });
@@ -121,7 +128,8 @@ export default function ServiceCataloguePage() {
             return;
         }
 
-        const price = form.price.trim() === "" ? 0 : Number(form.price);
+        const price =
+            form.price.trim() === "" ? 0 : Number(form.price);
 
         if (!Number.isFinite(price) || price < 0) {
             toast.error("Price must be 0 or greater");
@@ -134,7 +142,7 @@ export default function ServiceCataloguePage() {
             const data = {
                 name: form.name.trim(),
                 description: form.description.trim() || undefined,
-                icon: form.icon.trim() || undefined,
+                icon: form.icon || DEFAULT_SERVICE_ICON,
                 price,
                 available: form.available,
             };
@@ -156,7 +164,9 @@ export default function ServiceCataloguePage() {
             await loadServices();
         } catch (err) {
             toast.error(
-                err instanceof Error ? err.message : "Failed to save service",
+                err instanceof Error
+                    ? err.message
+                    : "Failed to save service",
             );
         } finally {
             setSaving(false);
@@ -189,7 +199,9 @@ export default function ServiceCataloguePage() {
             await loadServices();
         } catch (err) {
             toast.error(
-                err instanceof Error ? err.message : "Failed to delete service",
+                err instanceof Error
+                    ? err.message
+                    : "Failed to delete service",
             );
         } finally {
             setDeleting(false);
@@ -205,7 +217,10 @@ export default function ServiceCataloguePage() {
             setServices((current) =>
                 current.map((item) =>
                     item.id === service.id
-                        ? { ...item, available: !item.available }
+                        ? {
+                              ...item,
+                              available: !item.available,
+                          }
                         : item,
                 ),
             );
@@ -309,99 +324,114 @@ export default function ServiceCataloguePage() {
                     animate={{ opacity: 1 }}
                     className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"
                 >
-                    {filteredServices.map((service) => (
-                        <div
-                            key={service.id}
-                            className="dashboard-card p-5 flex flex-col group"
-                        >
-                            {/* Top */}
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-start gap-3 min-w-0">
-                                    <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center shrink-0">
-                                        <Wrench className="w-5 h-5 text-primary" />
+                    {filteredServices.map((service) => {
+                        const iconOption =
+                            SERVICE_ICON_OPTIONS.find(
+                                (item) => item.key === service.icon,
+                            ) ??
+                            SERVICE_ICON_OPTIONS.find(
+                                (item) =>
+                                    item.key === DEFAULT_SERVICE_ICON,
+                            )!;
+
+                        const ServiceIcon = iconOption.icon;
+
+                        return (
+                            <div
+                                key={service.id}
+                                className="dashboard-card p-5 flex flex-col group"
+                            >
+                                {/* Top */}
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start gap-3 min-w-0">
+                                        <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center shrink-0">
+                                            <ServiceIcon className="w-5 h-5 text-primary" />
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <h3 className="font-semibold text-foreground text-lg truncate">
+                                                {service.name}
+                                            </h3>
+
+                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                                {service.description ||
+                                                    "No description"}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div className="min-w-0">
-                                        <h3 className="font-semibold text-foreground text-lg truncate">
-                                            {service.name}
-                                        </h3>
+                                    <div className="flex gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                openEditService(service)
+                                            }
+                                            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                                            aria-label={`Edit ${service.name}`}
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
 
-                                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                            {service.description ||
-                                                "No description"}
-                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                openDeleteModal(service)
+                                            }
+                                            className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                            aria-label={`Delete ${service.name}`}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div className="flex gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => openEditService(service)}
-                                        className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                                        aria-label={`Edit ${service.name}`}
-                                    >
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            openDeleteModal(service)
-                                        }
-                                        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                        aria-label={`Delete ${service.name}`}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Price */}
-                            <div className="mt-5 pt-4 border-t border-border">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div>
-                                        {service.price > 0 ? (
-                                            <span className="text-lg font-bold text-foreground">
-                                                ₹{service.price}
-                                            </span>
-                                        ) : (
-                                            <span className="text-sm font-semibold text-emerald-500">
-                                                Free
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Availability */}
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            toggleAvailability(service)
-                                        }
-                                        aria-pressed={service.available}
-                                        className={cn(
-                                            "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                                            service.available
-                                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
-                                                : "border-border bg-secondary text-muted-foreground",
-                                        )}
-                                    >
-                                        <span
-                                            className={cn(
-                                                "w-2 h-2 rounded-full",
-                                                service.available
-                                                    ? "bg-emerald-500"
-                                                    : "bg-muted-foreground",
+                                {/* Price */}
+                                <div className="mt-5 pt-4 border-t border-border">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div>
+                                            {service.price > 0 ? (
+                                                <span className="text-lg font-bold text-foreground">
+                                                    ₹{service.price}
+                                                </span>
+                                            ) : (
+                                                <span className="text-sm font-semibold text-emerald-500">
+                                                    Free
+                                                </span>
                                             )}
-                                        />
+                                        </div>
 
-                                        {service.available
-                                            ? "Available"
-                                            : "Unavailable"}
-                                    </button>
+                                        {/* Availability */}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                toggleAvailability(service)
+                                            }
+                                            aria-pressed={service.available}
+                                            className={cn(
+                                                "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                                                service.available
+                                                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                                    : "border-border bg-secondary text-muted-foreground",
+                                            )}
+                                        >
+                                            <span
+                                                className={cn(
+                                                    "w-2 h-2 rounded-full",
+                                                    service.available
+                                                        ? "bg-emerald-500"
+                                                        : "bg-muted-foreground",
+                                                )}
+                                            />
+
+                                            {service.available
+                                                ? "Available"
+                                                : "Unavailable"}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </motion.div>
             )}
 
@@ -409,29 +439,29 @@ export default function ServiceCataloguePage() {
             <AnimatePresence>
                 {showModal && (
                     <div
-                        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md"
+                        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md overflow-hidden"
                         onClick={closeModal}
                     >
                         <motion.div
-                            initial={{
-                                opacity: 0,
-                                scale: 0.96,
-                                y: 8,
-                            }}
-                            animate={{
-                                opacity: 1,
-                                scale: 1,
-                                y: 0,
-                            }}
-                            exit={{
-                                opacity: 0,
-                                scale: 0.96,
-                                y: 8,
-                            }}
-                            transition={{ duration: 0.2 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-lg bg-card border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
-                        >
+                                initial={{
+                                    opacity: 0,
+                                    scale: 0.96,
+                                    y: 8,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    scale: 1,
+                                    y: 0,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    scale: 0.96,
+                                    y: 8,
+                                }}
+                                transition={{ duration: 0.2 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full max-w-lg max-h-[90vh] bg-card border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                            >
                             {/* Header */}
                             <div className="px-5 sm:px-6 py-4 border-b border-white/10">
                                 <div className="flex items-center justify-between">
@@ -454,7 +484,7 @@ export default function ServiceCataloguePage() {
 
                             <form
                                 onSubmit={saveService}
-                                className="p-5 sm:p-6 space-y-5"
+                                className="p-5 sm:p-6 space-y-5 overflow-y-auto"
                             >
                                 {/* Name */}
                                 <div>
@@ -523,29 +553,26 @@ export default function ServiceCataloguePage() {
                                     />
                                 </div>
 
-                                {/* Icon */}
+                                {/* Service Icon */}
                                 <div>
                                     <label className="text-sm font-medium text-foreground mb-1.5 block">
-                                        Icon
+                                        Service icon
                                     </label>
 
-                                    <Input
-                                        placeholder="e.g. laundry"
+                                    <p className="text-xs text-muted-foreground mb-3">
+                                        Choose an icon that represents this
+                                        service.
+                                    </p>
+
+                                    <ServiceIconPicker
                                         value={form.icon}
-                                        onChange={(e) =>
+                                        onChange={(icon) =>
                                             setForm({
                                                 ...form,
-                                                icon: e.target.value,
+                                                icon,
                                             })
                                         }
-                                        maxLength={50}
-                                        className="h-11"
                                     />
-
-                                    <p className="text-xs text-muted-foreground mt-1.5">
-                                        Optional. We can add a proper icon
-                                        picker later.
-                                    </p>
                                 </div>
 
                                 {/* Availability */}
@@ -625,9 +652,18 @@ export default function ServiceCataloguePage() {
                         onClick={closeDeleteModal}
                     >
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.96 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.96 }}
+                            initial={{
+                                opacity: 0,
+                                scale: 0.96,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                            }}
+                            exit={{
+                                opacity: 0,
+                                scale: 0.96,
+                            }}
                             onClick={(e) => e.stopPropagation()}
                             className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6"
                         >
