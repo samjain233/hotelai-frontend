@@ -543,6 +543,12 @@ class ApiClient {
         return this.request(`/guest/rooms/${hotelSlug}`);
     }
 
+    // ─── Services (Guest) ───────────────────────────────────
+    
+    async getGuestServices(hotelSlug: string): Promise<Service[]> {
+        return this.request<Service[]>(`/guest/services/${hotelSlug}`);
+    }
+
     // ─── Services (Admin) ───────────────────────────────────
 
     async getServices(): Promise<Service[]> {
@@ -596,6 +602,7 @@ class ApiClient {
         guestPhone?: string;
         stayToken?: string;
         pin?: string;
+        serviceId?: string;
     }): Promise<ServiceRequest> {
         return this.request<ServiceRequest>('/guest/service-requests', {
             method: 'POST',
