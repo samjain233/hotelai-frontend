@@ -7,22 +7,14 @@ import { useParams, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
-import { ServiceRequest } from "@/lib/types";
+import { Service, ServiceRequest } from "@/lib/types";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 import { motion, AnimatePresence } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import {
     AlertTriangle,
-    Bed,
-    Sparkles,
     Send,
     CheckCircle,
-    ShowerHead,
-    Wine,
-    Shirt,
-    Droplets,
-    BedDouble,
-    Trash2,
     MessageSquare,
     ChevronDown,
     ArrowLeft,
@@ -51,24 +43,7 @@ const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] 
     { label: "Other", Icon: ClipboardList, desc: "Any other concern" },
 ];
 
-const ROOM_SERVICE_ITEMS = [
-    { label: "Extra Towels", icon: Droplets, category: "Extra Towels" },
-    { label: "Extra Pillows", icon: BedDouble, category: "Extra Pillows" },
-    { label: "Iron & Board", icon: Shirt, category: "Iron & Board" },
-    { label: "Water Bottles", icon: Wine, category: "Water Bottles" },
-    { label: "Toiletries", icon: ShowerHead, category: "Toiletries" },
-    { label: "Extra Blanket", icon: Bed, category: "Extra Blanket" },
-];
-
-const HOUSEKEEPING_ITEMS = [
-    { label: "Room Cleaning", icon: Sparkles, desc: "Full room cleanup" },
-    { label: "Bed Making", icon: BedDouble, desc: "Fresh bedsheets" },
-    { label: "Bathroom Cleanup", icon: ShowerHead, desc: "Deep bathroom clean" },
-    { label: "Trash Pickup", icon: Trash2, desc: "Empty dustbins" },
-    { label: "Minibar Refill", icon: Wine, desc: "Restock minibar" },
-];
-
-type Tab = "complaint" | "room_service" | "housekeeping";
+type Tab = "complaint" | "services";
 
 const STATUS_COLORS: Record<string, string> = {
     SUBMITTED: "bg-[var(--guest-accent-15)] text-[var(--guest-accent)] border-[var(--guest-accent-30)]",
@@ -103,14 +78,11 @@ export default function GuestServicesClient() {
     const [complaintCategory, setComplaintCategory] = useState("");
     const [complaintDesc, setComplaintDesc] = useState("");
     const [complaintPriority, setComplaintPriority] = useState("NORMAL");
-
-    // Room service state
-    const [roomServiceItem, setRoomServiceItem] = useState("");
-    const [roomServiceNote, setRoomServiceNote] = useState("");
-
-    // Housekeeping state
-    const [hkCategory, setHkCategory] = useState("");
-    const [hkNote, setHkNote] = useState("");
+    // Hotel services
+    const [services, setServices] = useState<Service[]>([]);
+    const [servicesLoading, setServicesLoading] = useState(false);
+    const [selectedServiceId, setSelectedServiceId] = useState("");
+    const [serviceNote, setServiceNote] = useState("");
 
     useEffect(() => {
         setGuestLogoFailed(false);
@@ -162,6 +134,26 @@ export default function GuestServicesClient() {
         if (selectedRoom) loadRequests();
     }, [selectedRoom, loadRequests]);
 
+    const loadServices = useCallback(async () => {
+        if (!hotelSlug) return;
+
+        setServicesLoading(true);
+
+        try {
+            const data = await api.getGuestServices(hotelSlug);
+            setServices(data);
+        } catch (err) {
+            console.error("Failed to load guest services:", err);
+            setServices([]);
+        } finally {
+            setServicesLoading(false);
+        }
+    }, [hotelSlug]);
+
+    useEffect(() => {
+        void loadServices();
+    }, [loadServices]);
+
     useActivityStreamGuest({
         hotelSlug: hotelSlug || "",
         roomId: selectedRoom,
@@ -177,6 +169,7 @@ export default function GuestServicesClient() {
         }
 
         const token = stayTokenOverride || getStayToken(selectedRoom);
+
         if (!token) {
             setShowPinModal(true);
             return;
@@ -186,26 +179,46 @@ export default function GuestServicesClient() {
         let category = "";
         let description = "";
         let priority = "NORMAL";
+        let serviceId: string | undefined;
 
         if (activeTab === "complaint") {
-            if (!complaintCategory) return;
+            if (!complaintCategory) {
+                toast.error("Please select a complaint category");
+                return;
+            }
+
             type = "COMPLAINT";
             category = complaintCategory;
             description = complaintDesc;
             priority = complaintPriority;
-        } else if (activeTab === "room_service") {
-            if (!roomServiceItem) return;
-            type = "ROOM_SERVICE";
-            category = roomServiceItem;
-            description = roomServiceNote;
         } else {
-            if (!hkCategory) return;
-            type = "HOUSEKEEPING";
-            category = hkCategory;
-            description = hkNote;
+            if (!selectedServiceId) {
+                toast.error("Please select a service");
+                return;
+            }
+
+            const selectedService = services.find(
+                (service) => service.id === selectedServiceId,
+            );
+
+            if (!selectedService) {
+                toast.error("Service not found");
+                return;
+            }
+
+            if (!selectedService.available) {
+                toast.error("This service is currently unavailable");
+                return;
+            }
+
+            type = "SERVICE";
+            serviceId = selectedService.id;
+            category = selectedService.name;
+            description = serviceNote;
         }
 
         setSubmitting(true);
+
         try {
             await api.createServiceRequest({
                 type,
@@ -215,16 +228,31 @@ export default function GuestServicesClient() {
                 roomId: selectedRoom,
                 guestName: guestName || undefined,
                 stayToken: token,
+                ...(serviceId ? { serviceId } : {}),
             });
+
             setSubmitted(true);
+
             toast.success("Request submitted successfully");
-            setComplaintCategory(""); setComplaintDesc(""); setComplaintPriority("NORMAL");
-            setRoomServiceItem(""); setRoomServiceNote("");
-            setHkCategory(""); setHkNote("");
-            loadRequests();
+
+            // Reset complaint
+            setComplaintCategory("");
+            setComplaintDesc("");
+            setComplaintPriority("NORMAL");
+
+            // Reset service
+            setSelectedServiceId("");
+            setServiceNote("");
+
+            await loadRequests();
+
             setTimeout(() => setSubmitted(false), 3000);
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Failed to submit request";
+            const msg =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to submit request";
+
             if (
                 msg.toLowerCase().includes("pin") ||
                 msg.toLowerCase().includes("vacant") ||
@@ -235,6 +263,7 @@ export default function GuestServicesClient() {
                 clearStayToken(selectedRoom);
                 setShowPinModal(true);
             }
+
             toast.error(msg);
         } finally {
             setSubmitting(false);
@@ -244,15 +273,24 @@ export default function GuestServicesClient() {
     if (loading) return <GuestServicesSkeleton style={themeStyle} />;
 
     const tabs = [
-        { key: "complaint" as Tab, label: "Complaint", icon: AlertTriangle },
-        { key: "room_service" as Tab, label: "Room Service", icon: Bed },
-        { key: "housekeeping" as Tab, label: "Housekeeping", icon: Sparkles },
+        {
+            key: "complaint" as Tab,
+            label: "Complaint",
+            icon: AlertTriangle,
+        },
+        {
+            key: "services" as Tab,
+            label: "Services",
+            icon: Headset,
+        },
     ];
 
-    const myRequests = requests.filter(r => {
-        if (activeTab === "complaint") return r.type === "COMPLAINT";
-        if (activeTab === "room_service") return r.type === "ROOM_SERVICE";
-        return r.type === "HOUSEKEEPING";
+    const myRequests = requests.filter((request) => {
+        if (activeTab === "complaint") {
+            return request.type === "COMPLAINT";
+        }
+
+        return request.type === "SERVICE";
     });
 
     const bottomNavOffsetClass = "pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))]";
@@ -449,79 +487,112 @@ export default function GuestServicesClient() {
                             </div>
                         )}
 
-                        {activeTab === "room_service" && (
+                        {activeTab === "services" && (
                             <div className="space-y-3">
-                                <p className="text-xs text-[var(--guest-muted)]">Quick requests:</p>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {ROOM_SERVICE_ITEMS.map(item => {
-                                        const Icon = item.icon;
-                                        const isSel = roomServiceItem === item.category;
-                                        return (
-                                            <button
-                                                key={item.label}
-                                                type="button"
-                                                onClick={() => setRoomServiceItem(item.category)}
-                                                aria-pressed={isSel}
-                                                className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all focus-visible:outline-none ${isSel
-                                                    ? "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] shadow-sm text-[var(--guest-text)]"
-                                                    : "border-[var(--guest-line)] bg-[var(--guest-surface)] hover:border-[var(--guest-border)] text-[var(--guest-text)]"
-                                                    }`}
-                                            >
-                                                <Icon className={`h-6 w-6 shrink-0 ${isSel ? "text-[var(--guest-accent)]" : "text-[var(--guest-muted)]"}`} />
-                                                <span className="text-xs text-center font-medium">{item.label}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                <p className="text-xs text-[var(--guest-muted)]">
+                                    Select a service:
+                                </p>
 
-                                <textarea
-                                    value={roomServiceNote}
-                                    onChange={(e) => setRoomServiceNote(e.target.value)}
-                                    placeholder="Additional notes (optional)..."
-                                    rows={2}
-                                    className="w-full rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-2.5 text-sm text-[var(--guest-text)] outline-none transition placeholder:text-[var(--guest-subtle)] focus:border-[var(--guest-accent-40)] focus:ring-1 focus:ring-[var(--guest-accent-30)] resize-none"
-                                />
-                            </div>
-                        )}
+                                {servicesLoading ? (
+                                    <div className="rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-6 text-center">
+                                        <div className="mx-auto h-5 w-5 rounded-full border-2 border-[var(--guest-accent)]/30 border-t-[var(--guest-accent)] animate-spin" />
+                                        <p className="mt-2 text-xs text-[var(--guest-muted)]">
+                                            Loading services...
+                                        </p>
+                                    </div>
+                                ) : services.length === 0 ? (
+                                    <div className="rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-6 text-center">
+                                        <Headset className="mx-auto h-8 w-8 text-[var(--guest-muted)]" />
 
-                        {activeTab === "housekeeping" && (
-                            <div className="space-y-3">
-                                <p className="text-xs text-[var(--guest-muted)]">What do you need?</p>
-                                <div className="space-y-2">
-                                    {HOUSEKEEPING_ITEMS.map(item => {
-                                        const Icon = item.icon;
-                                        const isSel = hkCategory === item.label;
-                                        return (
-                                            <button
-                                                key={item.label}
-                                                type="button"
-                                                onClick={() => setHkCategory(item.label)}
-                                                aria-pressed={isSel}
-                                                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all focus-visible:outline-none ${isSel
-                                                    ? "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] shadow-sm"
-                                                    : "border-[var(--guest-line)] bg-[var(--guest-surface)] hover:border-[var(--guest-border)]"
-                                                    }`}
-                                            >
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSel ? "bg-[var(--guest-accent-25)] text-[var(--guest-accent)]" : "bg-[var(--guest-surface-2)] text-[var(--guest-muted)]"
-                                                    }`}>
-                                                    <Icon className="w-5 h-5 shrink-0" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-[var(--guest-text)]">{item.label}</p>
-                                                    <p className="text-[10px] text-[var(--guest-muted)]">{item.desc}</p>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                        <p className="mt-3 text-sm font-semibold text-[var(--guest-text)]">
+                                            No services available
+                                        </p>
 
-                                <textarea
-                                    value={hkNote}
-                                    onChange={(e) => setHkNote(e.target.value)}
-                                    placeholder="Preferred time or special instructions..."
-                                    rows={2}
-                                    className="w-full rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-2.5 text-sm text-[var(--guest-text)] outline-none transition placeholder:text-[var(--guest-subtle)] focus:border-[var(--guest-accent-40)] focus:ring-1 focus:ring-[var(--guest-accent-30)] resize-none"
-                                />
+                                        <p className="mt-1 text-xs text-[var(--guest-muted)]">
+                                            This hotel has not added any guest services yet.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="space-y-2">
+                                            {services.map((service) => {
+                                                const isSelected =
+                                                    selectedServiceId === service.id;
+
+                                                return (
+                                                    <button
+                                                        key={service.id}
+                                                        type="button"
+                                                        disabled={!service.available}
+                                                        onClick={() => {
+                                                            if (!service.available) return;
+
+                                                            setSelectedServiceId(service.id);
+                                                        }}
+                                                        aria-pressed={isSelected}
+                                                        className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all focus-visible:outline-none ${
+                                                            !service.available
+                                                                ? "cursor-not-allowed border-[var(--guest-line)] bg-[var(--guest-surface)] opacity-60"
+                                                                : isSelected
+                                                                    ? "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] shadow-sm"
+                                                                    : "border-[var(--guest-line)] bg-[var(--guest-surface)] hover:border-[var(--guest-border)]"
+                                                        }`}
+                                                    >
+                                                        <div
+                                                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                                                                isSelected
+                                                                    ? "bg-[var(--guest-accent-25)] text-[var(--guest-accent)]"
+                                                                    : "bg-[var(--guest-surface-2)] text-[var(--guest-muted)]"
+                                                            }`}
+                                                        >
+                                                            <Headset className="h-5 w-5" />
+                                                        </div>
+
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-sm font-medium text-[var(--guest-text)]">
+                                                                {service.name}
+                                                            </p>
+
+                                                            {service.description && (
+                                                                <p className="mt-0.5 text-[10px] leading-snug text-[var(--guest-muted)]">
+                                                                    {service.description}
+                                                                </p>
+                                                            )}
+
+                                                            <p className="mt-1 text-[10px] font-medium text-[var(--guest-muted)]">
+                                                                {service.price > 0
+                                                                    ? `₹${service.price}`
+                                                                    : "Free"}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="shrink-0">
+                                                            {!service.available ? (
+                                                                <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 text-[9px] font-semibold text-red-400">
+                                                                    Unavailable
+                                                                </span>
+                                                            ) : isSelected ? (
+                                                                <CheckCircle className="h-5 w-5 text-[var(--guest-accent)]" />
+                                                            ) : null}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {selectedServiceId && (
+                                            <textarea
+                                                value={serviceNote}
+                                                onChange={(e) =>
+                                                    setServiceNote(e.target.value)
+                                                }
+                                                placeholder="Additional instructions (optional)..."
+                                                rows={2}
+                                                className="w-full resize-none rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-2.5 text-sm text-[var(--guest-text)] outline-none transition placeholder:text-[var(--guest-subtle)] focus:border-[var(--guest-accent-40)] focus:ring-1 focus:ring-[var(--guest-accent-30)]"
+                                            />
+                                        )}
+                                    </>
+                                )}
                             </div>
                         )}
                     </motion.div>
