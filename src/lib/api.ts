@@ -14,6 +14,7 @@ import {
     PublicMenuData,
     ServiceRequest,
     RegisterPendingResponse,
+    GuestStay,
 } from './types';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -415,11 +416,18 @@ class ApiClient {
         return this.request(`/admin/rooms/${id}/checkout`, { method: 'POST' });
     }
 
-    async checkinRoom(id: string, pin?: string): Promise<{ message: string; room: Room; pin: string }> {
+    async checkinRoom(
+        id: string,
+        data?: { pin?: string; guestName?: string; guestPhone?: string; guestEmail?: string },
+    ): Promise<{ message: string; room: Room; pin: string; stayId?: string }> {
         return this.request(`/admin/rooms/${id}/checkin`, {
             method: 'POST',
-            body: JSON.stringify({ pin }),
+            body: JSON.stringify(data || {}),
         });
+    }
+
+    async getRoomStays(id: string): Promise<GuestStay[]> {
+        return this.request(`/admin/rooms/${id}/stays`);
     }
 
     async regenerateRoomPin(id: string, pin?: string): Promise<{ message: string; room: Room; pin: string }> {
@@ -501,8 +509,12 @@ class ApiClient {
         return this.request<Order>(`/guest/orders/${id}`);
     }
 
-    async getGuestRoomOrders(roomId: string): Promise<Order[]> {
-        return this.request<Order[]>(`/guest/rooms/${roomId}/orders`);
+    async getGuestRoomOrders(roomId: string, stayToken?: string): Promise<Order[]> {
+        const headers: Record<string, string> = {};
+        if (stayToken) {
+            headers['x-stay-token'] = stayToken;
+        }
+        return this.request<Order[]>(`/guest/rooms/${roomId}/orders`, { headers });
     }
 
     async getPublicRooms(hotelSlug: string): Promise<{ id: string; number: string; floor?: string; type?: string }[]> {
@@ -528,8 +540,12 @@ class ApiClient {
         });
     }
 
-    async getGuestServiceRequests(roomId: string): Promise<ServiceRequest[]> {
-        return this.request<ServiceRequest[]>(`/guest/rooms/${roomId}/service-requests`);
+    async getGuestServiceRequests(roomId: string, stayToken?: string): Promise<ServiceRequest[]> {
+        const headers: Record<string, string> = {};
+        if (stayToken) {
+            headers['x-stay-token'] = stayToken;
+        }
+        return this.request<ServiceRequest[]>(`/guest/rooms/${roomId}/service-requests`, { headers });
     }
 
     async getServiceRequests(type?: string, status?: string): Promise<ServiceRequest[]> {

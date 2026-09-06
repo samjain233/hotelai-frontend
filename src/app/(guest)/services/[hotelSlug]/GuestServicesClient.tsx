@@ -120,7 +120,8 @@ export default function GuestServicesClient() {
     const loadRequests = useCallback(async () => {
         if (!selectedRoom) return;
         try {
-            const data = await api.getGuestServiceRequests(selectedRoom);
+            const stayToken = getStayToken(selectedRoom);
+            const data = await api.getGuestServiceRequests(selectedRoom, stayToken || undefined);
             setRequests(data);
         } catch (err) { console.error(err); }
     }, [selectedRoom]);
@@ -551,6 +552,7 @@ export default function GuestServicesClient() {
                 roomNumber={rooms.find((r) => r.id === selectedRoom)?.number || "Your Room"}
                 onSuccess={(newToken) => {
                     setShowPinModal(false);
+                    void loadRequests();
                     void handleSubmit(newToken);
                 }}
             />

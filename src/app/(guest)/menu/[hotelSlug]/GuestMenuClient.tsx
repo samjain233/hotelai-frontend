@@ -92,6 +92,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const [cartAnimKey, setCartAnimKey] = useState(0);
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [showPinModal, setShowPinModal] = useState(false);
+    const [pinModalPurpose, setPinModalPurpose] = useState<"ORDER" | "BILL">("ORDER");
     const [pastOrders, setPastOrders] = useState<Order[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [guestLogoFailed, setGuestLogoFailed] = useState(false);
@@ -317,7 +318,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const loadPastOrders = useCallback(async () => {
         if (!resolvedRoomId) return;
         try {
-            const orders = await api.getGuestRoomOrders(resolvedRoomId);
+            const stayToken = getStayToken(resolvedRoomId);
+            const orders = await api.getGuestRoomOrders(resolvedRoomId, stayToken || undefined);
             setPastOrders(orders);
             const tracking = orderRef.current;
             if (tracking?.id) {
@@ -393,6 +395,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         }
         const existingToken = getStayToken(resolvedRoomId);
         if (!existingToken) {
+            setPinModalPurpose("ORDER");
             setShowPinModal(true);
             return;
         }
@@ -406,6 +409,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         if (isOpen) {
             const existingToken = getStayToken(resolvedRoomId);
             if (!existingToken) {
+                setPinModalPurpose("ORDER");
                 setShowPinModal(true);
                 return;
             }
@@ -419,6 +423,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         if (!isOpen || !resolvedRoomId) return;
         const token = stayTokenOverride || getStayToken(resolvedRoomId);
         if (!token) {
+            setPinModalPurpose("ORDER");
             setShowPinModal(true);
             return;
         }
@@ -803,6 +808,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                                         className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
                                                         onClick={() => {
                                                             setShowHeaderMenu(false);
+                                                            const existingToken = getStayToken(resolvedRoomId);
+                                                            if (!existingToken) {
+                                                                setPinModalPurpose("BILL");
+                                                                setShowPinModal(true);
+                                                                return;
+                                                            }
                                                             setShowHistory(true);
                                                         }}
                                                     >
@@ -914,7 +925,15 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 {resolvedRoomId ? (
                     <button
                         type="button"
-                        onClick={() => setShowHistory(true)}
+                        onClick={() => {
+                            const existingToken = getStayToken(resolvedRoomId);
+                            if (!existingToken) {
+                                setPinModalPurpose("BILL");
+                                setShowPinModal(true);
+                                return;
+                            }
+                            setShowHistory(true);
+                        }}
                         className="flex w-full items-center gap-3 rounded-xl border border-[var(--guest-line)] bg-[var(--guest-text-12)] px-4 py-3 text-left transition-colors hover:border-[var(--guest-accent-35)] hover:bg-[var(--guest-surface-2)]"
                     >
                         <Receipt className="h-5 w-5 shrink-0 text-[var(--guest-accent)]" aria-hidden />
@@ -1268,7 +1287,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 roomNumber={roomDisplayName || "Your Room"}
                 onSuccess={(newToken) => {
                     setShowPinModal(false);
-                    void placeOrder(newToken);
+                    void loadPastOrders();
+                    if (pinModalPurpose === "ORDER") {
+                        void placeOrder(newToken);
+                    } else {
+                        setShowHistory(true);
+                    }
                 }}
             />
         </div>

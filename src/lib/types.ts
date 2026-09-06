@@ -138,6 +138,25 @@ export interface MenuItem {
     createdAt: string;
 }
 
+// ─── Guest Stay ───────────────────────────────────────────
+export type StayStatus = 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
+
+export interface GuestStay {
+    id: string;
+    hotelId: string;
+    roomId: string;
+    guestName?: string | null;
+    guestPhone?: string | null;
+    guestEmail?: string | null;
+    pin: string;
+    status: StayStatus;
+    checkInAt: string;
+    checkOutAt?: string | null;
+    orders?: Order[];
+    serviceRequests?: ServiceRequest[];
+    room?: Room;
+}
+
 // ─── Room ─────────────────────────────────────────────────
 export interface Room {
     id: string;
@@ -152,6 +171,7 @@ export interface Room {
     checkedInAt?: string | null;
     hotelId: string;
     _count?: { orders: number };
+    activeStay?: GuestStay | null;
 }
 
 export interface RoomQr {
@@ -180,6 +200,7 @@ export interface Order {
     orderNumber: number;
     roomId: string;
     room?: Room;
+    stayId?: string | null;
     hotelId: string;
     status: OrderStatus;
     totalAmount: number;

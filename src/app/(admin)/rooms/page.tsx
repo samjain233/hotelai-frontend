@@ -31,10 +31,12 @@ import {
     LogOut,
     RefreshCw,
     Copy,
+    Receipt,
 } from "lucide-react";
 import { parseRoomNumbersInput } from "@/lib/parseRoomNumbersInput";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { RoomStayHistoryModal } from "@/components/admin/RoomStayHistoryModal";
 
 type QrLayout = 4 | 6 | 8;
 
@@ -114,8 +116,12 @@ export default function RoomsPage() {
     // ─── Check-In & PIN States ───
     const [checkinModalRoom, setCheckinModalRoom] = useState<Room | null>(null);
     const [checkinPin, setCheckinPin] = useState("");
+    const [checkinGuestName, setCheckinGuestName] = useState("");
+    const [checkinGuestPhone, setCheckinGuestPhone] = useState("");
+    const [checkinGuestEmail, setCheckinGuestEmail] = useState("");
     const [checkinLoading, setCheckinLoading] = useState(false);
     const [pinCopiedRoomId, setPinCopiedRoomId] = useState<string | null>(null);
+    const [stayHistoryRoom, setStayHistoryRoom] = useState<Room | null>(null);
 
     useEffect(() => { loadRooms(); }, []);
 
@@ -138,6 +144,9 @@ export default function RoomsPage() {
     function openCheckinModal(room: Room) {
         const randomPin = String(Math.floor(1000 + Math.random() * 9000));
         setCheckinPin(randomPin);
+        setCheckinGuestName("");
+        setCheckinGuestPhone("");
+        setCheckinGuestEmail("");
         setCheckinModalRoom(room);
     }
 
@@ -151,7 +160,12 @@ export default function RoomsPage() {
 
         setCheckinLoading(true);
         try {
-            const res = await api.checkinRoom(checkinModalRoom.id, checkinPin.trim());
+            const res = await api.checkinRoom(checkinModalRoom.id, {
+                pin: checkinPin.trim(),
+                guestName: checkinGuestName.trim() || undefined,
+                guestPhone: checkinGuestPhone.trim() || undefined,
+                guestEmail: checkinGuestEmail.trim() || undefined,
+            });
             toast.success(`Room ${checkinModalRoom.number} checked in! PIN: ${res.pin}`);
             setCheckinModalRoom(null);
             await loadRooms();
@@ -449,6 +463,16 @@ export default function RoomsPage() {
                                             <LogIn className="w-3.5 h-3.5" /> Check In
                                         </button>
                                     )}
+
+                                    {/* Stay & Billing History button */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setStayHistoryRoom(room)}
+                                        className="w-full mt-2 py-1.5 px-2 rounded-lg border border-border/80 bg-secondary/30 hover:bg-secondary text-foreground text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                                        title="View stay ledger, guest orders and billing folio"
+                                    >
+                                        <Receipt className="w-3.5 h-3.5 text-primary" /> Stay &amp; Billing
+                                    </button>
                                 </div>
 
                                 {/* Actions area - Print QR & Delete */}
@@ -497,10 +521,50 @@ export default function RoomsPage() {
                                     </button>
                                 </div>
 
-                                <form onSubmit={handleCheckinSubmit} className="pt-4 space-y-4">
+                                <form onSubmit={handleCheckinSubmit} className="pt-4 space-y-3">
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground block mb-1">
+                                            Guest Name <span className="text-[10px] text-muted-foreground/70">(Optional)</span>
+                                        </label>
+                                        <Input
+                                            type="text"
+                                            value={checkinGuestName}
+                                            onChange={(e) => setCheckinGuestName(e.target.value)}
+                                            placeholder="e.g. Rahul Sharma"
+                                            className="h-10 text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="text-xs font-medium text-muted-foreground block mb-1">
+                                                Phone <span className="text-[10px] text-muted-foreground/70">(Optional)</span>
+                                            </label>
+                                            <Input
+                                                type="tel"
+                                                value={checkinGuestPhone}
+                                                onChange={(e) => setCheckinGuestPhone(e.target.value)}
+                                                placeholder="+91 98765 43210"
+                                                className="h-10 text-xs"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-muted-foreground block mb-1">
+                                                Email <span className="text-[10px] text-muted-foreground/70">(Optional)</span>
+                                            </label>
+                                            <Input
+                                                type="email"
+                                                value={checkinGuestEmail}
+                                                onChange={(e) => setCheckinGuestEmail(e.target.value)}
+                                                placeholder="guest@email.com"
+                                                className="h-10 text-xs"
+                                            />
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <label className="text-xs font-medium text-muted-foreground block mb-1.5">
-                                            4-Digit Stay PIN
+                                            4-Digit Stay PIN <span className="text-red-500">*</span>
                                         </label>
                                         <div className="flex gap-2">
                                             <Input
@@ -511,7 +575,6 @@ export default function RoomsPage() {
                                                 className="text-center font-mono text-xl font-bold tracking-widest h-12"
                                                 placeholder="e.g. 4829"
                                                 required
-                                                autoFocus
                                             />
                                             <Button
                                                 type="button"
@@ -1089,6 +1152,13 @@ export default function RoomsPage() {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Room Stay & Billing History Modal */}
+            <RoomStayHistoryModal
+                isOpen={!!stayHistoryRoom}
+                onClose={() => setStayHistoryRoom(null)}
+                room={stayHistoryRoom}
+            />
         </>
     );
 }
