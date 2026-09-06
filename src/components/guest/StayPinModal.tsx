@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { KeyRound, ShieldCheck, X, Loader2, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
-import { setStayToken } from "@/lib/staySession";
+import { setStaySession, getStayPin } from "@/lib/staySession";
 import { toast } from "sonner";
 
 interface StayPinModalProps {
@@ -29,13 +29,18 @@ export function StayPinModal({
 
     useEffect(() => {
         if (isOpen) {
-            setDigits(["", "", "", ""]);
+            const existingPin = getStayPin(roomId);
+            if (existingPin && existingPin.length === 4) {
+                setDigits(existingPin.split(""));
+            } else {
+                setDigits(["", "", "", ""]);
+            }
             setError(null);
             setTimeout(() => {
                 inputRefs.current[0]?.focus();
             }, 150);
         }
-    }, [isOpen]);
+    }, [isOpen, roomId]);
 
     const handleDigitChange = (index: number, value: string) => {
         setError(null);
@@ -98,7 +103,7 @@ export function StayPinModal({
         try {
             const res = await api.verifyGuestRoomPin(roomId, pin);
             if (res.stayToken) {
-                setStayToken(roomId, res.stayToken);
+                setStaySession(roomId, res.stayToken, pin);
                 toast.success(`Verified! Welcome to Room ${roomNumber}`);
                 onSuccess(res.stayToken);
                 onClose();

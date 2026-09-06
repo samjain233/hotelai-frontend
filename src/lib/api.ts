@@ -8,10 +8,12 @@ import {
     BulkMenuImportErrorRow,
     BulkMenuImportRow,
     MenuItem,
+    MenuTag,
     Room,
     RoomQr,
     Order,
     PublicMenuData,
+    Service,
     ServiceRequest,
     RegisterPendingResponse,
     GuestStay,
@@ -269,6 +271,38 @@ class ApiClient {
 
     // ─── Menu Items ───────────────────────────────────────
 
+    async getTags(): Promise<MenuTag[]> {
+        return this.request<MenuTag[]>('/tags');
+    }
+
+    async createTag(data: {
+        name: string;
+        type: 'ALLERGEN' | 'DIETARY';
+    }): Promise<MenuTag> {
+        return this.request<MenuTag>('/tags', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async updateTag(
+        id: number,
+        data: {
+            name: string;
+        },
+    ): Promise<MenuTag> {
+        return this.request<MenuTag>(`/tags/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteTag(id: number): Promise<void> {
+        return this.request<void>(`/tags/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     async getMenuItems(): Promise<MenuItem[]> {
         return this.request('/admin/menu');
     }
@@ -297,8 +331,8 @@ class ApiClient {
         dietaryPreference?: string;
         available?: boolean;
         spiceLevel?: string;
-        allergenCodes?: string[];
-        dietaryTags?: string[];
+        allergenTagIds?: number[];
+        dietaryTagIds?: number[];
         calories?: number | null;
         portionLabel?: string | null;
         chefRecommended?: boolean;
@@ -521,6 +555,53 @@ class ApiClient {
         return this.request(`/guest/rooms/${hotelSlug}`);
     }
 
+    // ─── Services (Guest) ───────────────────────────────────
+    
+    async getGuestServices(hotelSlug: string): Promise<Service[]> {
+        return this.request<Service[]>(`/guest/services/${hotelSlug}`);
+    }
+
+    // ─── Services (Admin) ───────────────────────────────────
+
+    async getServices(): Promise<Service[]> {
+        return this.request<Service[]>('/admin/services');
+    }
+
+    async createService(data: {
+        name: string;
+        description?: string;
+        price?: number;
+        icon?: string;
+        available?: boolean;
+    }): Promise<Service> {
+        return this.request<Service>('/admin/services', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async updateService(
+        id: string,
+        data: {
+            name?: string;
+            description?: string | null;
+            price?: number;
+            icon?: string | null;
+            available?: boolean;
+        },
+    ): Promise<Service> {
+        return this.request<Service>(`/admin/services/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteService(id: string): Promise<void> {
+        return this.request(`/admin/services/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     // ─── Service Requests (Guest & Admin) ────────────────────
 
     async createServiceRequest(data: {
@@ -533,6 +614,7 @@ class ApiClient {
         guestPhone?: string;
         stayToken?: string;
         pin?: string;
+        serviceId?: string;
     }): Promise<ServiceRequest> {
         return this.request<ServiceRequest>('/guest/service-requests', {
             method: 'POST',

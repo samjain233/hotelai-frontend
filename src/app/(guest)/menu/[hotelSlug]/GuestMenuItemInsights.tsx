@@ -2,7 +2,7 @@
 
 import type { MenuItem } from "@/lib/types";
 import type { Hotel } from "@/lib/types";
-import { ALLERGEN_LABELS, DIETARY_TAG_LABELS, SPICE_LABELS } from "@/lib/menuItemInsights";
+import { SPICE_LABELS } from "@/lib/menuItemInsights";
 import { cn } from "@/lib/utils";
 import { Flame, Sparkles, Wine } from "lucide-react";
 
@@ -25,8 +25,13 @@ export function GuestMenuItemInsights({
     if (!hotel?.guestMenuShowItemInsights) return null;
 
     const spice = item.spiceLevel && item.spiceLevel !== "NONE" ? SPICE_LABELS[item.spiceLevel] : "";
-    const allergens = (item.allergenCodes ?? []).map((c) => ALLERGEN_LABELS[c] ?? c);
-    const tags = (item.dietaryTags ?? []).map((c) => DIETARY_TAG_LABELS[c] ?? c);
+    const allergens = (item.allergens ?? []).map((tag) =>
+        tag.name.replace(/_/g, " "),
+    );
+
+    const tags = (item.dietaryTags ?? []).map((tag) =>
+        tag.name.replace(/_/g, " "),
+    );
     const portion = item.portionLabel?.trim();
     const cal = item.calories != null && item.calories > 0 ? `${item.calories} kcal` : "";
 

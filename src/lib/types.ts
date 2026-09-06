@@ -126,8 +126,8 @@ export interface MenuItem {
     available?: boolean;
     dietaryPreference?: 'VEG' | 'NON_VEG' | 'EGGITARIAN' | 'NONE';
     spiceLevel?: 'NONE' | 'MILD' | 'MEDIUM' | 'HOT';
-    allergenCodes?: string[];
-    dietaryTags?: string[];
+    allergens?: MenuTag[];
+    dietaryTags?: MenuTag[];
     calories?: number | null;
     portionLabel?: string | null;
     chefRecommended?: boolean;
@@ -238,7 +238,9 @@ export interface PublicMenuFullData extends PublicMenuData {
 }
 
 // ─── Service Request ──────────────────────────────────────
-export type ServiceRequestType = 'COMPLAINT' | 'ROOM_SERVICE' | 'HOUSEKEEPING';
+export type ServiceRequestType =
+    | 'COMPLAINT'
+    | 'SERVICE';
 export type ServiceRequestStatus = 'SUBMITTED' | 'ACKNOWLEDGED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
 export type ServiceRequestPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 
@@ -252,8 +254,28 @@ export interface ServiceRequest {
     roomId: string;
     room?: Room;
     hotelId: string;
+
+    serviceId?: string | null;
+
     guestName?: string;
     guestPhone?: string;
     createdAt: string;
     updatedAt: string;
+}
+
+export type MenuTag = {
+    id: number;
+    name: string;
+    type: "ALLERGEN" | "DIETARY";
+    hotelId?: string | null;
+};
+export interface Service {
+    id: string;
+    name: string;
+    description?: string | null;
+    icon?: string | null;
+    price: number;
+    available: boolean;
+    createdAt?: string;
+    updatedAt?: string;
 }
