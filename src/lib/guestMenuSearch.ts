@@ -161,10 +161,10 @@ export function sortMenuItems(items: readonly MenuItem[], sort: GuestMenuSort): 
             copy.sort((a, b) => b.name.localeCompare(a.name, undefined, { sensitivity: "base" }));
             break;
         case "price-asc":
-            copy.sort((a, b) => a.price - b.price);
+            copy.sort((a, b) => Number(a.price) - Number(b.price));
             break;
         case "price-desc":
-            copy.sort((a, b) => b.price - a.price);
+            copy.sort((a, b) => Number(b.price) - Number(a.price));
             break;
         default:
             break;

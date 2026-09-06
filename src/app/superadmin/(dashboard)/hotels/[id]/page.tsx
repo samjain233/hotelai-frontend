@@ -205,7 +205,7 @@ export default function HotelDetailPage() {
                                         <td className="py-2.5">
                                             <StatusBadge status={o.status} />
                                         </td>
-                                        <td className="py-2.5 text-right">₹{o.totalAmount}</td>
+                                        <td className="py-2.5 text-right">₹{Number(o.totalAmount).toLocaleString()}</td>
                                         <td className="py-2.5 text-right text-muted-foreground text-xs">
                                             {new Date(o.createdAt).toLocaleDateString()}
                                         </td>

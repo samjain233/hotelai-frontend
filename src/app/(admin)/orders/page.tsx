@@ -183,7 +183,7 @@ export default function OrdersPage() {
                                         <div className="flex items-center gap-6 pl-6 lg:border-l border-border min-w-[240px] justify-end">
                                             <div className="text-right">
                                                 <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">Total</div>
-                                                <div className="text-xl font-bold text-foreground">₹{order.totalAmount}</div>
+                                                <div className="text-xl font-bold text-foreground">₹{Number(order.totalAmount).toLocaleString()}</div>
                                             </div>
 
                                             <div className="flex flex-col gap-2 min-w-[120px]">
@@ -288,10 +288,10 @@ export default function OrdersPage() {
                                                     <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">{item.quantity}×</span>
                                                     <div>
                                                         <p className="text-sm font-medium text-foreground">{item.itemName}</p>
-                                                        <p className="text-xs text-muted-foreground">₹{item.price} each</p>
+                                                        <p className="text-xs text-muted-foreground">₹{Number(item.price).toLocaleString()} each</p>
                                                     </div>
                                                 </div>
-                                                <span className="font-semibold text-foreground">₹{item.price * item.quantity}</span>
+                                                <span className="font-semibold text-foreground">₹{(Number(item.price) * item.quantity).toLocaleString()}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -313,7 +313,7 @@ export default function OrdersPage() {
                             <div className="px-6 py-4 border-t border-border bg-secondary/20">
                                 <div className="flex items-center justify-between mb-3">
                                     <span className="text-sm text-muted-foreground font-medium">Total Amount</span>
-                                    <span className="text-2xl font-bold text-foreground">₹{selectedOrder.totalAmount}</span>
+                                    <span className="text-2xl font-bold text-foreground">₹{Number(selectedOrder.totalAmount).toLocaleString()}</span>
                                 </div>
                                 {nextAction[selectedOrder.status] && (
                                     <div className="flex gap-2">

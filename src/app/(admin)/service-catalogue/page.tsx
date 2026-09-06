@@ -23,16 +23,7 @@ import {
     SERVICE_ICON_OPTIONS,
 } from "@/lib/serviceIcons";
 
-type Service = {
-    id: string;
-    name: string;
-    description?: string | null;
-    icon?: string | null;
-    price: number;
-    available: boolean;
-    createdAt?: string;
-    updatedAt?: string;
-};
+import { Service } from "@/lib/types";
 
 const DELETE_CONFIRM_WORD = "delete";
 
@@ -106,7 +97,7 @@ export default function ServiceCataloguePage() {
             name: service.name,
             description: service.description ?? "",
             icon: service.icon ?? DEFAULT_SERVICE_ICON,
-            price: service.price > 0 ? String(service.price) : "",
+            price: Number(service.price) > 0 ? String(service.price) : "",
             available: service.available ?? true,
         });
 
@@ -389,9 +380,9 @@ export default function ServiceCataloguePage() {
                                 <div className="mt-5 pt-4 border-t border-border">
                                     <div className="flex items-center justify-between gap-4">
                                         <div>
-                                            {service.price > 0 ? (
+                                            {Number(service.price) > 0 ? (
                                                 <span className="text-lg font-bold text-foreground">
-                                                    ₹{service.price}
+                                                    ₹{Number(service.price).toLocaleString()}
                                                 </span>
                                             ) : (
                                                 <span className="text-sm font-semibold text-emerald-500">

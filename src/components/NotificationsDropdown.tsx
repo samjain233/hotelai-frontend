@@ -184,7 +184,7 @@ export function NotificationsDropdown() {
                                             </p>
                                             <p className="text-xs text-muted-foreground truncate">
                                                 Room {order.room?.number || "—"} · ₹
-                                                {order.totalAmount.toLocaleString()}
+                                                {Number(order.totalAmount || 0).toLocaleString()}
                                             </p>
                                             <p className="text-[11px] text-muted-foreground/80 mt-0.5">
                                                 {formatTime(order.createdAt)}

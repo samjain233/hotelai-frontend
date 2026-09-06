@@ -14,8 +14,9 @@ import {
 } from "@/lib/guestOrderLabels";
 import { cn } from "@/lib/utils";
 
-function formatPrice(price: number) {
-    return `₹${price.toLocaleString()}`;
+function formatPrice(price: number | string) {
+    const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
+    return `₹${n.toLocaleString("en-IN")}`;
 }
 
 interface CartBarProps {
@@ -121,7 +122,7 @@ interface CartDrawerProps {
     onAddToCart: (item: CartItem["item"]) => void;
     setGuestName: (v: string) => void;
     setNotes: (v: string) => void;
-    formatPrice: (p: number) => string;
+    formatPrice: (p: number | string) => string;
 }
 export function CartDrawer({ cart, guestName, notes, cartTotal, placing, isOpen = true, onClose, onInitiateOrder, onRemoveFromCart, onAddToCart, setGuestName, setNotes, formatPrice }: CartDrawerProps) {
     return (
@@ -194,10 +195,10 @@ export function CartDrawer({ cart, guestName, notes, cartTotal, placing, isOpen 
 interface HistoryDrawerProps {
     pastOrders: Order[];
     onClose: () => void;
-    formatPrice: (p: number) => string;
+    formatPrice: (p: number | string) => string;
 }
 export function HistoryDrawer({ pastOrders, onClose, formatPrice }: HistoryDrawerProps) {
-    const grandTotal = pastOrders.reduce((sum, o) => sum + (o.status !== "CANCELLED" ? o.totalAmount : 0), 0);
+    const grandTotal = pastOrders.reduce((sum, o) => sum + (o.status !== "CANCELLED" ? Number(o.totalAmount || 0) : 0), 0);
 
     /* Newest-first API order; group consecutive orders under the same calendar-day heading. */
     let lastHeading = "";
@@ -262,7 +263,7 @@ export function HistoryDrawer({ pastOrders, onClose, formatPrice }: HistoryDrawe
                                                         <span className="text-muted-foreground">
                                                             <span className="font-medium mr-1">{oi.quantity}x</span> {oi.itemName}
                                                         </span>
-                                                        <span>{formatPrice(oi.price * oi.quantity)}</span>
+                                                        <span>{formatPrice(Number(oi.price) * oi.quantity)}</span>
                                                     </div>
                                                 ))}
                                             </div>

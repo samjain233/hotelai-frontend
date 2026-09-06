@@ -561,8 +561,8 @@ export default function GuestServicesClient() {
                                                             )}
 
                                                             <p className="mt-1 text-[10px] font-medium text-[var(--guest-muted)]">
-                                                                {service.price > 0
-                                                                    ? `₹${service.price}`
+                                                                {Number(service.price) > 0
+                                                                    ? `₹${Number(service.price).toLocaleString()}`
                                                                     : "Free"}
                                                             </p>
                                                         </div>

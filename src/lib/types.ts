@@ -120,7 +120,7 @@ export interface MenuItem {
     description?: string;
     /** Optional Hindi/Latin aliases for guest search when hotels provide them (API may omit until supported). */
     searchAliases?: string[];
-    price: number;
+    price: number | string;
     imageUrl?: string;
     /** Guest menu includes sold-out items; omitted means orderable (`true`). */
     available?: boolean;
@@ -156,6 +156,7 @@ export interface GuestStay {
     checkOutAt?: string | null;
     orders?: Order[];
     serviceRequests?: ServiceRequest[];
+    totalFoodCost?: number | string;
     room?: Room;
 }
 
@@ -192,7 +193,7 @@ export interface OrderItem {
     id: string;
     itemId: string;
     quantity: number;
-    price: number;
+    price: number | string;
     itemName: string;
     item?: MenuItem;
 }
@@ -206,7 +207,7 @@ export interface Order {
     idempotencyKey?: string | null;
     hotelId: string;
     status: OrderStatus;
-    totalAmount: number;
+    totalAmount: number | string;
     notes?: string;
     guestName?: string;
     guestPhone?: string;
@@ -277,7 +278,7 @@ export interface Service {
     name: string;
     description?: string | null;
     icon?: string | null;
-    price: number;
+    price: number | string;
     available: boolean;
     createdAt?: string;
     updatedAt?: string;

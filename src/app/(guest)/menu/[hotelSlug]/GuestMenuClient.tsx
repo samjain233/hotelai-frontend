@@ -59,8 +59,9 @@ const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
     { value: "price-desc", label: "Price (high to low)" },
 ];
 
-function formatPrice(price: number) {
-    return `₹${price.toLocaleString()}`;
+function formatPrice(price: number | string) {
+    const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
+    return `₹${n.toLocaleString("en-IN")}`;
 }
 
 interface Props {
@@ -370,7 +371,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }, [resolvedRoomId]);
 
     const roomBillGrandTotal = useMemo(
-        () => pastOrders.reduce((sum, o) => sum + (o.status !== "CANCELLED" ? o.totalAmount : 0), 0),
+        () => pastOrders.reduce((sum, o) => sum + (o.status !== "CANCELLED" ? Number(o.totalAmount || 0) : 0), 0),
         [pastOrders],
     );
 
@@ -422,7 +423,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         return cart.find((ci) => ci.item.id === itemId)?.quantity || 0;
     }
 
-    const cartTotal = cart.reduce((sum, ci) => sum + ci.item.price * ci.quantity, 0);
+    const cartTotal = cart.reduce((sum, ci) => sum + Number(ci.item.price) * ci.quantity, 0);
     const cartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
     function initiateOrder() {
@@ -621,7 +622,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         <span className="mr-2 font-semibold text-[var(--guest-text)]">{oi.quantity}x</span>
                                         {oi.itemName}
                                     </span>
-                                    <span className="font-medium text-[var(--guest-text)]">{formatPrice(oi.price * oi.quantity)}</span>
+                                    <span className="font-medium text-[var(--guest-text)]">{formatPrice(Number(oi.price) * oi.quantity)}</span>
                                 </div>
                             ))}
                         </div>

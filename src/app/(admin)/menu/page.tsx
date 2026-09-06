@@ -692,7 +692,7 @@ export default function MenuPage() {
                                     <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">{item.description}</p>
 
                                     <div className="pt-4 border-t border-border">
-                                        <span className="text-lg font-bold text-foreground">₹{item.price}</span>
+                                        <span className="text-lg font-bold text-foreground">₹{Number(item.price).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>

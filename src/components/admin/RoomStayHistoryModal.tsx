@@ -36,8 +36,9 @@ interface RoomStayHistoryModalProps {
     room: Room | null;
 }
 
-function formatPrice(amount: number) {
-    return `₹${amount.toLocaleString("en-IN")}`;
+function formatPrice(amount: number | string) {
+    const n = typeof amount === "number" ? amount : parseFloat(String(amount ?? 0)) || 0;
+    return `₹${n.toLocaleString("en-IN")}`;
 }
 
 function formatDateTime(dateStr?: string | null) {
@@ -113,7 +114,7 @@ export function RoomStayHistoryModal({
 
     const printFolio = (stay: GuestStay) => {
         const billOrders = (stay.orders || []).filter((o) => o.status !== "CANCELLED");
-        const grandTotal = billOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+        const grandTotal = billOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
 
         const printWindow = window.open("", "_blank", "width=800,height=900");
         if (!printWindow) {
@@ -218,7 +219,7 @@ export function RoomStayHistoryModal({
 
         for (const s of groupStays) {
             const validOrders = (s.orders || []).filter((o) => o.status !== "CANCELLED");
-            const roomTotal = validOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+            const roomTotal = validOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
             grandTotal += roomTotal;
 
             const ordersRows =
@@ -231,7 +232,7 @@ export function RoomStayHistoryModal({
                         <td><strong>#${o.orderNumber}</strong> <span style="color: #666; font-size: 11px;">(${formatDateTime(o.createdAt)})</span></td>
                         <td>${(o.items || []).map((i) => `${i.quantity}x ${i.itemName}`).join(", ") || "—"}</td>
                         <td><span style="font-size: 11px; padding: 2px 6px; background: #eee; border-radius: 4px;">${o.status}</span></td>
-                        <td style="text-align: right; font-weight: 600;">₹${o.totalAmount.toLocaleString("en-IN")}</td>
+                        <td style="text-align: right; font-weight: 600;">${formatPrice(o.totalAmount)}</td>
                     </tr>
                 `,
                           )
@@ -241,7 +242,7 @@ export function RoomStayHistoryModal({
                 <div style="margin-top: 20px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
                     <div style="background: #f8f9fa; padding: 10px 14px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
                         <strong style="font-size: 14px;">Room ${s.room?.number || s.roomId} ${s.isPrimaryRoom ? "(Primary Lead)" : ""} — ${s.guestName || "Guest"}</strong>
-                        <span style="font-size: 13px; font-weight: bold;">Subtotal: ₹${roomTotal.toLocaleString("en-IN")}</span>
+                        <span style="font-size: 13px; font-weight: bold;">Subtotal: ${formatPrice(roomTotal)}</span>
                     </div>
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -293,7 +294,7 @@ export function RoomStayHistoryModal({
                 ${roomSectionsHtml}
                 <div class="grand-total-card">
                     <div style="font-size: 16px; font-weight: bold; color: #15803d;">Group Grand Total (${groupStays.length} Rooms):</div>
-                    <div style="font-size: 22px; font-weight: bold; color: #15803d;">₹${grandTotal.toLocaleString("en-IN")}</div>
+                    <div style="font-size: 22px; font-weight: bold; color: #15803d;">${formatPrice(grandTotal)}</div>
                 </div>
                 <div class="footer">
                     <p>Thank you for choosing our hotel. We look forward to welcoming you and your party again!</p>
@@ -478,7 +479,7 @@ export function RoomStayHistoryModal({
                                         <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
                                             {formatPrice(groupStays.reduce((sum, s) => {
                                                 const valid = (s.orders || []).filter((o) => o.status !== "CANCELLED");
-                                                return sum + valid.reduce((acc, o) => acc + o.totalAmount, 0);
+                                                return sum + valid.reduce((acc, o) => acc + Number(o.totalAmount || 0), 0);
                                             }, 0))}
                                         </span>
                                     </div>
@@ -490,7 +491,7 @@ export function RoomStayHistoryModal({
                                     </h3>
                                     {groupStays.map((s) => {
                                         const validOrders = (s.orders || []).filter((o) => o.status !== "CANCELLED");
-                                        const roomTotal = validOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+                                        const roomTotal = validOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
                                         return (
                                             <div key={s.id} className="rounded-xl border border-border bg-card overflow-hidden">
                                                 <div className="p-3 bg-secondary/30 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -507,7 +508,7 @@ export function RoomStayHistoryModal({
                                                             ({s.guestName || "Guest"})
                                                         </span>
                                                         <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                                            PIN: {s.pin}
+                                                             PIN: {s.pin}
                                                         </span>
                                                     </div>
                                                     <div className="text-xs font-bold text-foreground">
@@ -566,7 +567,7 @@ export function RoomStayHistoryModal({
                                     const isExpanded = expandedStayId === stay.id;
                                     const orders = stay.orders || [];
                                     const validOrders = orders.filter((o) => o.status !== "CANCELLED");
-                                    const stayTotal = validOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+                                    const stayTotal = validOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
                                     const services = stay.serviceRequests || [];
                                     const isActive = stay.status === "CHECKED_IN";
 
@@ -759,7 +760,7 @@ export function RoomStayHistoryModal({
                                                                                         {item.itemName}
                                                                                     </span>
                                                                                     <span className="font-medium text-foreground">
-                                                                                        {formatPrice(item.price * item.quantity)}
+                                                                                        {formatPrice(Number(item.price) * item.quantity)}
                                                                                     </span>
                                                                                 </div>
                                                                             ))}

@@ -30,7 +30,7 @@ export default function DashboardPage() {
                 if (ENABLE_ORDERING_ADMIN_NAV) {
                     const [o, c, r] = await Promise.all([api.getOrders(), api.getCategories(), api.getRooms()]);
                     setOrders(o);
-                    const revenue = o.filter(x => x.status !== 'CANCELLED').reduce((acc, curr) => acc + curr.totalAmount, 0);
+                    const revenue = o.filter(x => x.status !== 'CANCELLED').reduce((acc, curr) => acc + Number(curr.totalAmount || 0), 0);
                     const active = o.filter(x => ['PLACED', 'CONFIRMED', 'PREPARING'].includes(x.status)).length;
                     const items = c.reduce((acc, curr) => acc + (curr._count?.items || 0), 0);
                     setStats({ revenue, activeOrders: active, totalItems: items, occupancy: r.length });
@@ -168,7 +168,7 @@ export default function DashboardPage() {
                                         Room {order.room?.number ?? "N/A"}
                                     </span>
                                     <span className="font-semibold text-foreground tabular-nums">
-                                        ₹{order.totalAmount.toLocaleString()}
+                                        ₹{Number(order.totalAmount || 0).toLocaleString()}
                                     </span>
                                 </div>
                             </Link>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
                                                 <StatusBadge status={order.status} />
                                             </td>
                                             <td className="px-4 lg:px-6 py-3 lg:py-4 text-right font-medium text-foreground">
-                                                ₹{order.totalAmount.toLocaleString()}
+                                                ₹{Number(order.totalAmount || 0).toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}
