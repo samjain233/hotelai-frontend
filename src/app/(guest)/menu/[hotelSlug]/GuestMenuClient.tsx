@@ -104,6 +104,13 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     /** Hide logo + hotel name + room row on scroll down; show again on scroll up / near top. */
     const [brandingBarHidden, setBrandingBarHidden] = useState(false);
     const lastScrollYForBranding = useRef(0);
+    const orderIdempotencyKeyRef = useRef<string>("");
+    if (!orderIdempotencyKeyRef.current) {
+        orderIdempotencyKeyRef.current =
+            typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                ? crypto.randomUUID()
+                : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
 
     /** True while programmatic scroll-to-section is running (ignore scroll-spy updates). */
     const scrollSpySuspended = useRef(false);
@@ -459,6 +466,14 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             return;
         }
 
+        if (!orderIdempotencyKeyRef.current) {
+            orderIdempotencyKeyRef.current =
+                typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                    ? crypto.randomUUID()
+                    : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        }
+        const idempotencyKey = orderIdempotencyKeyRef.current;
+
         setPlacing(true);
         try {
             const result = await api.placeOrder({
@@ -467,7 +482,13 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 notes: notes || undefined,
                 guestName: guestName || undefined,
                 stayToken: token,
+                idempotencyKey,
             });
+            // Rotate key only after successful placement so any retries on connection failure reuse the same key
+            orderIdempotencyKeyRef.current =
+                typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                    ? crypto.randomUUID()
+                    : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
             setOrder(result);
             setCart([]);
             setShowCart(false);

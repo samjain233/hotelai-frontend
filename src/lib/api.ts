@@ -532,9 +532,15 @@ class ApiClient {
         guestPhone?: string;
         stayToken?: string;
         pin?: string;
+        idempotencyKey?: string;
     }): Promise<Order> {
+        const headers: Record<string, string> = {};
+        if (data.idempotencyKey) {
+            headers['Idempotency-Key'] = data.idempotencyKey;
+        }
         return this.request<Order>('/guest/orders', {
             method: 'POST',
+            headers,
             body: JSON.stringify(data),
         });
     }

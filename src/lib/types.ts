@@ -201,6 +201,7 @@ export interface Order {
     roomId: string;
     room?: Room;
     stayId?: string | null;
+    idempotencyKey?: string | null;
     hotelId: string;
     status: OrderStatus;
     totalAmount: number;
