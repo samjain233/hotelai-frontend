@@ -32,6 +32,9 @@ import {
     RefreshCw,
     Copy,
     Receipt,
+    Users,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
 import { parseRoomNumbersInput } from "@/lib/parseRoomNumbersInput";
 import { useAuth } from "@/context/AuthContext";
@@ -119,9 +122,16 @@ export default function RoomsPage() {
     const [checkinGuestName, setCheckinGuestName] = useState("");
     const [checkinGuestPhone, setCheckinGuestPhone] = useState("");
     const [checkinGuestEmail, setCheckinGuestEmail] = useState("");
+    const [checkinAdditionalRoomIds, setCheckinAdditionalRoomIds] = useState<string[]>([]);
+    const [showMultiRoomSelector, setShowMultiRoomSelector] = useState(false);
     const [checkinLoading, setCheckinLoading] = useState(false);
     const [pinCopiedRoomId, setPinCopiedRoomId] = useState<string | null>(null);
     const [stayHistoryRoom, setStayHistoryRoom] = useState<Room | null>(null);
+
+    const availableAdditionalRooms = useMemo(() => {
+        if (!checkinModalRoom) return [];
+        return rooms.filter((r) => !r.isOccupied && r.id !== checkinModalRoom.id);
+    }, [rooms, checkinModalRoom]);
 
     useEffect(() => { loadRooms(); }, []);
 
@@ -147,6 +157,8 @@ export default function RoomsPage() {
         setCheckinGuestName("");
         setCheckinGuestPhone("");
         setCheckinGuestEmail("");
+        setCheckinAdditionalRoomIds([]);
+        setShowMultiRoomSelector(false);
         setCheckinModalRoom(room);
     }
 
@@ -165,9 +177,16 @@ export default function RoomsPage() {
                 guestName: checkinGuestName.trim() || undefined,
                 guestPhone: checkinGuestPhone.trim() || undefined,
                 guestEmail: checkinGuestEmail.trim() || undefined,
+                additionalRoomIds: checkinAdditionalRoomIds.length > 0 ? checkinAdditionalRoomIds : undefined,
             });
-            toast.success(`Room ${checkinModalRoom.number} checked in! PIN: ${res.pin}`);
+            if (checkinAdditionalRoomIds.length > 0) {
+                toast.success(`Group of ${checkinAdditionalRoomIds.length + 1} rooms checked in! PIN: ${res.pin}`);
+            } else {
+                toast.success(`Room ${checkinModalRoom.number} checked in! PIN: ${res.pin}`);
+            }
             setCheckinModalRoom(null);
+            setCheckinAdditionalRoomIds([]);
+            setShowMultiRoomSelector(false);
             await loadRooms();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Failed to check in room");
@@ -591,12 +610,73 @@ export default function RoomsPage() {
                                         </p>
                                     </div>
 
+                                    {/* Multi-Room Booking Selector */}
+                                    {availableAdditionalRooms.length > 0 && (
+                                        <div className="rounded-xl border border-border/70 bg-secondary/30 p-2.5 space-y-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowMultiRoomSelector(!showMultiRoomSelector)}
+                                                className="w-full flex items-center justify-between text-xs font-semibold text-foreground hover:text-primary transition-colors"
+                                            >
+                                                <span className="flex items-center gap-1.5">
+                                                    <Users className="w-3.5 h-3.5 text-primary" />
+                                                    Multi-Room Group Booking
+                                                    {checkinAdditionalRoomIds.length > 0 && (
+                                                        <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-primary/20 text-primary font-bold">
+                                                            +{checkinAdditionalRoomIds.length} linked
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                {showMultiRoomSelector ? (
+                                                    <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+                                                ) : (
+                                                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                                                )}
+                                            </button>
+
+                                            {showMultiRoomSelector && (
+                                                <div className="pt-1.5 space-y-1.5 border-t border-border/50">
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        Select other vacant rooms booked together under this guest. All linked rooms share this PIN and can be billed on a single Master Folio.
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1">
+                                                        {availableAdditionalRooms.map((r) => {
+                                                            const isSelected = checkinAdditionalRoomIds.includes(r.id);
+                                                            return (
+                                                                <button
+                                                                    key={r.id}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setCheckinAdditionalRoomIds((prev) =>
+                                                                            isSelected ? prev.filter((id) => id !== r.id) : [...prev, r.id]
+                                                                        );
+                                                                    }}
+                                                                    className={cn(
+                                                                        "px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1",
+                                                                        isSelected
+                                                                            ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                                                                            : "bg-background border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+                                                                    )}
+                                                                >
+                                                                    <span>Room {r.number}</span>
+                                                                    {isSelected && <Check className="w-3 h-3" />}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <div className="flex gap-2 pt-2">
                                         <Button type="button" variant="outline" className="flex-1" onClick={() => setCheckinModalRoom(null)}>
                                             Cancel
                                         </Button>
                                         <Button type="submit" loading={checkinLoading} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                            Confirm Check-In
+                                            {checkinAdditionalRoomIds.length > 0
+                                                ? `Check In ${checkinAdditionalRoomIds.length + 1} Rooms`
+                                                : "Confirm Check-In"}
                                         </Button>
                                     </div>
                                 </form>

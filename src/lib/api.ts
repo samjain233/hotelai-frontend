@@ -452,8 +452,22 @@ class ApiClient {
 
     async checkinRoom(
         id: string,
-        data?: { pin?: string; guestName?: string; guestPhone?: string; guestEmail?: string },
-    ): Promise<{ message: string; room: Room; pin: string; stayId?: string }> {
+        data?: {
+            pin?: string;
+            guestName?: string;
+            guestPhone?: string;
+            guestEmail?: string;
+            additionalRoomIds?: string[];
+            groupStayId?: string;
+        },
+    ): Promise<{
+        message: string;
+        room: Room;
+        pin: string;
+        stayId?: string;
+        groupStayId?: string;
+        allStays?: { room: Room; stay: GuestStay }[];
+    }> {
         return this.request(`/admin/rooms/${id}/checkin`, {
             method: 'POST',
             body: JSON.stringify(data || {}),
@@ -462,6 +476,14 @@ class ApiClient {
 
     async getRoomStays(id: string): Promise<GuestStay[]> {
         return this.request(`/admin/rooms/${id}/stays`);
+    }
+
+    async getGroupStays(groupStayId: string): Promise<GuestStay[]> {
+        return this.request(`/admin/rooms/group/${groupStayId}`);
+    }
+
+    async checkoutGroup(groupStayId: string): Promise<{ message: string; checkedOutCount: number }> {
+        return this.request(`/admin/rooms/group/${groupStayId}/checkout`, { method: 'POST' });
     }
 
     async regenerateRoomPin(id: string, pin?: string): Promise<{ message: string; room: Room; pin: string }> {

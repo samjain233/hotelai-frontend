@@ -145,6 +145,8 @@ export interface GuestStay {
     id: string;
     hotelId: string;
     roomId: string;
+    groupStayId?: string | null;
+    isPrimaryRoom?: boolean;
     guestName?: string | null;
     guestPhone?: string | null;
     guestEmail?: string | null;
