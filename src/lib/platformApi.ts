@@ -114,6 +114,10 @@ export interface PlatformHotelDetail {
         role: string;
         createdAt: string;
     }[];
+    subscription: {
+        tier: 'STARTER' | 'CORE' | 'PRO' | 'ENTERPRISE';
+        isActive: boolean;
+    } | null;
 }
 
 export interface PlatformComplaint {
@@ -165,5 +169,23 @@ export const platformApi = {
         return request<PlatformComplaint[]>(`/platform/complaints${qs}`);
     },
     getAnalytics: () => request<PlatformAnalytics>("/platform/analytics"),
+    updateHotelSubscription: (hotelId: string, tier: string, isActive: boolean) => {
+        const base = useProxy() ? `/api` : API_URL;
+        const url = `${base}/platform/hotels/${hotelId}/subscription`;
+        return fetch(url, {
+            method: 'PATCH',
+            headers: {
+                "Content-Type": "application/json",
+                "x-platform-key": getKey(),
+            },
+            body: JSON.stringify({ tier, isActive }),
+        }).then(async (res) => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: "Request failed" }));
+                throw new Error(err.message || `HTTP ${res.status}`);
+            }
+            return res.json();
+        });
+    },
     enterHotelAsAdmin,
 };

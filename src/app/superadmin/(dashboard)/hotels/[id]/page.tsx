@@ -26,6 +26,7 @@ export default function HotelDetailPage() {
     const [loading, setLoading] = useState(true);
     const [enteringHotel, setEnteringHotel] = useState(false);
     const [enterError, setEnterError] = useState<string | null>(null);
+    const [updatingTier, setUpdatingTier] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -35,6 +36,23 @@ export default function HotelDetailPage() {
             .catch(() => {})
             .finally(() => setLoading(false));
     }, [id]);
+
+    async function handleUpdateTier(tier: string, isActive: boolean) {
+        if (!hotel) return;
+        setUpdatingTier(true);
+        try {
+            await platformApi.updateHotelSubscription(hotel.id, tier, isActive);
+            setHotel({
+                ...hotel,
+                subscription: { tier: tier as any, isActive },
+            });
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update subscription");
+        } finally {
+            setUpdatingTier(false);
+        }
+    }
 
     if (loading) {
         return (
@@ -148,6 +166,39 @@ export default function HotelDetailPage() {
                     </div>
                 ))}
             </div>
+
+            {/* Subscription */}
+            <Section title="Subscription Plan">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex-1">
+                        <p className="text-sm text-muted-foreground mb-1">Current Tier</p>
+                        <select
+                            disabled={updatingTier}
+                            value={hotel.subscription?.tier || "STARTER"}
+                            onChange={(e) => handleUpdateTier(e.target.value, hotel.subscription?.isActive ?? true)}
+                            className="bg-secondary/50 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary/50"
+                        >
+                            <option value="STARTER">STARTER</option>
+                            <option value="CORE">CORE</option>
+                            <option value="PRO">PRO</option>
+                            <option value="ENTERPRISE">ENTERPRISE</option>
+                        </select>
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm text-muted-foreground mb-1">Status</p>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                disabled={updatingTier}
+                                checked={hotel.subscription?.isActive ?? true}
+                                onChange={(e) => handleUpdateTier(hotel.subscription?.tier || "STARTER", e.target.checked)}
+                                className="rounded border-border bg-secondary text-primary focus:ring-primary"
+                            />
+                            <span className="text-sm">Active</span>
+                        </label>
+                    </div>
+                </div>
+            </Section>
 
             {/* Staff */}
             <Section title="Staff">
