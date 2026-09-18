@@ -145,6 +145,8 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const promptedRoomRef = useRef<string | null>(null);
     const { pin: stayPin } = useStaySession(resolvedRoomId);
 
+    const digitalOrderingEnabled = hotel?.features ? hotel.features.includes("DIGITAL_ORDERING") : true;
+
     /** Auto-prompt guest for Stay PIN when scanning QR code if token is not saved yet */
     useEffect(() => {
         if (!resolvedRoomId || loading) return;
@@ -741,7 +743,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                             ) : null}
                         </div>
                         <div className="relative flex shrink-0 items-center gap-1.5">
-                            {cartCount > 0 ? (
+                            {digitalOrderingEnabled && cartCount > 0 ? (
                                 <button
                                     type="button"
                                     onClick={() => setShowCart(true)}
@@ -1156,7 +1158,9 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     hasImage && !searchNormalized && catIndex === 0 && itemIndex < 4;
 
                                 let actionBlock: ReactNode = null;
-                                if (qty === 0) {
+                                if (!digitalOrderingEnabled) {
+                                    // Hidden
+                                } else if (qty === 0) {
                                     actionBlock = (
                                         <button
                                             type="button"
@@ -1288,7 +1292,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
             </main>
 
-            {(cartCount > 0 || showCart || showHistory || showRoomModal) && (
+            {digitalOrderingEnabled && (cartCount > 0 || showCart || showHistory || showRoomModal) && (
                 <AnimatedOverlays
                     showCart={showCart}
                     showHistory={showHistory}
@@ -1359,7 +1363,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 </div>
             ) : null}
 
-            {!showCart && !showHistory && !showRoomModal && chipCategories.length > 0 ? (
+            {digitalOrderingEnabled && !showCart && !showHistory && !showRoomModal && chipCategories.length > 0 ? (
                 <button
                     type="button"
                     onClick={() => setShowCategoryNav(true)}

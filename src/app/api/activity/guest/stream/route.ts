@@ -6,14 +6,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const hotelSlug = searchParams.get('hotelSlug');
     const roomId = searchParams.get('roomId');
+    const stayToken = searchParams.get('stayToken');
 
     if (!hotelSlug || !roomId) {
         return new Response('hotelSlug and roomId required', { status: 400 });
     }
 
-    const res = await fetch(
-        `${API_URL}/activity/guest/stream?hotelSlug=${encodeURIComponent(hotelSlug)}&roomId=${encodeURIComponent(roomId)}`
-    );
+    const upstreamUrl = new URL(`${API_URL}/activity/guest/stream`);
+    upstreamUrl.searchParams.set('hotelSlug', hotelSlug);
+    upstreamUrl.searchParams.set('roomId', roomId);
+    if (stayToken) {
+        upstreamUrl.searchParams.set('stayToken', stayToken);
+    }
+
+    const res = await fetch(upstreamUrl.toString());
 
     if (!res.ok) {
         return new Response(res.statusText, { status: res.status });

@@ -22,6 +22,7 @@ import {
     ShieldAlert,
     Palette,
     Wrench,
+    Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -33,13 +34,13 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const allNavItems = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
-    { name: "Orders", href: "/orders", icon: ClipboardList, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
-    { name: "Services", href: "/services", icon: Headset, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
-    { name: "Manage Services", href: "/service-catalogue", icon: Wrench, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
+    { name: "Orders", href: "/orders", icon: ClipboardList, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN", "FRONT_DESK"], featureLock: "DIGITAL_ORDERING" },
+    { name: "Services", href: "/services", icon: Headset, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"], featureLock: "SERVICE_REQUESTS" },
+    { name: "Manage Services", href: "/service-catalogue", icon: Wrench, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"], featureLock: "SERVICE_REQUESTS" },
     { name: "Menu", href: "/menu", icon: UtensilsCrossed, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
     { name: "Menu design", href: "/menu-design", icon: Palette, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
     { name: "Rooms & QR", href: "/rooms", icon: BedDouble, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
-    { name: "Kitchen", href: "/kitchen", icon: ChefHat, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN"] },
+    { name: "Kitchen", href: "/kitchen", icon: ChefHat, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN"], featureLock: "DIGITAL_ORDERING" },
     { name: "Staff", href: "/staff", icon: Users, roles: ["OWNER", "GENERAL_MANAGER"] },
     { name: "Settings", href: "/settings", icon: Settings, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
 ];
@@ -68,9 +69,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         if (!loading && admin) {
             const visibleNav = filterVisibleNavItems(allNavItems);
             const currentNav = visibleNav.find((item) => pathname.startsWith(item.href));
-            if (currentNav && !currentNav.roles.includes(admin.role)) {
-                const allowedNavs = visibleNav.filter((item) => item.roles.includes(admin.role));
-                router.replace(allowedNavs[0]?.href || "/dashboard");
+            if (currentNav) {
+                const isLocked = currentNav.featureLock && hotel?.features && !hotel.features.includes(currentNav.featureLock);
+                if (!currentNav.roles.includes(admin.role) || isLocked) {
+                    const allowedNavs = visibleNav.filter((item) => {
+                        if (!item.roles.includes(admin.role)) return false;
+                        if (item.featureLock && hotel?.features && !hotel.features.includes(item.featureLock)) return false;
+                        return true;
+                    });
+                    router.replace(allowedNavs[0]?.href || "/dashboard");
+                }
             }
         }
     }, [pathname, admin, loading, router]);
@@ -134,6 +142,25 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto no-scrollbar">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href;
+                            const isLocked = item.featureLock && hotel?.features && !hotel.features.includes(item.featureLock);
+
+                            if (isLocked) {
+                                return (
+                                    <div
+                                        key={item.href}
+                                        className={cn(
+                                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative cursor-not-allowed opacity-50",
+                                            "text-muted-foreground bg-transparent"
+                                        )}
+                                        title="Upgrade your plan to unlock this feature"
+                                    >
+                                        <item.icon className="w-4 h-4 text-muted-foreground" />
+                                        <span>{item.name}</span>
+                                        <Lock className="w-3.5 h-3.5 ml-auto text-muted-foreground/70" />
+                                    </div>
+                                );
+                            }
+
                             return (
                                 <Link
                                     key={item.href}
@@ -231,22 +258,42 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                     </button>
                                 </div>
                                 <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-1">
-                                    {navItems.map((item) => (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className={cn(
-                                                "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium",
-                                                pathname === item.href
-                                                    ? "bg-primary/10 text-primary"
-                                                    : "text-muted-foreground hover:bg-secondary"
-                                            )}
-                                        >
-                                            <item.icon className="w-5 h-5 shrink-0" />
-                                            {item.name}
-                                        </Link>
-                                    ))}
+                                    {navItems.map((item) => {
+                                        const isLocked = item.featureLock && hotel?.features && !hotel.features.includes(item.featureLock);
+                                        
+                                        if (isLocked) {
+                                            return (
+                                                <div
+                                                    key={item.href}
+                                                    className={cn(
+                                                        "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium opacity-50 cursor-not-allowed",
+                                                        "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <item.icon className="w-5 h-5 shrink-0" />
+                                                    {item.name}
+                                                    <Lock className="w-4 h-4 ml-auto text-muted-foreground/70" />
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className={cn(
+                                                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium",
+                                                    pathname === item.href
+                                                        ? "bg-primary/10 text-primary"
+                                                        : "text-muted-foreground hover:bg-secondary"
+                                                )}
+                                            >
+                                                <item.icon className="w-5 h-5 shrink-0" />
+                                                {item.name}
+                                            </Link>
+                                        );
+                                    })}
                                 </nav>
                                 <div className="shrink-0 border-t border-border px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] space-y-2">
                                     <div className="px-3 py-2 rounded-lg bg-secondary/50 border border-border min-w-0 overflow-hidden">

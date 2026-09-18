@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Order, ServiceRequest } from "@/lib/types";
 import { refreshHotelSession } from "@/lib/api";
+import { getStayToken } from "@/lib/staySession";
 
 /** Default access JWT ~15m; refresh cookies before SSE likely dies on upstream auth checks. */
 const PROACTIVE_ACCESS_REFRESH_MS = 8 * 60 * 1000;
@@ -32,6 +33,7 @@ export interface UseActivityStreamAdminOptions {
 export interface UseActivityStreamGuestOptions {
     hotelSlug: string;
     roomId: string;
+    stayToken?: string;
     enabled?: boolean;
     onOrderNew?: (order: Order) => void;
     onOrderUpdated?: (order: Order) => void;
@@ -196,7 +198,7 @@ export function useActivityStreamAdmin(options: UseActivityStreamAdminOptions = 
 }
 
 export function useActivityStreamGuest(options: UseActivityStreamGuestOptions) {
-    const { hotelSlug, roomId, enabled = true, onOrderNew, onOrderUpdated, onServiceRequestNew, onServiceRequestUpdated } = options;
+    const { hotelSlug, roomId, stayToken, enabled = true, onOrderNew, onOrderUpdated, onServiceRequestNew, onServiceRequestUpdated } = options;
     const [connected, setConnected] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const callbacksRef = useRef({ onOrderNew, onOrderUpdated, onServiceRequestNew, onServiceRequestUpdated });
@@ -205,8 +207,15 @@ export function useActivityStreamGuest(options: UseActivityStreamGuestOptions) {
     useEffect(() => {
         if (!enabled || !hotelSlug || !roomId) return;
 
+        const resolvedToken = stayToken || (typeof window !== "undefined" ? getStayToken(roomId) : null);
+        if (!resolvedToken) {
+            // Cannot stream room events without verified stay token
+            setConnected(false);
+            return;
+        }
+
         const es = new EventSource(
-            `/api/activity/guest/stream?hotelSlug=${encodeURIComponent(hotelSlug)}&roomId=${encodeURIComponent(roomId)}`
+            `/api/activity/guest/stream?hotelSlug=${encodeURIComponent(hotelSlug)}&roomId=${encodeURIComponent(roomId)}&stayToken=${encodeURIComponent(resolvedToken)}`
         );
 
         es.onopen = () => {

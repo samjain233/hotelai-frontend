@@ -24,6 +24,8 @@ export interface Hotel {
     guestMenuShowItemInsights?: boolean;
     /** IANA timezone for category serving windows (default Asia/Kolkata). */
     timezone?: string;
+    /** Features unlocked for the hotel based on subscription */
+    features?: string[];
 }
 
 // ─── Admin ────────────────────────────────────────────────
@@ -191,11 +193,13 @@ export type OrderStatus = 'PLACED' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELI
 
 export interface OrderItem {
     id: string;
-    itemId: string;
+    itemId?: string | null;
     quantity: number;
     price: number | string;
     itemName: string;
-    item?: MenuItem;
+    portionLabel?: string | null;
+    itemSnapshot?: Record<string, unknown> | null;
+    item?: MenuItem | null;
 }
 
 export interface Order {
