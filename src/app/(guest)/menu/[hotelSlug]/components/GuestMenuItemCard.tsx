@@ -19,7 +19,11 @@ interface GuestMenuItemCardProps {
 
 function formatPrice(price: number | string) {
     const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
-    return `₹${n.toLocaleString("en-IN")}`;
+    const hasDecimals = n % 1 !== 0;
+    return `₹${n.toLocaleString("en-IN", {
+        minimumFractionDigits: hasDecimals ? 2 : 0,
+        maximumFractionDigits: 2,
+    })}`;
 }
 
 export function GuestMenuItemCard({
@@ -120,7 +124,7 @@ export function GuestMenuItemCard({
                             <div className="mt-1.5">
                                 <p
                                     className={cn(
-                                        "text-[13px] leading-relaxed text-[var(--guest-muted)]",
+                                        "text-[13px] leading-relaxed text-[var(--guest-text-70)]",
                                         !descOpen && descLong && "line-clamp-2",
                                     )}
                                 >
@@ -141,7 +145,10 @@ export function GuestMenuItemCard({
                 </div>
             </div>
             {hasImage ? (
-                <div className="relative flex w-[114px] sm:w-[124px] shrink-0 flex-col items-center pb-3 self-start">
+                <div className={cn(
+                    "relative flex w-[114px] sm:w-[124px] shrink-0 flex-col items-center self-start",
+                    ctx.digitalOrderingEnabled && "pb-3"
+                )}>
                     <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)] shadow-sm">
                         {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}

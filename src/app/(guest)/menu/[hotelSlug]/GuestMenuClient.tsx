@@ -34,7 +34,11 @@ import { GuestCategoryNav } from "./components/GuestCategoryNav";
 
 function formatPrice(price: number | string) {
     const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
-    return `₹${n.toLocaleString("en-IN")}`;
+    const hasDecimals = n % 1 !== 0;
+    return `₹${n.toLocaleString("en-IN", {
+        minimumFractionDigits: hasDecimals ? 2 : 0,
+        maximumFractionDigits: 2,
+    })}`;
 }
 
 function UtensilsCrossed({ className }: { className?: string }) {

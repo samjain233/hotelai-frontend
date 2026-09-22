@@ -21,7 +21,7 @@ export function GuestCategoryNav({
     const ctx = useGuestMenuContext();
     const [showCategoryNav, setShowCategoryNav] = useState(false);
 
-    const isVisible = ctx.digitalOrderingEnabled && !ctx.showCart && !ctx.showHistory && !ctx.showRoomModal && chipCategories.length > 0;
+    const isVisible = !ctx.showCart && !ctx.showHistory && !ctx.showRoomModal && chipCategories.length > 0;
 
     return (
         <>
