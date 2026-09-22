@@ -707,7 +707,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     ) : null}
                                 </div>
                             </div>
-                            {stayPin ? (
+                            {stayPin && (digitalOrderingEnabled || serviceRequestsEnabled) ? (
                                 <button
                                     type="button"
                                     onClick={() => setShowPinModal(true)}
@@ -773,7 +773,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                     role="menu"
                                     className="absolute right-0 top-12 z-[60] w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] py-2 shadow-xl shadow-black/50"
                                 >
-                                    {stayPin ? (
+                                    {stayPin && (digitalOrderingEnabled || serviceRequestsEnabled) ? (
                                         <div className="mx-3 mb-2 flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
                                             <span className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
                                                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
