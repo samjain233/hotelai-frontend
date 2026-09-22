@@ -12,7 +12,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         const jsonResponse = await handleUpload({
             body,
             request,
-            onBeforeGenerateToken: async (_pathname, clientPayload) => {
+            onBeforeGenerateToken: async (pathname, clientPayload) => {
                 const payload =
                     typeof clientPayload === 'string'
                         ? (JSON.parse(clientPayload || '{}') as { token?: string })
@@ -34,7 +34,15 @@ export async function POST(request: Request): Promise<NextResponse> {
                     throw new Error(err.message || 'Token invalid or already used');
                 }
 
-                await res.json(); // consume validates token
+                const { hotelId } = await res.json() as { hotelId: string }; // consume validates token
+
+                if (!hotelId) {
+                    throw new Error('Invalid token response');
+                }
+
+                if (!pathname.startsWith(`menu-items/${hotelId}/`) && !pathname.startsWith(`hotel-logos/${hotelId}/`)) {
+                    throw new Error(`Unauthorized upload path: ${pathname}. Path must be scoped to your hotel.`);
+                }
 
                 return {
                     allowedContentTypes: [...ALLOWED_TYPES],

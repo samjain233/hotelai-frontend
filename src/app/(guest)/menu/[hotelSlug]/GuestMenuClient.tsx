@@ -146,10 +146,12 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const { pin: stayPin } = useStaySession(resolvedRoomId);
 
     const digitalOrderingEnabled = hotel?.features ? hotel.features.includes("DIGITAL_ORDERING") : true;
+    const serviceRequestsEnabled = hotel?.features ? hotel.features.includes("SERVICE_REQUESTS") : true;
 
     /** Auto-prompt guest for Stay PIN when scanning QR code if token is not saved yet */
     useEffect(() => {
         if (!resolvedRoomId || loading) return;
+        if (!digitalOrderingEnabled && !serviceRequestsEnabled) return;
         if (promptedRoomRef.current === resolvedRoomId) return;
         const token = getStayToken(resolvedRoomId);
         const pin = getStayPin(resolvedRoomId);
@@ -865,18 +867,20 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                                         </button>
                                     </div>
                                     <div className="mx-2 border-t border-[var(--guest-line)]" />
-                                    <div className="px-2 pt-1">
-                                        <Link
-                                            href={guestServicesHref}
-                                            role="menuitem"
-                                            className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
-                                            onClick={() => setShowHeaderMenu(false)}
-                                        >
-                                            <Headset className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" aria-hidden />
-                                            Guest services
-                                        </Link>
-                                    </div>
-                                    {resolvedRoomId ? (
+                                    {serviceRequestsEnabled && (
+                                        <div className="px-2 pt-1">
+                                            <Link
+                                                href={guestServicesHref}
+                                                role="menuitem"
+                                                className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
+                                                onClick={() => setShowHeaderMenu(false)}
+                                            >
+                                                <Headset className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                                                Guest services
+                                            </Link>
+                                        </div>
+                                    )}
+                                    {resolvedRoomId && digitalOrderingEnabled ? (
                                         <>
                                             <div className="mx-2 border-t border-[var(--guest-line)]" />
                                             <div className="px-2 pt-1">
@@ -1000,7 +1004,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         </div>
                     </div>
                 )}
-                {resolvedRoomId ? (
+                {resolvedRoomId && digitalOrderingEnabled ? (
                     <button
                         type="button"
                         onClick={() => {
@@ -1028,17 +1032,19 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         <ChevronRight className="h-5 w-5 shrink-0 text-[var(--guest-muted)]" aria-hidden />
                     </button>
                 ) : null}
-                <Link
-                    href={guestServicesHref}
-                    className="flex w-full items-center gap-3 rounded-xl border border-[var(--guest-line)] bg-[var(--guest-text-12)] px-4 py-3 text-left transition-colors hover:border-[var(--guest-accent-35)] hover:bg-[var(--guest-surface-2)]"
-                >
-                    <Headset className="h-5 w-5 shrink-0 text-[var(--guest-accent)]" aria-hidden />
-                    <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-[var(--guest-text)]">Guest services</p>
-                        <p className="text-xs text-[var(--guest-muted)]">Complaints, housekeeping &amp; room requests</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-[var(--guest-muted)]" aria-hidden />
-                </Link>
+                {serviceRequestsEnabled && (
+                    <Link
+                        href={guestServicesHref}
+                        className="flex w-full items-center gap-3 rounded-xl border border-[var(--guest-line)] bg-[var(--guest-text-12)] px-4 py-3 text-left transition-colors hover:border-[var(--guest-accent-35)] hover:bg-[var(--guest-surface-2)]"
+                    >
+                        <Headset className="h-5 w-5 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-[var(--guest-text)]">Guest services</p>
+                            <p className="text-xs text-[var(--guest-muted)]">Complaints, housekeeping &amp; room requests</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 shrink-0 text-[var(--guest-muted)]" aria-hidden />
+                    </Link>
+                )}
                 {hasActiveFilters && resultCount > 0 && (
                     <div className="text-xs text-[var(--guest-muted)]">
                         <span className="font-semibold text-[var(--guest-muted)]">{resultCount}</span>{" "}
