@@ -156,6 +156,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                 );
                             }
 
+                            return (
                                 <Link
                                     key={item.href}
                                     href={item.href}

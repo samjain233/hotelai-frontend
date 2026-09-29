@@ -128,8 +128,6 @@ export default function DashboardPage() {
                 />
             </div>
 
-            </div>
-
             {/* Main Content Grid */}
             <div className={cn("grid grid-cols-1 gap-6 lg:gap-8", isOrderingEnabled ? "lg:grid-cols-3" : "")}>
                 {/* RECENT ORDERS (Takes up 2 columns) */}
@@ -145,8 +143,7 @@ export default function DashboardPage() {
                             >
                                 View All <ArrowRight className="w-4 h-4 ml-1" />
                             </Link>
-                        )}
-                    </div>
+                        </div>
 
                     {/* Mobile: stacked cards (no horizontal table scroll) */}
                     <div className="md:hidden space-y-3">
@@ -217,7 +214,8 @@ export default function DashboardPage() {
                             </table>
                         </div>
                     </div>
-                </div>
+                    </div>
+                )}
 
                 {/* QUICK ACTIONS / SIDE PANEL */}
                 <div className={cn("space-y-4", !isOrderingEnabled ? "grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 space-y-0" : "")}>
