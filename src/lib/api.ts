@@ -675,6 +675,10 @@ class ApiClient {
 
     // ─── Staff Management ─────────────────────────────────
 
+    async getNavigation(): Promise<Array<{ name: string; href: string; iconName: string; isLocked: boolean; featureLock?: string }>> {
+        return this.request<Array<{ name: string; href: string; iconName: string; isLocked: boolean; featureLock?: string }>>('/auth/navigation');
+    }
+
     async getStaff(): Promise<StaffListMember[]> {
         return this.request<StaffListMember[]>('/auth/staff');
     }

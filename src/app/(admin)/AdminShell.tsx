@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { useState, useEffect } from "react";
+import useSWR from "swr";
+import { api, swrFetcher } from "@/lib/api";
 import {
     LayoutDashboard,
     ClipboardList,
@@ -32,24 +34,26 @@ import {
 } from "@/lib/adminNavConfig";
 import { motion, AnimatePresence } from "framer-motion";
 
-const allNavItems = [
-    { name: "Overview", href: "/dashboard", icon: LayoutDashboard, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
-    { name: "Orders", href: "/orders", icon: ClipboardList, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN", "FRONT_DESK"], featureLock: "DIGITAL_ORDERING" },
-    { name: "Services", href: "/services", icon: Headset, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"], featureLock: "SERVICE_REQUESTS" },
-    { name: "Manage Services", href: "/service-catalogue", icon: Wrench, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"], featureLock: "SERVICE_REQUESTS" },
-    { name: "Menu", href: "/menu", icon: UtensilsCrossed, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
-    { name: "Menu design", href: "/menu-design", icon: Palette, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER"] },
-    { name: "Rooms & QR", href: "/rooms", icon: BedDouble, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "FRONT_DESK"] },
-    { name: "Kitchen", href: "/kitchen", icon: ChefHat, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN"], featureLock: "DIGITAL_ORDERING" },
-    { name: "Staff", href: "/staff", icon: Users, roles: ["OWNER", "GENERAL_MANAGER"] },
-    { name: "Settings", href: "/settings", icon: Settings, roles: ["OWNER", "GENERAL_MANAGER", "MANAGER", "KITCHEN", "FRONT_DESK"] },
-];
+const iconMap: Record<string, any> = {
+    LayoutDashboard,
+    ClipboardList,
+    Headset,
+    Wrench,
+    UtensilsCrossed,
+    Palette,
+    BedDouble,
+    ChefHat,
+    Users,
+    Settings,
+};
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
     const { admin, logout, hotel, loading, impersonating } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    const { data: serverNavItems, isLoading: navLoading } = useSWR(admin ? '/auth/navigation' : null, swrFetcher);
 
     useEffect(() => {
         if (!loading && !admin) {
@@ -66,26 +70,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     }, [pathname, admin, loading, router]);
 
     useEffect(() => {
-        if (!loading && admin) {
-            const visibleNav = filterVisibleNavItems(allNavItems);
-            const currentNav = visibleNav.find((item) => pathname.startsWith(item.href));
-            if (currentNav) {
-                const isLocked = currentNav.featureLock && hotel?.features && !hotel.features.includes(currentNav.featureLock);
-                if (!currentNav.roles.includes(admin.role) || isLocked) {
-                    const allowedNavs = visibleNav.filter((item) => {
-                        if (!item.roles.includes(admin.role)) return false;
-                        if (item.featureLock && hotel?.features && !hotel.features.includes(item.featureLock)) return false;
-                        return true;
-                    });
-                    router.replace(allowedNavs[0]?.href || "/dashboard");
-                }
+        if (!loading && admin && serverNavItems && !navLoading) {
+            const currentNav = (serverNavItems as any[]).find((item) => pathname.startsWith(item.href));
+            if (currentNav && currentNav.isLocked) {
+                const allowedNavs = (serverNavItems as any[]).filter((item) => !item.isLocked);
+                router.replace(allowedNavs[0]?.href || "/dashboard");
             }
         }
-    }, [pathname, admin, loading, router]);
+    }, [pathname, admin, loading, navLoading, serverNavItems, router]);
 
-    const navItems = admin
-        ? filterVisibleNavItems(allNavItems.filter((item) => item.roles.includes(admin.role)))
-        : [];
+    const navItems = serverNavItems ? (serverNavItems as any[]) : [];
 
     if (loading || !admin) {
         return (
@@ -142,7 +136,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto no-scrollbar">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href;
-                            const isLocked = item.featureLock && hotel?.features && !hotel.features.includes(item.featureLock);
+                            const isLocked = item.isLocked;
+                            const IconComponent = iconMap[item.iconName] || LayoutDashboard;
 
                             if (isLocked) {
                                 return (
@@ -154,14 +149,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                         )}
                                         title="Upgrade your plan to unlock this feature"
                                     >
-                                        <item.icon className="w-4 h-4 text-muted-foreground" />
+                                        <IconComponent className="w-4 h-4 text-muted-foreground" />
                                         <span>{item.name}</span>
                                         <Lock className="w-3.5 h-3.5 ml-auto text-muted-foreground/70" />
                                     </div>
                                 );
                             }
 
-                            return (
                                 <Link
                                     key={item.href}
                                     href={item.href}
@@ -172,7 +166,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                             : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                                     )}
                                 >
-                                    <item.icon className={cn("w-4 h-4 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                                    <IconComponent className={cn("w-4 h-4 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                                     <span>{item.name}</span>
                                     {isActive && (
                                         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
@@ -259,7 +253,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                 </div>
                                 <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-1">
                                     {navItems.map((item) => {
-                                        const isLocked = item.featureLock && hotel?.features && !hotel.features.includes(item.featureLock);
+                                        const isLocked = item.isLocked;
+                                        const IconComponent = iconMap[item.iconName] || LayoutDashboard;
                                         
                                         if (isLocked) {
                                             return (
@@ -270,7 +265,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                                         "text-muted-foreground"
                                                     )}
                                                 >
-                                                    <item.icon className="w-5 h-5 shrink-0" />
+                                                    <IconComponent className="w-5 h-5 shrink-0" />
                                                     {item.name}
                                                     <Lock className="w-4 h-4 ml-auto text-muted-foreground/70" />
                                                 </div>
@@ -289,7 +284,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                                         : "text-muted-foreground hover:bg-secondary"
                                                 )}
                                             >
-                                                <item.icon className="w-5 h-5 shrink-0" />
+                                                <IconComponent className="w-5 h-5 shrink-0" />
                                                 {item.name}
                                             </Link>
                                         );

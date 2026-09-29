@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
-import { ENABLE_ORDERING_ADMIN_NAV } from "@/lib/adminNavConfig";
 
 export default function DashboardPage() {
     const { hotel, admin } = useAuth();
@@ -24,10 +23,13 @@ export default function DashboardPage() {
     const [stats, setStats] = useState({ revenue: 0, activeOrders: 0, totalItems: 0, occupancy: 0 });
     const [loading, setLoading] = useState(true);
 
+    const isOrderingEnabled = hotel?.features?.includes("DIGITAL_ORDERING") ?? false;
+    const isStaffEnabled = hotel?.features?.includes("STAFF_MANAGEMENT") ?? false;
+
     useEffect(() => {
         async function load() {
             try {
-                if (ENABLE_ORDERING_ADMIN_NAV) {
+                if (isOrderingEnabled) {
                     const [o, c, r] = await Promise.all([api.getOrders(), api.getCategories(), api.getRooms()]);
                     setOrders(o);
                     const revenue = o.filter(x => x.status !== 'CANCELLED').reduce((acc, curr) => acc + Number(curr.totalAmount || 0), 0);
@@ -47,7 +49,7 @@ export default function DashboardPage() {
             }
         }
         load();
-    }, []);
+    }, [isOrderingEnabled]);
 
     if (loading) return <AdminPageSkeleton cardCount={4} />;
 
@@ -61,7 +63,7 @@ export default function DashboardPage() {
                         Overview of {hotel?.name || "your hotel"}&apos;s performance today.
                     </p>
                 </div>
-                {ENABLE_ORDERING_ADMIN_NAV && (
+                {isOrderingEnabled && (
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full md:w-auto shrink-0">
                         <Link
                             href="/orders"
@@ -96,52 +98,47 @@ export default function DashboardPage() {
                Icon on left, Value big, Label muted.
                Similar to the "Linear" / Reference style.
             */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                <StatCard
-                    title="Total Revenue"
-                    value={`₹${stats.revenue.toLocaleString()}`}
-                    icon={DollarSign}
-                    trend="+12.5%"
-                    disabled={!ENABLE_ORDERING_ADMIN_NAV}
-                />
-                <StatCard
-                    title="Active Orders"
-                    value={stats.activeOrders.toString()}
-                    icon={ShoppingBag}
-                    trend="+2"
-                    active
-                    disabled={!ENABLE_ORDERING_ADMIN_NAV}
-                />
+            <div className={cn("grid gap-4 sm:gap-6", isOrderingEnabled ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2")}>
+                {isOrderingEnabled && (
+                    <>
+                        <StatCard
+                            title="Total Revenue"
+                            value={`₹${stats.revenue.toLocaleString()}`}
+                            icon={DollarSign}
+                            trend="+12.5%"
+                        />
+                        <StatCard
+                            title="Active Orders"
+                            value={stats.activeOrders.toString()}
+                            icon={ShoppingBag}
+                            trend="+2"
+                            active
+                        />
+                    </>
+                )}
                 <StatCard
                     title="Menu Items"
                     value={stats.totalItems.toString()}
                     icon={Utensils}
                 />
                 <StatCard
-                    title="Total Rooms"
+                    title={isOrderingEnabled ? "Total Rooms" : "Total Rooms (QR Codes)"}
                     value={stats.occupancy.toString()}
                     icon={Users}
                 />
             </div>
 
+            </div>
+
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className={cn("grid grid-cols-1 gap-6 lg:gap-8", isOrderingEnabled ? "lg:grid-cols-3" : "")}>
                 {/* RECENT ORDERS (Takes up 2 columns) */}
-                <div
-                    className={cn(
-                        "lg:col-span-2 space-y-4",
-                        !ENABLE_ORDERING_ADMIN_NAV && "opacity-45 pointer-events-none select-none",
-                    )}
-                    aria-disabled={!ENABLE_ORDERING_ADMIN_NAV}
-                >
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                            <h2 className="text-base sm:text-lg font-semibold text-foreground">Recent Orders</h2>
-                            {!ENABLE_ORDERING_ADMIN_NAV && (
-                                <p className="text-xs text-muted-foreground mt-0.5">Available when ordering is enabled</p>
-                            )}
-                        </div>
-                        {ENABLE_ORDERING_ADMIN_NAV && (
+                {isOrderingEnabled && (
+                    <div className="lg:col-span-2 space-y-4">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                                <h2 className="text-base sm:text-lg font-semibold text-foreground">Recent Orders</h2>
+                            </div>
                             <Link
                                 href="/orders"
                                 className="inline-flex items-center shrink-0 text-sm font-medium text-primary hover:text-primary/90 min-h-11 px-2 -mr-2 rounded-lg hover:bg-primary/5 transition-colors"
@@ -223,9 +220,10 @@ export default function DashboardPage() {
                 </div>
 
                 {/* QUICK ACTIONS / SIDE PANEL */}
-                <div className="space-y-4">
-                    <h2 className="text-base sm:text-lg font-semibold text-foreground">Quick Actions</h2>
-                    <div className="dashboard-card p-3 sm:p-4 space-y-1 sm:space-y-2">
+                <div className={cn("space-y-4", !isOrderingEnabled ? "grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 space-y-0" : "")}>
+                    <div>
+                        <h2 className="text-base sm:text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
+                        <div className="dashboard-card p-3 sm:p-4 space-y-1 sm:space-y-2">
                         <ActionRow
                             icon={Utensils}
                             title="Update Menu"
@@ -238,14 +236,17 @@ export default function DashboardPage() {
                             subtitle="Print QR codes"
                             href="/rooms"
                         />
-                        <ActionRow
-                            icon={Users}
-                            title="Staff & Access"
-                            subtitle="Invite team and manage access keys"
-                            href="/staff"
-                            disabled={admin?.role !== "OWNER" && admin?.role !== "GENERAL_MANAGER"}
-                            disabledHint="Only the owner or general manager can manage staff"
-                        />
+                        {isStaffEnabled && (
+                            <ActionRow
+                                icon={Users}
+                                title="Staff & Access"
+                                subtitle="Invite team and manage access keys"
+                                href="/staff"
+                                disabled={admin?.role !== "OWNER" && admin?.role !== "GENERAL_MANAGER"}
+                                disabledHint="Only the owner or general manager can manage staff"
+                            />
+                        )}
+                    </div>
                     </div>
 
                     <div className="dashboard-card p-4 sm:p-6 bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
