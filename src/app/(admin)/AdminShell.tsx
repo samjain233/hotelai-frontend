@@ -136,25 +136,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto no-scrollbar">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href;
-                            const isLocked = item.isLocked;
                             const IconComponent = iconMap[item.iconName] || LayoutDashboard;
-
-                            if (isLocked) {
-                                return (
-                                    <div
-                                        key={item.href}
-                                        className={cn(
-                                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative cursor-not-allowed opacity-50",
-                                            "text-muted-foreground bg-transparent"
-                                        )}
-                                        title="Upgrade your plan to unlock this feature"
-                                    >
-                                        <IconComponent className="w-4 h-4 text-muted-foreground" />
-                                        <span>{item.name}</span>
-                                        <Lock className="w-3.5 h-3.5 ml-auto text-muted-foreground/70" />
-                                    </div>
-                                );
-                            }
 
                             return (
                                 <Link
@@ -254,24 +236,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                 </div>
                                 <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-1">
                                     {navItems.map((item) => {
-                                        const isLocked = item.isLocked;
                                         const IconComponent = iconMap[item.iconName] || LayoutDashboard;
-                                        
-                                        if (isLocked) {
-                                            return (
-                                                <div
-                                                    key={item.href}
-                                                    className={cn(
-                                                        "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium opacity-50 cursor-not-allowed",
-                                                        "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    <IconComponent className="w-5 h-5 shrink-0" />
-                                                    {item.name}
-                                                    <Lock className="w-4 h-4 ml-auto text-muted-foreground/70" />
-                                                </div>
-                                            );
-                                        }
 
                                         return (
                                             <Link
