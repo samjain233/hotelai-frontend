@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Playfair_Display } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
+import { SWRProvider } from "@/components/SWRProvider";
 import { Toaster } from "sonner";
 import { getSiteUrl } from "@/lib/site-config";
 import "./globals.css";
@@ -74,7 +75,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>{children}</AuthProvider>
+          <SWRProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </SWRProvider>
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
         <Analytics />
