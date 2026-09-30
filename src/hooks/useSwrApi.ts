@@ -11,6 +11,8 @@ export const SWR_KEYS = {
     publicRooms: (hotelSlug: string) => [`guest/rooms/${hotelSlug}`] as const,
     categories: () => ['admin/categories'] as const,
     menuItems: () => ['admin/menu'] as const,
+    adminRooms: () => ['admin/rooms'] as const,
+    navigation: () => ['auth/navigation'] as const,
 } as const;
 
 /** SWR config: 60s dedup - avoid duplicate requests within a minute */
@@ -77,6 +79,28 @@ export function useMenuItems(enabled = true) {
         enabled ? '/admin/menu' : null,
         swrFetcher,
         { dedupingInterval: 30_000, revalidateOnFocus: true },
+    );
+}
+
+/**
+ * Admin rooms.
+ */
+export function useAdminRooms(enabled = true) {
+    return useSWR<import('@/lib/types').Room[]>(
+        enabled ? '/admin/rooms' : null,
+        swrFetcher,
+        { dedupingInterval: 30_000, revalidateOnFocus: true },
+    );
+}
+
+/**
+ * Admin navigation tabs. Rarely changes.
+ */
+export function useAdminNavigation(enabled = true) {
+    return useSWR<{ name: string; href: string; iconName: string; featureLock?: string; isLocked?: boolean }[]>(
+        enabled ? '/auth/navigation' : null,
+        swrFetcher,
+        { dedupingInterval: 300_000, revalidateOnFocus: false },
     );
 }
 

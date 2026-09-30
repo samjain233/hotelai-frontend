@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
+import { useAdminRooms } from "@/hooks/useSwrApi";
 import { Room, RoomQr } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { RoomsSkeleton } from "@/components/ui/Skeleton";
@@ -92,9 +93,8 @@ export default function RoomsPage() {
         [hotel?.qrCodeBackgroundHex],
     );
     const qrPrintCardLight = useMemo(() => isQrPrintBackgroundLight(qrPrintFrameBg), [qrPrintFrameBg]);
-    const [rooms, setRooms] = useState<Room[]>([]);
+    const { data: rooms = [], isLoading: loading, mutate: mutateRooms } = useAdminRooms();
     const [qrs, setQrs] = useState<RoomQr[]>([]);
-    const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showQrModal, setShowQrModal] = useState(false);
     const [form, setForm] = useState({ number: "", floor: "" });
@@ -133,8 +133,6 @@ export default function RoomsPage() {
         return rooms.filter((r) => !r.isOccupied && r.id !== checkinModalRoom.id);
     }, [rooms, checkinModalRoom]);
 
-    useEffect(() => { loadRooms(); }, []);
-
     useEffect(() => {
         if (!showModal) setRoomNumberHelpOpen(false);
     }, [showModal]);
@@ -144,12 +142,6 @@ export default function RoomsPage() {
         if (qrs.length > 0) setQrSelectedIds(new Set(qrs.map((q) => q.roomId)));
     }, [qrs]);
 
-    // ─── CRUD ───
-    async function loadRooms() {
-        try { const r = await api.getRooms(); setRooms(r); }
-        catch (err) { console.error(err); }
-        finally { setLoading(false); }
-    }
 
     function openCheckinModal(room: Room) {
         const randomPin = String(Math.floor(1000 + Math.random() * 9000));
@@ -187,7 +179,7 @@ export default function RoomsPage() {
             setCheckinModalRoom(null);
             setCheckinAdditionalRoomIds([]);
             setShowMultiRoomSelector(false);
-            await loadRooms();
+            await mutateRooms();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Failed to check in room");
         } finally {
@@ -200,7 +192,7 @@ export default function RoomsPage() {
         try {
             await api.checkoutRoom(room.id);
             toast.success(`Room ${room.number} checked out`);
-            await loadRooms();
+            await mutateRooms();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Failed to check out room");
         }
@@ -217,7 +209,7 @@ export default function RoomsPage() {
         try {
             const res = await api.regenerateRoomPin(room.id, custom.trim());
             toast.success(`New PIN for Room ${room.number}: ${res.pin}`);
-            await loadRooms();
+            await mutateRooms();
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Failed to update PIN");
         }
@@ -245,7 +237,7 @@ export default function RoomsPage() {
             else await api.createBulkRooms(numbers.map((number) => ({ number, floor })));
             setShowModal(false);
             setForm({ number: "", floor: "" });
-            await loadRooms();
+            await mutateRooms();
             toast.success(numbers.length === 1 ? "Room added successfully" : "Rooms added successfully");
         } catch (err: unknown) {
             alert(err instanceof Error ? err.message : "Failed to create rooms");
@@ -254,7 +246,7 @@ export default function RoomsPage() {
 
     async function deleteRoom(id: string) {
         if (!confirm("Delete this room?")) return;
-        try { await api.deleteRoom(id); await loadRooms(); }
+        try { await api.deleteRoom(id); await mutateRooms(); }
         catch (err: unknown) { alert(err instanceof Error ? err.message : "Failed"); }
     }
 

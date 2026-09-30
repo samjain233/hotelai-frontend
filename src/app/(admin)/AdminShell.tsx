@@ -5,8 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { useState, useEffect } from "react";
-import useSWR from "swr";
-import { api, swrFetcher } from "@/lib/api";
+import { useAdminNavigation } from "@/hooks/useSwrApi";
 import {
     LayoutDashboard,
     ClipboardList,
@@ -53,7 +52,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    const { data: serverNavItems, isLoading: navLoading } = useSWR(admin ? '/auth/navigation' : null, swrFetcher);
+    const { data: serverNavItems, isLoading: navLoading } = useAdminNavigation(!!admin);
 
     useEffect(() => {
         if (!loading && !admin) {
