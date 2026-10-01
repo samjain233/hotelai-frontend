@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import { api } from "@/lib/api";
+import { FeatureGuard } from "@/components/admin/FeatureGuard";
 import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
 import {
     ServiceRequest,
@@ -227,7 +228,7 @@ function playAlertSound(priority: string) {
 
 // ─── Page ─────────────────────────────────────────────────
 
-export default function AdminServicesPage() {
+function AdminServicesContent() {
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -954,5 +955,13 @@ export default function AdminServicesPage() {
             )}
 
         </div>
+    );
+}
+
+export default function AdminServicesPage() {
+    return (
+        <FeatureGuard>
+            <AdminServicesContent />
+        </FeatureGuard>
     );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
+import { FeatureGuard } from "@/components/admin/FeatureGuard";
 import { Order, OrderStatus } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { AnimatePresence, motion } from "framer-motion";
@@ -35,7 +36,7 @@ const nextAction: Record<string, { label: string; status: string }> = {
     READY: { label: "Mark Delivered", status: "DELIVERED" },
 };
 
-export default function OrdersPage() {
+function OrdersContent() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<OrderStatus | "ALL">("ALL");
@@ -341,6 +342,14 @@ export default function OrdersPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function OrdersPage() {
+    return (
+        <FeatureGuard>
+            <OrdersContent />
+        </FeatureGuard>
     );
 }
 

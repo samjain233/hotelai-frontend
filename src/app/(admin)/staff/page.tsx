@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { FeatureGuard } from "@/components/admin/FeatureGuard";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -82,7 +83,7 @@ function isKeyOnlyStaffEmail(email: string) {
     return email.endsWith(STAFF_KEY_EMAIL_SUFFIX);
 }
 
-export default function StaffPage() {
+function StaffContent() {
     const { admin } = useAuth();
     const [staff, setStaff] = useState<StaffListMember[]>([]);
     const [pending, setPending] = useState<PendingInvite[]>([]);
@@ -503,5 +504,13 @@ export default function StaffPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function StaffPage() {
+    return (
+        <FeatureGuard>
+            <StaffContent />
+        </FeatureGuard>
     );
 }

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { api } from "@/lib/api";
+import { FeatureGuard } from "@/components/admin/FeatureGuard";
 import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
@@ -32,7 +33,7 @@ const COLUMNS = [
     { status: "READY", title: "Ready to Serve", icon: Clock, color: "bg-emerald-500", border: "border-l-emerald-500", headerBg: "bg-emerald-500/10", actionLabel: "Complete", nextStatus: "DELIVERED" },
 ];
 
-export default function KitchenPage() {
+function KitchenContent() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -325,5 +326,13 @@ export default function KitchenPage() {
                 })}
             </div>
         </div>
+    );
+}
+
+export default function KitchenPage() {
+    return (
+        <FeatureGuard>
+            <KitchenContent />
+        </FeatureGuard>
     );
 }

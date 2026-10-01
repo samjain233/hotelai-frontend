@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { FeatureGuard } from "@/components/admin/FeatureGuard";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -27,7 +28,7 @@ import { Service } from "@/lib/types";
 
 const DELETE_CONFIRM_WORD = "delete";
 
-export default function ServiceCataloguePage() {
+function ServiceCatalogueContent() {
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -728,5 +729,13 @@ export default function ServiceCataloguePage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function ServiceCataloguePage() {
+    return (
+        <FeatureGuard>
+            <ServiceCatalogueContent />
+        </FeatureGuard>
     );
 }
