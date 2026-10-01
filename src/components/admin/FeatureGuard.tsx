@@ -2,7 +2,7 @@
 
 import { useAdminNavigation } from "@/hooks/useSwrApi";
 import { Loader2, Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -33,7 +33,7 @@ export function FeatureGuard({ children, requiredPath }: { children: React.React
                 </p>
                 <div className="flex gap-4">
                     <Link href="/settings">
-                        <Button variant="default" size="lg">Manage Subscription</Button>
+                        <Button variant="primary" size="lg">Manage Subscription</Button>
                     </Link>
                     <Link href="/dashboard">
                         <Button variant="outline" size="lg">Back to Dashboard</Button>
