@@ -144,7 +144,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             
             // Fire and forget, no await
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-            fetch(`${apiUrl}/platform/analytics/menu-view`, {
+            fetch(`${apiUrl}/analytics/menu-view`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ hotelId: hotel.id })
