@@ -4,332 +4,552 @@ import type { ComponentType } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
-import { Order } from "@/lib/types";
+import type { Order, OrderStatus, Room, ServiceRequest } from "@/lib/types";
 import { useEffect, useState } from "react";
 import {
-    DollarSign,
-    ShoppingBag,
+    ArrowRight,
+    BedDouble,
+    ChefHat,
+    ClipboardList,
+    Headset,
     Utensils,
     Users,
-    ArrowRight,
-    BedDouble
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 
+const OPEN_ORDER_STATUSES: OrderStatus[] = ["PLACED", "CONFIRMED", "PREPARING", "READY"];
+const OPEN_REQUEST_STATUSES = ["SUBMITTED", "ACKNOWLEDGED", "IN_PROGRESS"];
+
+const PIPELINE: { status: OrderStatus; label: string; bar: string }[] = [
+    { status: "PLACED", label: "New", bar: "bg-blue-500" },
+    { status: "CONFIRMED", label: "Confirmed", bar: "bg-indigo-500" },
+    { status: "PREPARING", label: "Preparing", bar: "bg-amber-500" },
+    { status: "READY", label: "Ready", bar: "bg-emerald-500" },
+    { status: "DELIVERED", label: "Delivered", bar: "bg-zinc-400" },
+];
+
+function money(amount: number): string {
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
+
+function dayKey(date: Date, timeZone?: string): string {
+    try {
+        return new Intl.DateTimeFormat("en-CA", {
+            timeZone: timeZone || undefined,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        }).format(date);
+    } catch {
+        return new Intl.DateTimeFormat("en-CA", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        }).format(date);
+    }
+}
+
+function shiftDay(key: string, days: number): string {
+    const [year, month, day] = key.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+}
+
+function hourInZone(timeZone?: string): number {
+    try {
+        const hour = new Intl.DateTimeFormat("en-GB", {
+            hour: "numeric",
+            hourCycle: "h23",
+            timeZone: timeZone || undefined,
+        })
+            .formatToParts(new Date())
+            .find((part) => part.type === "hour")?.value;
+        return Number(hour ?? new Date().getHours());
+    } catch {
+        return new Date().getHours();
+    }
+}
+
+function greeting(timeZone?: string): string {
+    const hour = hourInZone(timeZone);
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+}
+
+function longDate(timeZone?: string): string {
+    try {
+        return new Intl.DateTimeFormat("en-IN", {
+            timeZone: timeZone || undefined,
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+        }).format(new Date());
+    } catch {
+        return new Intl.DateTimeFormat("en-IN", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+        }).format(new Date());
+    }
+}
+
+function clockTime(iso: string, timeZone?: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "";
+    try {
+        return new Intl.DateTimeFormat("en-IN", {
+            timeZone: timeZone || undefined,
+            hour: "2-digit",
+            minute: "2-digit",
+        }).format(date);
+    } catch {
+        return new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit" }).format(date);
+    }
+}
+
+function orderTotal(order: Order): number {
+    return Number(order.totalAmount || 0);
+}
+
+function itemSummary(order: Order): string {
+    const items = order.items ?? [];
+    if (items.length === 0) return "No items";
+    const first = items[0].itemName;
+    return items.length > 1 ? `${first} +${items.length - 1}` : first;
+}
+
+function revenueChange(today: number, yesterday: number): { text: string; tone: "up" | "down" | "flat" } {
+    if (yesterday <= 0) {
+        return today > 0
+            ? { text: "No revenue yesterday", tone: "up" }
+            : { text: "Nothing in yet today", tone: "flat" };
+    }
+    const pct = Math.round(((today - yesterday) / yesterday) * 100);
+    if (pct === 0) return { text: "Same as yesterday", tone: "flat" };
+    const arrow = pct > 0 ? "↑" : "↓";
+    return { text: `${arrow} ${Math.abs(pct)}% vs yesterday`, tone: pct > 0 ? "up" : "down" };
+}
+
 export default function DashboardPage() {
     const { hotel, admin } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
-    const [stats, setStats] = useState({ revenue: 0, activeOrders: 0, totalItems: 0, occupancy: 0 });
+    const [rooms, setRooms] = useState<Room[]>([]);
+    const [menuItems, setMenuItems] = useState(0);
+    const [categoryCount, setCategoryCount] = useState(0);
+    const [openRequests, setOpenRequests] = useState(0);
     const [loading, setLoading] = useState(true);
 
     const isOrderingEnabled = hotel?.features?.includes("DIGITAL_ORDERING") ?? false;
     const isStaffEnabled = hotel?.features?.includes("STAFF_MANAGEMENT") ?? false;
+    const isRequestsEnabled = hotel?.features?.includes("SERVICE_REQUESTS") ?? false;
+    const timeZone = hotel?.timezone;
 
     useEffect(() => {
+        let cancelled = false;
         async function load() {
             try {
-                if (isOrderingEnabled) {
-                    const [o, c, r] = await Promise.all([api.getOrders(), api.getCategories(), api.getRooms()]);
-                    setOrders(o);
-                    const revenue = o.filter(x => x.status !== 'CANCELLED').reduce((acc, curr) => acc + Number(curr.totalAmount || 0), 0);
-                    const active = o.filter(x => ['PLACED', 'CONFIRMED', 'PREPARING'].includes(x.status)).length;
-                    const items = c.reduce((acc, curr) => acc + (curr._count?.items || 0), 0);
-                    setStats({ revenue, activeOrders: active, totalItems: items, occupancy: r.length });
-                } else {
-                    const [c, r] = await Promise.all([api.getCategories(), api.getRooms()]);
-                    setOrders([]);
-                    const items = c.reduce((acc, curr) => acc + (curr._count?.items || 0), 0);
-                    setStats({ revenue: 0, activeOrders: 0, totalItems: items, occupancy: r.length });
-                }
+                const requestsPromise: Promise<ServiceRequest[]> = isRequestsEnabled
+                    ? api.getServiceRequests().catch(() => [])
+                    : Promise.resolve([]);
+                const [orderList, categories, roomList, requests] = await Promise.all([
+                    isOrderingEnabled ? api.getOrders() : Promise.resolve([] as Order[]),
+                    api.getCategories(),
+                    api.getRooms(),
+                    requestsPromise,
+                ]);
+                if (cancelled) return;
+                setOrders(orderList);
+                setRooms(roomList);
+                setCategoryCount(categories.length);
+                setMenuItems(categories.reduce((sum, category) => sum + (category._count?.items || 0), 0));
+                setOpenRequests(requests.filter((request) => OPEN_REQUEST_STATUSES.includes(request.status)).length);
             } catch (error) {
                 console.error(error);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         }
         load();
-    }, [isOrderingEnabled]);
+        return () => {
+            cancelled = true;
+        };
+    }, [isOrderingEnabled, isRequestsEnabled]);
 
     if (loading) return <AdminPageSkeleton cardCount={4} />;
 
+    const today = dayKey(new Date(), timeZone);
+    const yesterday = shiftDay(today, -1);
+    const counted = orders.filter((order) => order.status !== "CANCELLED");
+    const todayRevenue = counted
+        .filter((order) => dayKey(new Date(order.createdAt), timeZone) === today)
+        .reduce((sum, order) => sum + orderTotal(order), 0);
+    const yesterdayRevenue = counted
+        .filter((order) => dayKey(new Date(order.createdAt), timeZone) === yesterday)
+        .reduce((sum, order) => sum + orderTotal(order), 0);
+    const todaysOrders = orders.filter((order) => dayKey(new Date(order.createdAt), timeZone) === today);
+    const openOrders = orders.filter((order) => OPEN_ORDER_STATUSES.includes(order.status));
+    const waiting = openOrders.filter((order) => order.status === "PLACED").length;
+    const inKitchen = openOrders.filter((order) => order.status === "CONFIRMED" || order.status === "PREPARING").length;
+    const ready = openOrders.filter((order) => order.status === "READY").length;
+    const occupied = rooms.filter((room) => room.isOccupied).length;
+    const change = revenueChange(todayRevenue, yesterdayRevenue);
+    const recent = [...orders].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 6);
+    const pipelineTotal = PIPELINE.reduce(
+        (sum, step) => sum + todaysOrders.filter((order) => order.status === step.status).length,
+        0,
+    );
+    const cancelledToday = todaysOrders.filter((order) => order.status === "CANCELLED").length;
+
+    const firstName = admin?.name?.trim().split(/\s+/)[0];
+    const attention = [
+        waiting > 0 && {
+            href: "/orders",
+            text: `${waiting} order${waiting === 1 ? "" : "s"} waiting for confirmation`,
+        },
+        ready > 0 && {
+            href: "/orders",
+            text: `${ready} order${ready === 1 ? "" : "s"} ready to deliver`,
+        },
+        openRequests > 0 && {
+            href: "/services",
+            text: `${openRequests} open service request${openRequests === 1 ? "" : "s"}`,
+        },
+    ].filter((item): item is { href: string; text: string } => Boolean(item));
+
+    const kpis: KpiProps[] = [
+        ...(isOrderingEnabled
+            ? [
+                  {
+                      label: "Today's revenue",
+                      value: money(todayRevenue),
+                      detail: change.text,
+                      tone: change.tone,
+                      href: "/orders",
+                  },
+                  {
+                      label: "Open orders",
+                      value: String(openOrders.length),
+                      detail:
+                          openOrders.length === 0
+                              ? "Nothing in progress"
+                              : [waiting && `${waiting} new`, inKitchen && `${inKitchen} in kitchen`, ready && `${ready} ready`]
+                                    .filter(Boolean)
+                                    .join(" · "),
+                      href: "/orders",
+                  },
+              ]
+            : []),
+        {
+            label: "Rooms occupied",
+            value: rooms.length === 0 ? "0" : `${occupied}/${rooms.length}`,
+            detail: rooms.length === 0 ? "No rooms added yet" : `${rooms.length - occupied} available`,
+            href: "/rooms",
+        },
+        ...(isRequestsEnabled
+            ? [
+                  {
+                      label: "Open requests",
+                      value: String(openRequests),
+                      detail: openRequests === 0 ? "All requests handled" : "Needs a response",
+                      href: "/services",
+                  },
+              ]
+            : []),
+        {
+            label: "Menu items",
+            value: String(menuItems),
+            detail: categoryCount === 0 ? "No categories yet" : `Across ${categoryCount} categories`,
+            href: "/menu",
+        },
+    ];
+
     return (
-        <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-[env(safe-area-inset-bottom,0px)]">
-            {/* Header / Title Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-8 pb-[env(safe-area-inset-bottom,0px)] animate-in fade-in duration-500">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-                    <p className="text-sm sm:text-base text-muted-foreground mt-1">
-                        Overview of {hotel?.name || "your hotel"}&apos;s performance today.
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                        {greeting(timeZone)}
+                        {firstName ? `, ${firstName}` : ""}
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        {longDate(timeZone)}
+                        {hotel?.name ? ` · ${hotel.name}` : ""}
                     </p>
                 </div>
                 {isOrderingEnabled && (
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full md:w-auto shrink-0">
+                    <div className="flex gap-2">
                         <Link
-                            href="/orders"
-                            className={cn(
-                                "inline-flex items-center justify-center rounded-lg font-medium text-sm transition-all duration-200",
-                                "min-h-11 h-11 px-4 w-full sm:w-auto",
-                                "bg-transparent border border-white/10 hover:bg-white/5 text-foreground",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]",
-                            )}
+                            href="/kitchen"
+                            className="inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:flex-none"
                         >
-                            View Reports
+                            <ChefHat className="h-4 w-4" />
+                            Kitchen
                         </Link>
                         <Link
                             href="/orders"
-                            className={cn(
-                                "inline-flex items-center justify-center rounded-lg font-medium text-sm transition-all duration-200",
-                                "min-h-11 h-11 px-4 w-full sm:w-auto gap-2",
-                                "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)]",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]",
-                            )}
+                            className="inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:flex-none"
                         >
-                            <ShoppingBag className="w-4 h-4 shrink-0" />
-                            New Order
+                            <ClipboardList className="h-4 w-4" />
+                            Orders
                         </Link>
                     </div>
                 )}
             </div>
 
-            {/* 
-               STAT CARDS
-               Clean, solid cards with subtle borders. 
-               Icon on left, Value big, Label muted.
-               Similar to the "Linear" / Reference style.
-            */}
-            <div className={cn("grid gap-4 sm:gap-6", isOrderingEnabled ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2")}>
-                {isOrderingEnabled && (
-                    <>
-                        <StatCard
-                            title="Total Revenue"
-                            value={`₹${stats.revenue.toLocaleString()}`}
-                            icon={DollarSign}
-                            trend="+12.5%"
-                        />
-                        <StatCard
-                            title="Active Orders"
-                            value={stats.activeOrders.toString()}
-                            icon={ShoppingBag}
-                            trend="+2"
-                            active
-                        />
-                    </>
+            {attention.length > 0 && (
+                <div className="flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2">
+                    {attention.map((item) => (
+                        <Link
+                            key={item.text}
+                            href={item.href}
+                            className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-amber-800 hover:underline dark:text-amber-200"
+                        >
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                            {item.text}
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                    ))}
+                </div>
+            )}
+
+            <div
+                className={cn(
+                    "grid grid-cols-2 gap-3 sm:gap-4",
+                    kpis.length <= 2 && "sm:grid-cols-2",
+                    kpis.length === 3 && "lg:grid-cols-3",
+                    kpis.length === 4 && "xl:grid-cols-4",
+                    kpis.length >= 5 && "xl:grid-cols-5",
                 )}
-                <StatCard
-                    title="Menu Items"
-                    value={stats.totalItems.toString()}
-                    icon={Utensils}
-                />
-                <StatCard
-                    title={isOrderingEnabled ? "Total Rooms" : "Total Rooms (QR Codes)"}
-                    value={stats.occupancy.toString()}
-                    icon={Users}
-                />
+            >
+                {kpis.map((kpi) => (
+                    <Kpi key={kpi.label} {...kpi} />
+                ))}
             </div>
 
-            {/* Main Content Grid */}
-            <div className={cn("grid grid-cols-1 gap-6 lg:gap-8", isOrderingEnabled ? "lg:grid-cols-3" : "")}>
-                {/* RECENT ORDERS (Takes up 2 columns) */}
+            <div className={cn("grid grid-cols-1 gap-6", isOrderingEnabled && "xl:grid-cols-3")}>
                 {isOrderingEnabled && (
-                    <div className="lg:col-span-2 space-y-4">
-                        <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                                <h2 className="text-base sm:text-lg font-semibold text-foreground">Recent Orders</h2>
+                    <div className="space-y-6 xl:col-span-2">
+                        <section className="dashboard-card p-5 sm:p-6">
+                            <div className="flex items-baseline justify-between gap-3">
+                                <h2 className="text-sm font-semibold text-foreground">Today&apos;s orders</h2>
+                                <p className="text-xs text-muted-foreground">
+                                    {pipelineTotal} completed or in progress
+                                    {cancelledToday > 0 ? ` · ${cancelledToday} cancelled` : ""}
+                                </p>
                             </div>
-                            <Link
-                                href="/orders"
-                                className="inline-flex items-center shrink-0 text-sm font-medium text-primary hover:text-primary/90 min-h-11 px-2 -mr-2 rounded-lg hover:bg-primary/5 transition-colors"
-                            >
-                                View All <ArrowRight className="w-4 h-4 ml-1" />
-                            </Link>
-                        </div>
+                            {pipelineTotal === 0 ? (
+                                <p className="mt-6 text-sm text-muted-foreground">No orders yet today.</p>
+                            ) : (
+                                <>
+                                    <div className="mt-5 flex h-2.5 overflow-hidden rounded-full bg-secondary">
+                                        {PIPELINE.map((step) => {
+                                            const count = todaysOrders.filter((order) => order.status === step.status).length;
+                                            if (count === 0) return null;
+                                            return (
+                                                <div
+                                                    key={step.status}
+                                                    className={cn("h-full", step.bar)}
+                                                    style={{ width: `${(count / pipelineTotal) * 100}%` }}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                    <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                                        {PIPELINE.map((step) => {
+                                            const count = todaysOrders.filter((order) => order.status === step.status).length;
+                                            return (
+                                                <li key={step.status} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <span className={cn("h-2 w-2 rounded-full", step.bar)} />
+                                                    <span className="tabular-nums font-medium text-foreground">{count}</span>
+                                                    {step.label}
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </>
+                            )}
+                        </section>
 
-                    {/* Mobile: stacked cards (no horizontal table scroll) */}
-                    <div className="md:hidden space-y-3">
-                        {orders.slice(0, 5).map((order) => (
-                            <Link
-                                key={order.id}
-                                href="/orders"
-                                className="dashboard-card p-4 flex flex-col gap-3 active:scale-[0.99] transition-transform hover:border-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-xl"
-                            >
-                                <div className="flex justify-between items-start gap-3">
-                                    <span className="font-semibold text-foreground tabular-nums">#{order.orderNumber}</span>
-                                    <StatusBadge status={order.status} />
-                                </div>
-                                <div className="flex justify-between items-center gap-2 text-sm">
-                                    <span className="text-muted-foreground">
-                                        Room {order.room?.number ?? "N/A"}
-                                    </span>
-                                    <span className="font-semibold text-foreground tabular-nums">
-                                        ₹{Number(order.totalAmount || 0).toLocaleString()}
-                                    </span>
-                                </div>
-                            </Link>
-                        ))}
-                        {orders.length === 0 && (
-                            <div className="dashboard-card p-8 text-center text-sm text-muted-foreground">
-                                No recent orders found.
+                        <section>
+                            <div className="mb-3 flex items-center justify-between">
+                                <h2 className="text-sm font-semibold text-foreground">Recent orders</h2>
+                                <Link
+                                    href="/orders"
+                                    className="inline-flex cursor-pointer items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                                >
+                                    View all <ArrowRight className="ml-1 h-4 w-4" />
+                                </Link>
                             </div>
-                        )}
-                    </div>
 
-                    {/* Tablet/desktop: table */}
-                    <div className="dashboard-card overflow-hidden hidden md:block">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-xs text-muted-foreground uppercase tracking-wider bg-secondary border-b border-border">
-                                    <tr>
-                                        <th className="px-4 lg:px-6 py-3 lg:py-4 font-medium">Order ID</th>
-                                        <th className="px-4 lg:px-6 py-3 lg:py-4 font-medium">Room</th>
-                                        <th className="px-4 lg:px-6 py-3 lg:py-4 font-medium">Status</th>
-                                        <th className="px-4 lg:px-6 py-3 lg:py-4 font-medium text-right">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {orders.slice(0, 5).map((order) => (
-                                        <tr key={order.id} className="table-row-hover group cursor-pointer transition-colors">
-                                            <td className="px-4 lg:px-6 py-3 lg:py-4 font-medium text-foreground">
+                            <div className="space-y-2 md:hidden">
+                                {recent.map((order) => (
+                                    <Link
+                                        key={order.id}
+                                        href="/orders"
+                                        className="dashboard-card flex cursor-pointer items-center justify-between gap-3 p-4"
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="font-medium text-foreground">
                                                 #{order.orderNumber}
-                                            </td>
-                                            <td className="px-4 lg:px-6 py-3 lg:py-4 text-muted-foreground">
-                                                Room {order.room?.number || "N/A"}
-                                            </td>
-                                            <td className="px-4 lg:px-6 py-3 lg:py-4">
-                                                <StatusBadge status={order.status} />
-                                            </td>
-                                            <td className="px-4 lg:px-6 py-3 lg:py-4 text-right font-medium text-foreground">
-                                                ₹{Number(order.totalAmount || 0).toLocaleString()}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {orders.length === 0 && (
+                                                <span className="font-normal text-muted-foreground"> · Room {order.room?.number ?? "—"}</span>
+                                            </p>
+                                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                                {itemSummary(order)} · {clockTime(order.createdAt, timeZone)}
+                                            </p>
+                                        </div>
+                                        <div className="shrink-0 text-right">
+                                            <p className="text-sm font-medium tabular-nums">{money(orderTotal(order))}</p>
+                                            <StatusBadge status={order.status} />
+                                        </div>
+                                    </Link>
+                                ))}
+                                {recent.length === 0 && <EmptyOrders />}
+                            </div>
+
+                            <div className="dashboard-card hidden overflow-hidden md:block">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
-                                                No recent orders found.
-                                            </td>
+                                            <th className="px-5 py-3 font-medium">Order</th>
+                                            <th className="px-5 py-3 font-medium">Room</th>
+                                            <th className="px-5 py-3 font-medium">Items</th>
+                                            <th className="px-5 py-3 font-medium">Time</th>
+                                            <th className="px-5 py-3 font-medium">Status</th>
+                                            <th className="px-5 py-3 text-right font-medium">Amount</th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {recent.map((order) => (
+                                            <tr key={order.id} className="table-row-hover">
+                                                <td className="px-5 py-3.5 font-medium tabular-nums">#{order.orderNumber}</td>
+                                                <td className="px-5 py-3.5 text-muted-foreground">{order.room?.number ?? "—"}</td>
+                                                <td className="max-w-[16rem] truncate px-5 py-3.5 text-muted-foreground">{itemSummary(order)}</td>
+                                                <td className="px-5 py-3.5 tabular-nums text-muted-foreground">{clockTime(order.createdAt, timeZone)}</td>
+                                                <td className="px-5 py-3.5">
+                                                    <StatusBadge status={order.status} />
+                                                </td>
+                                                <td className="px-5 py-3.5 text-right font-medium tabular-nums">{money(orderTotal(order))}</td>
+                                            </tr>
+                                        ))}
+                                        {recent.length === 0 && (
+                                            <tr>
+                                                <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                                                    No orders yet. They will appear here as guests order from their rooms.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
                     </div>
                 )}
 
-                {/* QUICK ACTIONS / SIDE PANEL */}
-                <div className={cn("space-y-4", !isOrderingEnabled ? "grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 space-y-0" : "")}>
+                <aside className={cn("space-y-4", !isOrderingEnabled && "grid gap-4 space-y-0 md:grid-cols-2 xl:grid-cols-2")}>
                     <div>
-                        <h2 className="text-base sm:text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
-                        <div className="dashboard-card p-3 sm:p-4 space-y-1 sm:space-y-2">
-                        <ActionRow
-                            icon={Utensils}
-                            title="Update Menu"
-                            subtitle="Add items or change prices"
-                            href="/menu"
-                        />
-                        <ActionRow
-                            icon={BedDouble}
-                            title="Manage Rooms"
-                            subtitle="Print QR codes"
-                            href="/rooms"
-                        />
-                        {isStaffEnabled && (
-                            <ActionRow
-                                icon={Users}
-                                title="Staff & Access"
-                                subtitle="Invite team and manage access keys"
-                                href="/staff"
-                                disabled={admin?.role !== "OWNER" && admin?.role !== "GENERAL_MANAGER"}
-                                disabledHint="Only the owner or general manager can manage staff"
-                            />
-                        )}
-                    </div>
-                    </div>
-
-                    <div className="dashboard-card p-4 sm:p-6 bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
-                        <h3 className="font-semibold text-emerald-600 dark:text-emerald-400 mb-1">System Status</h3>
-                        <div className="flex items-center gap-2 text-sm text-emerald-600/80 dark:text-emerald-400/80">
-                            <span className="relative flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                            </span>
-                            All systems operational
+                        <h2 className="mb-3 text-sm font-semibold text-foreground">Shortcuts</h2>
+                        <div className="dashboard-card p-2">
+                            <ActionRow icon={Utensils} title="Update menu" subtitle="Items, prices and photos" href="/menu" />
+                            <ActionRow icon={BedDouble} title="Rooms" subtitle="Occupancy and QR cards" href="/rooms" />
+                            {isOrderingEnabled && (
+                                <ActionRow icon={ClipboardList} title="Orders" subtitle="Confirm, prepare, deliver" href="/orders" />
+                            )}
+                            {isRequestsEnabled && (
+                                <ActionRow icon={Headset} title="Guest requests" subtitle="Housekeeping and complaints" href="/services" />
+                            )}
+                            {isStaffEnabled && (
+                                <ActionRow
+                                    icon={Users}
+                                    title="Staff"
+                                    subtitle="Invite your team"
+                                    href="/staff"
+                                    disabled={admin?.role !== "OWNER" && admin?.role !== "GENERAL_MANAGER"}
+                                    disabledHint="Only the owner or general manager can manage staff"
+                                />
+                            )}
                         </div>
                     </div>
-                </div>
+
+                    {!isOrderingEnabled && (
+                        <div className="dashboard-card flex flex-col justify-center p-5">
+                            <h2 className="text-sm font-semibold text-foreground">Digital ordering is off</h2>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Guests can still browse the menu from the QR card in their room.
+                            </p>
+                        </div>
+                    )}
+                </aside>
             </div>
         </div>
     );
 }
 
-// ----------------------------------------------------------------------
-// Sub-components for cleaner file
-// ----------------------------------------------------------------------
-
-function StatCard({
-    title,
-    value,
-    icon: Icon,
-    trend,
-    active,
-    disabled,
-}: {
-    title: string;
+interface KpiProps {
+    label: string;
     value: string;
-    icon: ComponentType<{ className?: string }>;
-    trend?: string;
-    active?: boolean;
-    disabled?: boolean;
-}) {
+    detail: string;
+    href: string;
+    tone?: "up" | "down" | "flat";
+}
+
+function Kpi({ label, value, detail, href, tone = "flat" }: KpiProps) {
     return (
-        <div
-            className={cn(
-                "dashboard-card p-5 sm:p-6 flex flex-col justify-between min-h-[8rem] sm:h-32 relative overflow-hidden group",
-                active && !disabled && "border-primary/30 bg-primary/5 shadow-[inset_0_0_20px_rgba(99,102,241,0.05)]",
-                disabled && "opacity-45 pointer-events-none select-none",
-            )}
-            aria-disabled={disabled}
+        <Link
+            href={href}
+            className="dashboard-card flex min-h-[7.5rem] cursor-pointer flex-col justify-between p-4 transition-colors hover:border-primary/30 sm:p-5"
         >
-            <div className="flex justify-between items-start">
-                <div className="p-2.5 rounded-lg bg-secondary border border-border text-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <Icon className="w-4 h-4" />
-                </div>
-                {trend && !disabled && (
-                    <span className="text-xs font-semibold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                        {trend}
-                    </span>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums text-foreground sm:text-3xl">{value}</p>
+            <p
+                className={cn(
+                    "mt-2 text-xs",
+                    tone === "up" && "text-emerald-600 dark:text-emerald-400",
+                    tone === "down" && "text-red-600 dark:text-red-400",
+                    tone === "flat" && "text-muted-foreground",
                 )}
-            </div>
-            <div>
-                <p className="text-sm font-medium text-muted-foreground">{title}</p>
-                <div className="text-2xl font-bold text-foreground mt-1 tracking-tight">{value}</div>
-                {disabled && (
-                    <p className="text-[11px] text-muted-foreground mt-1">Ordering not active</p>
-                )}
-            </div>
+            >
+                {detail}
+            </p>
+        </Link>
+    );
+}
+
+function EmptyOrders() {
+    return (
+        <div className="dashboard-card p-8 text-center text-sm text-muted-foreground">
+            No orders yet. They will appear here as guests order from their rooms.
         </div>
     );
 }
 
-function StatusBadge({ status }: { status: string }) {
-    const styles = {
-        PLACED: "bg-blue-500/10 text-blue-500",
-        CONFIRMED: "bg-indigo-500/10 text-indigo-500",
-        PREPARING: "bg-amber-500/10 text-amber-500",
-        READY: "bg-emerald-500/10 text-emerald-500",
-        DELIVERED: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
-        CANCELLED: "bg-red-500/10 text-red-500",
-    }[status] || "bg-zinc-500/10 text-zinc-500";
+const STATUS_LABEL: Record<OrderStatus, string> = {
+    PLACED: "New",
+    CONFIRMED: "Confirmed",
+    PREPARING: "Preparing",
+    READY: "Ready",
+    DELIVERED: "Delivered",
+    CANCELLED: "Cancelled",
+};
 
+function StatusBadge({ status }: { status: OrderStatus }) {
+    const styles: Record<OrderStatus, string> = {
+        PLACED: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+        CONFIRMED: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+        PREPARING: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+        READY: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+        DELIVERED: "bg-secondary text-muted-foreground",
+        CANCELLED: "bg-red-500/10 text-red-600 dark:text-red-400",
+    };
     return (
-        <span
-            className={cn(
-                "inline-flex items-center max-w-full px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0",
-                styles,
-            )}
-        >
-            {status.replace(/_/g, " ")}
+        <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium", styles[status])}>
+            {STATUS_LABEL[status]}
         </span>
     );
 }
@@ -347,35 +567,22 @@ function ActionRow({
     subtitle: string;
     href: string;
     disabled?: boolean;
-    /** Shown under subtitle when `disabled` is true */
     disabledHint?: string;
 }) {
     const className = cn(
-        "flex items-center gap-3 sm:gap-4 min-h-12 sm:min-h-0 p-3 rounded-xl transition-colors group",
-        disabled
-            ? "opacity-45 cursor-not-allowed pointer-events-none select-none"
-            : "hover:bg-secondary",
+        "flex items-center gap-3 rounded-lg p-3 transition-colors",
+        disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer hover:bg-secondary",
     );
     const inner = (
         <>
-            <div
-                className={cn(
-                    "w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground transition-all",
-                    !disabled && "group-hover:text-primary group-hover:bg-primary/10 group-hover:border-primary/20",
-                )}
-            >
-                <Icon className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground">{title}</p>
-                <p className="text-xs text-muted-foreground">{subtitle}</p>
-                {disabled && disabledHint ? (
-                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">{disabledHint}</p>
-                ) : null}
-            </div>
-            {!disabled && (
-                <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-foreground opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all transform sm:group-hover:translate-x-1 shrink-0" />
-            )}
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground">
+                <Icon className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-foreground">{title}</span>
+                <span className="block text-xs text-muted-foreground">{disabled && disabledHint ? disabledHint : subtitle}</span>
+            </span>
+            {!disabled && <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
         </>
     );
     if (disabled) {
