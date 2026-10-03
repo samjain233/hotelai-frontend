@@ -5,9 +5,9 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 
 const NAV_LINKS = [
-    { href: "#features", label: "Features" },
-    { href: "#pricing", label: "Pricing" },
     { href: "#how-it-works", label: "How it works" },
+    { href: "#for-hotels", label: "For hotels" },
+    { href: "#pricing", label: "Pricing" },
 ];
 
 export function LandingMobileNav() {
@@ -34,45 +34,43 @@ export function LandingMobileNav() {
                 onClick={() => setOpen((v) => !v)}
                 aria-label={open ? "Close menu" : "Open menu"}
                 aria-expanded={open}
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]/60"
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-[#1f2340] transition-colors hover:bg-[#1f2340]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]"
             >
                 {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
             {open && (
                 <>
-                    {/* Backdrop */}
                     <div
-                        className="fixed inset-0 top-16 z-40 bg-black/60 backdrop-blur-sm"
+                        className="fixed inset-0 z-40 bg-[#1f2340]/30 backdrop-blur-sm"
                         onClick={close}
                         aria-hidden="true"
                     />
 
-                    {/* Drawer */}
-                    <nav className="fixed inset-x-0 top-16 z-50 border-b border-white/[0.06] bg-[#09090b]/95 backdrop-blur-xl animate-slide-down">
-                        <div className="mx-auto flex max-w-6xl flex-col px-6 py-4 gap-1">
+                    <nav className="fixed inset-x-3 top-20 z-50 rounded-2xl border-2 border-[#1f2340] bg-white shadow-[4px_4px_0_#1f2340] animate-slide-down">
+                        <div className="flex flex-col gap-1 p-3">
                             {NAV_LINKS.map((link) => (
                                 <a
                                     key={link.href}
                                     href={link.href}
                                     onClick={close}
-                                    className="flex min-h-[44px] items-center rounded-lg px-3 text-base font-medium text-zinc-300 transition-colors hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]/60"
+                                    className="flex min-h-[44px] items-center rounded-xl px-3 text-base font-semibold text-[#1f2340] transition-colors hover:bg-[#fff6e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]"
                                 >
                                     {link.label}
                                 </a>
                             ))}
-                            <div className="my-2 h-px bg-white/[0.06]" />
+                            <div className="my-1 h-0.5 bg-[#1f2340]/10" />
                             <Link
                                 href="/login"
                                 onClick={close}
-                                className="flex min-h-[44px] items-center rounded-lg px-3 text-base font-medium text-zinc-300 transition-colors hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]/60"
+                                className="flex min-h-[44px] items-center rounded-xl px-3 text-base font-semibold text-[#1f2340] transition-colors hover:bg-[#fff6e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]"
                             >
                                 Sign in
                             </Link>
                             <Link
                                 href="/register"
                                 onClick={close}
-                                className="mt-1 flex min-h-[44px] items-center justify-center rounded-xl bg-gradient-to-r from-[#d4a853] to-[#b8862d] px-5 text-base font-semibold text-white shadow-lg shadow-[#d4a853]/20 transition-all hover:shadow-[#d4a853]/30 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]/60"
+                                className="mt-1 flex min-h-[44px] items-center justify-center rounded-xl border-2 border-[#1f2340] bg-[#d4a853] px-5 text-base font-semibold text-[#1f2340] transition-colors hover:bg-[#e0b866] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f2340]"
                             >
                                 Get started free
                             </Link>

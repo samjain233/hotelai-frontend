@@ -2,135 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import {
-    QrCode,
-    UtensilsCrossed,
-    BedDouble,
-    Smartphone,
-    BarChart3,
-    Users,
-    Printer,
-    Shield,
-    Zap,
     ArrowRight,
     Check,
-    Star,
-    Search,
-    ShoppingCart,
-    Wifi,
-    Plus,
-    LayoutGrid,
-    Settings,
+    UtensilsCrossed,
+    QrCode,
+    BellRing,
+    Printer,
+    Users,
+    Sparkles,
 } from "lucide-react";
 import { LandingMobileNav } from "@/components/LandingMobileNav";
-
-/** Demo dish photos for landing mockups (Unsplash — free to use). IDs verified live (some older Unsplash IDs 404). */
-const LANDING_MENU_IMAGES = {
-    paneerTikka:
-        "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=160&h=160&fit=crop&q=80",
-    butterChicken:
-        "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=160&h=160&fit=crop&q=80",
-    dalMakhani:
-        "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=160&h=160&fit=crop&q=80",
-    biryani:
-        "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=160&h=160&fit=crop&q=80",
-    gulabJamun:
-        "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=160&h=160&fit=crop&q=80",
-} as const;
-
-/* ─── Reusable mockup sub-components (server components, zero JS) ─── */
-
-function PhoneMockup({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return (
-        <div className={`relative mx-auto w-[260px] sm:w-[280px] md:w-[300px] ${className}`}>
-            {/* Phone shell */}
-            <div className="rounded-[2.5rem] border border-white/[0.08] bg-[#111113] p-3 shadow-2xl shadow-black/60 ring-1 ring-white/[0.04]">
-                {/* Notch */}
-                <div className="absolute top-0 left-1/2 z-10 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-[#111113]" />
-                {/* Screen */}
-                <div className="overflow-hidden rounded-[2rem] bg-[#09090b]">
-                    {children}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function BrowserMockup({ children, title, className = "" }: { children: React.ReactNode; title: string; className?: string }) {
-    return (
-        <div className={`overflow-hidden rounded-xl border border-white/[0.08] bg-[#111113] shadow-2xl shadow-black/40 ${className}`}>
-            {/* Title bar */}
-            <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
-                <div className="flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-                </div>
-                <div className="ml-3 flex-1 rounded-md bg-white/[0.04] px-3 py-1 text-[10px] text-zinc-500 truncate">
-                    {title}
-                </div>
-            </div>
-            {/* Content */}
-            <div className="bg-[#09090b]">
-                {children}
-            </div>
-        </div>
-    );
-}
-
-function MockupMenuItem({
-    name,
-    price,
-    tag,
-    veg,
-    imageSrc,
-}: {
-    name: string;
-    price: string;
-    tag?: string;
-    veg?: boolean;
-    imageSrc: string;
-}) {
-    return (
-        <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-2.5">
-            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-white/10">
-                <Image
-                    src={imageSrc}
-                    alt=""
-                    width={44}
-                    height={44}
-                    className="h-full w-full object-cover"
-                    sizes="44px"
-                />
-            </div>
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                    {veg !== undefined && (
-                        <div className={`h-3 w-3 rounded-sm border ${veg ? "border-green-500" : "border-red-500"} flex items-center justify-center`}>
-                            <div className={`h-1.5 w-1.5 rounded-full ${veg ? "bg-green-500" : "bg-red-500"}`} />
-                        </div>
-                    )}
-                    <p className="truncate text-[11px] font-medium text-white">{name}</p>
-                </div>
-                {tag && <p className="mt-0.5 text-[9px] text-zinc-500">{tag}</p>}
-            </div>
-            <span className="shrink-0 text-[11px] font-bold text-[#d4a853]">{price}</span>
-        </div>
-    );
-}
-
-function MockupQrCard({ room }: { room: string }) {
-    return (
-        <div className="flex flex-col items-center rounded-lg border border-zinc-700/50 bg-zinc-800/50 p-3">
-            <div className="mb-2 grid h-14 w-14 grid-cols-5 grid-rows-5 gap-px rounded bg-white p-1">
-                {Array.from({ length: 25 }).map((_, i) => (
-                    <div key={i} className={`rounded-[1px] ${[0,1,2,4,5,6,10,12,14,18,20,21,22,24].includes(i) ? "bg-zinc-900" : "bg-white"}`} />
-                ))}
-            </div>
-            <span className="text-[10px] font-bold text-white">{room}</span>
-            <span className="text-[7px] text-zinc-500">Scan to view menu</span>
-        </div>
-    );
-}
 
 export const metadata: Metadata = {
     title: { absolute: "DreamCanvas — Digital Menu for Hotels" },
@@ -138,687 +19,330 @@ export const metadata: Metadata = {
         "Give your guests a premium digital menu experience. QR-based room service menus, real-time updates, and beautiful print-ready QR codes.",
 };
 
+const STEPS = [
+    {
+        n: "1",
+        title: "Guest scans",
+        desc: "A QR card in every room. No app needed.",
+        img: "/illustrations/step-scan.jpg",
+        alt: "Guest scanning a QR card on a hotel nightstand",
+        tint: "bg-[#fde7c2]",
+    },
+    {
+        n: "2",
+        title: "Kitchen cooks",
+        desc: "Orders land on the kitchen screen instantly.",
+        img: "/illustrations/step-kitchen.jpg",
+        alt: "Chef receiving a new order on a kitchen screen",
+        tint: "bg-[#fbd9cf]",
+    },
+    {
+        n: "3",
+        title: "Served with a smile",
+        desc: "Hot food at the door, happy guests.",
+        img: "/illustrations/step-deliver.jpg",
+        alt: "Room service waiter delivering food to a smiling guest",
+        tint: "bg-[#d3ebe7]",
+    },
+] as const;
+
+const OWNER_PERKS = [
+    { icon: UtensilsCrossed, label: "Update menu & prices in seconds" },
+    { icon: Printer, label: "Print-ready QR cards for every room" },
+    { icon: BellRing, label: "Live orders & service requests" },
+    { icon: Users, label: "Staff accounts with roles" },
+] as const;
+
+const PLANS = [
+    {
+        name: "Starter",
+        price: "Free",
+        period: "",
+        features: ["Up to 5 rooms", "20 menu items", "QR code generation"],
+        cta: "Get started",
+        featured: false,
+    },
+    {
+        name: "Pro",
+        price: "₹299",
+        period: "/month",
+        features: ["Unlimited rooms & items", "Your hotel branding", "Staff accounts & priority support"],
+        cta: "Start 14-day free trial",
+        featured: true,
+    },
+] as const;
+
+function Logo({ small = false }: { small?: boolean }) {
+    return (
+        <Link href="/" className="flex items-center gap-2 cursor-pointer">
+            <span
+                className={`flex items-center justify-center rounded-xl border-2 border-[#1f2340] bg-[#d4a853] ${small ? "h-7 w-7" : "h-9 w-9"}`}
+            >
+                <UtensilsCrossed className={small ? "h-3.5 w-3.5 text-[#1f2340]" : "h-4 w-4 text-[#1f2340]"} />
+            </span>
+            <span className={`font-bold tracking-tight ${small ? "text-sm" : "text-lg"}`}>dreamcanvas</span>
+        </Link>
+    );
+}
+
+function PrimaryButton({ href, children, className = "" }: { href: string; children: React.ReactNode; className?: string }) {
+    return (
+        <Link
+            href={href}
+            className={`group inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-[#1f2340] bg-[#d4a853] px-7 py-3.5 font-semibold text-[#1f2340] shadow-[4px_4px_0_#1f2340] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#1f2340] active:translate-y-0 active:shadow-[2px_2px_0_#1f2340] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#d4a853]/50 ${className}`}
+        >
+            {children}
+        </Link>
+    );
+}
+
 export default function LandingPage() {
     return (
-        <div className="min-h-screen bg-[#09090b] text-white overflow-hidden">
+        <div className="min-h-screen overflow-x-hidden bg-[#fff6e8] text-[#1f2340]">
             {/* ─── Navbar ─── */}
-            <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-xl">
-                <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-                    <Link href="/" className="flex items-center gap-2 sm:gap-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8862d]">
-                            <UtensilsCrossed className="h-4 w-4 text-white" />
-                        </div>
-                        <span className="text-lg font-bold tracking-tight">dreamcanvas</span>
-                    </Link>
-                    <div className="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
-                        <a href="#features" className="transition-colors hover:text-white">Features</a>
-                        <a href="#pricing" className="transition-colors hover:text-white">Pricing</a>
-                        <a href="#how-it-works" className="transition-colors hover:text-white">How it works</a>
+            <header className="fixed inset-x-0 top-3 z-50 px-3 sm:top-4 sm:px-6">
+                <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between rounded-2xl border-2 border-[#1f2340] bg-white/90 px-3 shadow-[3px_3px_0_#1f2340] backdrop-blur-md sm:h-16 sm:px-5">
+                    <Logo />
+                    <div className="hidden items-center gap-8 text-sm font-medium text-[#4a4e6a] md:flex">
+                        <a href="#how-it-works" className="cursor-pointer transition-colors hover:text-[#1f2340]">How it works</a>
+                        <a href="#for-hotels" className="cursor-pointer transition-colors hover:text-[#1f2340]">For hotels</a>
+                        <a href="#pricing" className="cursor-pointer transition-colors hover:text-[#1f2340]">Pricing</a>
                     </div>
                     <div className="flex items-center gap-2">
                         <Link
                             href="/login"
-                            className="hidden rounded-lg px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:text-white md:block"
+                            className="hidden cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold text-[#1f2340] transition-colors hover:bg-[#1f2340]/5 md:block"
                         >
                             Sign in
                         </Link>
                         <Link
                             href="/register"
-                            className="rounded-lg bg-gradient-to-r from-[#d4a853] to-[#b8862d] px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-[#d4a853]/20 transition-all hover:shadow-[#d4a853]/30 hover:brightness-110 sm:px-5"
+                            className="cursor-pointer rounded-xl border-2 border-[#1f2340] bg-[#d4a853] px-3 py-1.5 text-sm font-semibold text-[#1f2340] transition-colors hover:bg-[#e0b866] sm:px-4 sm:py-2"
                         >
-                            <span className="sm:hidden">Get started</span>
-                            <span className="hidden sm:inline">Get started free</span>
+                            Get started
                         </Link>
                         <LandingMobileNav />
                     </div>
-                </div>
-            </nav>
+                </nav>
+            </header>
 
-            {/* ─── Hero ─── */}
-            <section className="relative pt-28 pb-16 md:pt-44 md:pb-32">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(212,168,83,0.12)_0%,_transparent_60%)]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-[#d4a853]/[0.04] blur-[120px]" />
+            <main>
+                {/* ─── Hero ─── */}
+                <section className="relative pt-28 pb-16 sm:pt-32 md:pt-40 md:pb-24">
+                    <div className="pointer-events-none absolute -top-24 -right-24 h-80 w-80 rounded-full bg-[#d4a853]/20 blur-3xl" />
+                    <div className="pointer-events-none absolute top-1/2 -left-32 h-72 w-72 rounded-full bg-[#f07a5f]/10 blur-3xl" />
 
-                <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#d4a853]/20 bg-[#d4a853]/[0.06] px-4 py-1.5 text-xs font-medium text-[#d4a853]">
-                        <Zap className="h-3.5 w-3.5" />
-                        Now serving 50+ hotels across India
-                    </div>
+                    <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-8">
+                        <div className="text-center lg:text-left">
+                            <span className="inline-flex items-center gap-2 rounded-full border-2 border-[#1f2340] bg-white px-4 py-1.5 text-xs font-semibold">
+                                <Sparkles className="h-3.5 w-3.5 text-[#c0892f]" />
+                                Loved by 50+ hotels across India
+                            </span>
 
-                    <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-6xl lg:text-7xl">
-                        Your menu, on every{" "}
-                        <span className="bg-gradient-to-r from-[#d4a853] via-[#e8c875] to-[#d4a853] bg-clip-text text-transparent">
-                            guest&apos;s phone
-                        </span>
-                    </h1>
+                            <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+                                Room service,{" "}
+                                <span className="relative inline-block">
+                                    <span className="relative z-10">one scan away.</span>
+                                    <span className="absolute inset-x-0 bottom-1 -z-0 h-3 rounded-full bg-[#d4a853]/60 sm:h-4" />
+                                </span>
+                            </h1>
 
-                    <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg md:text-xl">
-                        Replace printed room menus with a beautiful digital experience.
-                        Guests scan a QR code, browse your menu, and you update prices in seconds — not days.
-                    </p>
+                            <p className="mx-auto mt-5 max-w-lg text-lg text-[#4a4e6a] lg:mx-0">
+                                QR menus your guests love. Orders your kitchen sees instantly.
+                            </p>
 
-                    <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                        <Link
-                            href="/register"
-                            className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#d4a853] to-[#b8862d] px-8 py-3.5 text-base font-semibold text-white shadow-xl shadow-[#d4a853]/25 transition-all hover:shadow-[#d4a853]/40 hover:brightness-110"
-                        >
-                            Start for free
-                            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                        </Link>
-                        <a
-                            href="#how-it-works"
-                            className="flex items-center gap-2 rounded-xl border border-white/10 px-8 py-3.5 text-base font-medium text-zinc-300 transition-all hover:border-white/20 hover:text-white"
-                        >
-                            See how it works
-                        </a>
-                    </div>
-
-                    <p className="mt-5 text-xs text-zinc-500">No credit card required. Set up in under 5 minutes.</p>
-                </div>
-
-                {/* Hero phone mockup */}
-                <div className="relative mx-auto mt-12 max-w-5xl px-4 sm:px-6 md:mt-24">
-                    <div className="absolute inset-0 -top-20 bg-[radial-gradient(ellipse_at_center,_rgba(212,168,83,0.08)_0%,_transparent_70%)]" />
-                    <div className="relative flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-center md:gap-12">
-
-                        {/* Phone: Guest Menu */}
-                        <PhoneMockup className="z-10">
-                            <div className="px-4 pt-8 pb-6">
-                                {/* Header */}
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#d4a853] to-[#c9973a] flex items-center justify-center text-white text-xs font-bold">H</div>
-                                    <div>
-                                        <p className="text-[12px] font-semibold text-white">The Grand Palace</p>
-                                        <p className="text-[9px] text-zinc-500">Room 204</p>
-                                    </div>
-                                </div>
-                                {/* Search */}
-                                <div className="flex items-center gap-2 rounded-lg bg-white/[0.05] px-3 py-2 mb-4">
-                                    <Search className="h-3 w-3 text-zinc-500" />
-                                    <span className="text-[10px] text-zinc-500">Search dishes...</span>
-                                </div>
-                                {/* Category pills */}
-                                <div className="flex gap-1.5 mb-4 overflow-hidden">
-                                    <span className="shrink-0 rounded-full bg-[#d4a853]/15 px-3 py-1 text-[9px] font-medium text-[#d4a853]">All</span>
-                                    <span className="shrink-0 rounded-full bg-white/[0.05] px-3 py-1 text-[9px] text-zinc-400">Starters</span>
-                                    <span className="shrink-0 rounded-full bg-white/[0.05] px-3 py-1 text-[9px] text-zinc-400">Main Course</span>
-                                    <span className="shrink-0 rounded-full bg-white/[0.05] px-3 py-1 text-[9px] text-zinc-400">Drinks</span>
-                                </div>
-                                {/* Menu items */}
-                                <div className="space-y-2">
-                                    <MockupMenuItem
-                                        name="Paneer Tikka"
-                                        price="₹349"
-                                        tag="Chef's special"
-                                        veg={true}
-                                        imageSrc={LANDING_MENU_IMAGES.paneerTikka}
-                                    />
-                                    <MockupMenuItem
-                                        name="Butter Chicken"
-                                        price="₹429"
-                                        tag="Most ordered"
-                                        veg={false}
-                                        imageSrc={LANDING_MENU_IMAGES.butterChicken}
-                                    />
-                                    <MockupMenuItem
-                                        name="Dal Makhani"
-                                        price="₹299"
-                                        veg={true}
-                                        imageSrc={LANDING_MENU_IMAGES.dalMakhani}
-                                    />
-                                    <MockupMenuItem
-                                        name="Veg Biryani"
-                                        price="₹349"
-                                        veg={true}
-                                        imageSrc={LANDING_MENU_IMAGES.biryani}
-                                    />
-                                </div>
-                                {/* Cart bar */}
-                                <div className="mt-4 flex items-center justify-between rounded-xl bg-[#d4a853] px-4 py-2.5">
-                                    <div className="flex items-center gap-2">
-                                        <ShoppingCart className="h-3.5 w-3.5 text-white" />
-                                        <span className="text-[10px] font-semibold text-white">2 items</span>
-                                    </div>
-                                    <span className="text-[10px] font-bold text-white">₹778</span>
-                                </div>
-                            </div>
-                        </PhoneMockup>
-
-                        {/* Floating elements around the phone */}
-                        <div className="pointer-events-none absolute inset-0 hidden md:block">
-                            {/* QR card float */}
-                            <div className="absolute top-8 left-4 lg:left-16 animate-[float_6s_ease-in-out_infinite] rounded-2xl border border-white/[0.08] bg-[#111113]/90 p-4 shadow-xl backdrop-blur-sm">
-                                <div className="mb-2 grid h-16 w-16 grid-cols-5 grid-rows-5 gap-px rounded bg-white p-1.5">
-                                    {Array.from({ length: 25 }).map((_, i) => (
-                                        <div key={i} className={`rounded-[1px] ${[0,1,2,4,5,6,10,12,14,18,20,21,22,24].includes(i) ? "bg-zinc-900" : "bg-white"}`} />
-                                    ))}
-                                </div>
-                                <p className="text-center text-[10px] font-bold text-white">Room 204</p>
-                                <p className="text-center text-[8px] text-zinc-500">Scan to view menu</p>
+                            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start">
+                                <PrimaryButton href="/register">
+                                    Start for free
+                                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                                </PrimaryButton>
+                                <a
+                                    href="#how-it-works"
+                                    className="cursor-pointer rounded-2xl px-6 py-3.5 font-semibold text-[#1f2340] underline decoration-[#d4a853] decoration-2 underline-offset-4 transition-colors hover:decoration-[#1f2340]"
+                                >
+                                    See how it works
+                                </a>
                             </div>
 
-                            {/* Stat card float */}
-                            <div className="absolute top-16 right-4 lg:right-16 animate-[float_6s_ease-in-out_1s_infinite] rounded-2xl border border-white/[0.08] bg-[#111113]/90 p-4 shadow-xl backdrop-blur-sm">
-                                <p className="text-[10px] text-zinc-500 mb-1">Today&apos;s views</p>
-                                <p className="text-2xl font-bold text-white">128</p>
-                                <p className="text-[9px] text-emerald-400 mt-1">+23% from yesterday</p>
-                            </div>
+                            <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-medium text-[#4a4e6a] lg:justify-start">
+                                {["No app for guests", "Live in 5 minutes", "No credit card"].map((t) => (
+                                    <li key={t} className="flex items-center gap-1.5">
+                                        <Check className="h-4 w-4 text-[#3f8f8c]" strokeWidth={3} />
+                                        {t}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
 
-                            {/* Notification float */}
-                            <div className="absolute bottom-20 right-8 lg:right-24 animate-[float_6s_ease-in-out_2s_infinite] rounded-xl border border-white/[0.08] bg-[#111113]/90 px-4 py-3 shadow-xl backdrop-blur-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                                    <p className="text-[10px] text-white">Menu updated — live instantly</p>
-                                </div>
+                        <div className="relative mx-auto w-full max-w-xl">
+                            <div className="overflow-hidden rounded-[2rem] border-2 border-[#1f2340] bg-[#fdf3e2] shadow-[8px_8px_0_#1f2340]">
+                                <Image
+                                    src="/illustrations/hero-guest.jpg"
+                                    alt="Hotel guest browsing a room-service menu on her phone after scanning a QR card"
+                                    width={1024}
+                                    height={768}
+                                    priority
+                                    sizes="(min-width: 1024px) 560px, 100vw"
+                                    className="h-auto w-full"
+                                />
+                            </div>
+                            <div className="absolute -bottom-5 -left-3 flex items-center gap-2 rounded-2xl border-2 border-[#1f2340] bg-white px-4 py-2.5 shadow-[3px_3px_0_#1f2340] animate-[float_6s_ease-in-out_infinite] sm:-left-6">
+                                <QrCode className="h-5 w-5 text-[#c0892f]" />
+                                <span className="text-sm font-semibold">Order placed · Room 204</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* ─── Logos / Social Proof ─── */}
-            <section className="border-y border-white/[0.04] bg-white/[0.01] py-10">
-                <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
-                    <p className="mb-6 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
-                        Trusted by hotels and restaurants
-                    </p>
-                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-4 text-zinc-600 sm:gap-x-12">
-                        {["Boutique Hotels", "Heritage Properties", "Resorts", "Restaurants", "Cafes"].map((name) => (
-                            <span key={name} className="text-sm font-medium tracking-wide">{name}</span>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ─── Features Grid ─── */}
-            <section id="features" className="py-16 md:py-32">
-                <div className="mx-auto max-w-6xl px-4 sm:px-6">
-                    <div className="mx-auto max-w-2xl text-center">
-                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-                            Everything your hotel needs
+                {/* ─── How it works ─── */}
+                <section id="how-it-works" className="scroll-mt-24 py-16 md:py-24">
+                    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+                        <h2 className="text-center text-3xl font-extrabold tracking-tight sm:text-4xl">
+                            Scan. Order. Enjoy.
                         </h2>
-                        <p className="mt-4 text-lg text-zinc-400">
-                            One platform to manage your menu, rooms, and guest experience.
-                        </p>
-                    </div>
 
-                    <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {[
-                            {
-                                icon: QrCode,
-                                title: "QR Code Menus",
-                                desc: "Generate print-ready QR codes for every room. Guests scan and browse — no app download needed.",
-                            },
-                            {
-                                icon: UtensilsCrossed,
-                                title: "Menu Management",
-                                desc: "Add items, categories, images, prices, and dietary tags. Update instantly — changes go live in seconds.",
-                            },
-                            {
-                                icon: BedDouble,
-                                title: "Room Management",
-                                desc: "Add rooms in bulk, assign floors, and generate individual QR codes. Track everything from one dashboard.",
-                            },
-                            {
-                                icon: Smartphone,
-                                title: "Mobile-First Design",
-                                desc: "Beautiful, fast menu that works on any phone. Dark theme, smooth animations, and instant load times.",
-                            },
-                            {
-                                icon: Printer,
-                                title: "Smart QR Printing",
-                                desc: "Choose layout sizes, add hotel branding, WiFi info, and cut guides. Print directly or save as PDF.",
-                            },
-                            {
-                                icon: Users,
-                                title: "Staff Accounts",
-                                desc: "Invite managers, kitchen staff, and front desk with role-based access. Everyone sees only what they need.",
-                            },
-                            {
-                                icon: BarChart3,
-                                title: "Hotel Dashboard",
-                                desc: "See your menu stats, room count, and staff activity at a glance. Clean, modern admin panel.",
-                            },
-                            {
-                                icon: Shield,
-                                title: "Secure & Reliable",
-                                desc: "Hosted on fast global infrastructure. Your data is encrypted and backed up. 99.9% uptime.",
-                            },
-                            {
-                                icon: Zap,
-                                title: "5-Minute Setup",
-                                desc: "Register, add your menu, print QR codes, place them in rooms. That's it. No training needed.",
-                            },
-                        ].map((feature) => (
-                            <div
-                                key={feature.title}
-                                className="group rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 transition-all hover:border-[#d4a853]/20 hover:bg-[#d4a853]/[0.03] active:border-[#d4a853]/25 active:bg-[#d4a853]/[0.05]"
-                            >
-                                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4a853]/10 text-[#d4a853] transition-colors group-hover:bg-[#d4a853]/15">
-                                    <feature.icon className="h-5 w-5" />
-                                </div>
-                                <h3 className="mb-2 text-base font-semibold">{feature.title}</h3>
-                                <p className="text-sm leading-relaxed text-zinc-400">{feature.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ─── Product Showcase ─── */}
-            <section className="py-16 md:py-32 border-y border-white/[0.04] bg-white/[0.01]">
-                <div className="mx-auto max-w-6xl px-4 sm:px-6">
-                    <div className="mx-auto max-w-2xl text-center mb-12 md:mb-16">
-                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">See it in action</h2>
-                        <p className="mt-4 text-lg text-zinc-400">A quick look at what you and your guests experience.</p>
-                    </div>
-
-                    {/* Row 1: Admin Dashboard */}
-                    <div className="grid gap-12 md:grid-cols-2 md:items-center mb-24">
-                        <div>
-                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d4a853]/20 bg-[#d4a853]/[0.06] px-3 py-1 text-xs font-medium text-[#d4a853]">
-                                <BarChart3 className="h-3 w-3" />
-                                Admin Dashboard
-                            </div>
-                            <h3 className="text-2xl font-bold mb-3">Your command center</h3>
-                            <p className="text-zinc-400 leading-relaxed mb-6">
-                                See rooms, menu items, staff, and activity at a glance. 
-                                Everything is organized so you can manage your property without hunting through pages.
-                            </p>
-                            <ul className="space-y-2">
-                                {["Real-time stats overview", "Quick-action cards", "Staff activity feed"].map(item => (
-                                    <li key={item} className="flex items-center gap-2 text-sm text-zinc-300">
-                                        <Check className="h-3.5 w-3.5 text-[#d4a853]" />
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                        <BrowserMockup title="dreamcanvas.in/dashboard">
-                            <div className="p-5">
-                                {/* Top stats row */}
-                                <div className="grid grid-cols-3 gap-3 mb-5">
-                                    {[
-                                        { label: "Total Rooms", value: "42", icon: BedDouble },
-                                        { label: "Menu Items", value: "86", icon: UtensilsCrossed },
-                                        { label: "Staff", value: "5", icon: Users },
-                                    ].map(stat => (
-                                        <div key={stat.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                                            <stat.icon className="h-4 w-4 text-[#d4a853] mb-2" />
-                                            <p className="text-lg font-bold text-white">{stat.value}</p>
-                                            <p className="text-[9px] text-zinc-500">{stat.label}</p>
+                        <div className="mt-12 grid gap-6 md:grid-cols-3">
+                            {STEPS.map((s) => (
+                                <article
+                                    key={s.n}
+                                    className="overflow-hidden rounded-3xl border-2 border-[#1f2340] bg-white shadow-[5px_5px_0_#1f2340]"
+                                >
+                                    <div className={`${s.tint} border-b-2 border-[#1f2340]`}>
+                                        <Image
+                                            src={s.img}
+                                            alt={s.alt}
+                                            width={1024}
+                                            height={1024}
+                                            sizes="(min-width: 768px) 360px, 100vw"
+                                            className="aspect-[4/3] h-auto w-full object-cover mix-blend-multiply"
+                                        />
+                                    </div>
+                                    <div className="flex items-start gap-3 p-5">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[#1f2340] bg-[#d4a853] text-sm font-bold">
+                                            {s.n}
+                                        </span>
+                                        <div>
+                                            <h3 className="text-lg font-bold">{s.title}</h3>
+                                            <p className="mt-0.5 text-[#4a4e6a]">{s.desc}</p>
                                         </div>
-                                    ))}
-                                </div>
-                                {/* Mini sidebar + content */}
-                                <div className="flex gap-3">
-                                    <div className="w-16 shrink-0 space-y-2">
-                                        {[LayoutGrid, UtensilsCrossed, BedDouble, Users, Settings].map((Icon, i) => (
-                                            <div key={i} className={`flex h-8 w-full items-center justify-center rounded-lg ${i === 0 ? "bg-[#d4a853]/15 text-[#d4a853]" : "text-zinc-600 hover:text-zinc-400"}`}>
-                                                <Icon className="h-3.5 w-3.5" />
-                                            </div>
-                                        ))}
                                     </div>
-                                    <div className="flex-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                                        <p className="text-[10px] font-medium text-zinc-400 mb-2">Recent Activity</p>
-                                        {[
-                                            { text: "Room 301 checked in", time: "2m ago" },
-                                            { text: "Menu updated: Starters", time: "15m ago" },
-                                            { text: "New staff added", time: "1h ago" },
-                                        ].map(item => (
-                                            <div key={item.text} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
-                                                <span className="text-[10px] text-zinc-300">{item.text}</span>
-                                                <span className="text-[9px] text-zinc-600">{item.time}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </BrowserMockup>
-                    </div>
-
-                    {/* Row 2: Menu Editor */}
-                    <div className="grid gap-12 md:grid-cols-2 md:items-center mb-24">
-                        <BrowserMockup title="dreamcanvas.in/menu" className="md:order-first">
-                            <div className="p-5">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <p className="text-[12px] font-semibold text-white">Menu Items</p>
-                                        <p className="text-[9px] text-zinc-500">86 items across 8 categories</p>
-                                    </div>
-                                    <div className="flex items-center gap-2 rounded-lg bg-[#d4a853] px-3 py-1.5">
-                                        <Plus className="h-3 w-3 text-white" />
-                                        <span className="text-[10px] font-semibold text-white">Add Item</span>
-                                    </div>
-                                </div>
-                                {/* Category tabs */}
-                                <div className="flex gap-1.5 mb-4 overflow-hidden">
-                                    {["All", "Starters", "Main Course", "Desserts", "Beverages"].map((cat, i) => (
-                                        <span key={cat} className={`shrink-0 rounded-full px-3 py-1 text-[9px] font-medium ${i === 0 ? "bg-[#d4a853]/15 text-[#d4a853]" : "bg-white/[0.04] text-zinc-500"}`}>{cat}</span>
-                                    ))}
-                                </div>
-                                {/* Item cards */}
-                                <div className="space-y-2">
-                                    {[
-                                        {
-                                            name: "Paneer Tikka",
-                                            price: "₹349",
-                                            cat: "Starters",
-                                            veg: true,
-                                            imageSrc: LANDING_MENU_IMAGES.paneerTikka,
-                                        },
-                                        {
-                                            name: "Butter Chicken",
-                                            price: "₹429",
-                                            cat: "Main Course",
-                                            veg: false,
-                                            imageSrc: LANDING_MENU_IMAGES.butterChicken,
-                                        },
-                                        {
-                                            name: "Gulab Jamun",
-                                            price: "₹199",
-                                            cat: "Desserts",
-                                            veg: true,
-                                            imageSrc: LANDING_MENU_IMAGES.gulabJamun,
-                                        },
-                                    ].map(item => (
-                                        <div key={item.name} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg ring-1 ring-white/10">
-                                                <Image
-                                                    src={item.imageSrc}
-                                                    alt=""
-                                                    width={40}
-                                                    height={40}
-                                                    className="h-full w-full object-cover"
-                                                    sizes="40px"
-                                                />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className={`h-2.5 w-2.5 rounded-sm border ${item.veg ? "border-green-500" : "border-red-500"} flex items-center justify-center`}>
-                                                        <div className={`h-1 w-1 rounded-full ${item.veg ? "bg-green-500" : "bg-red-500"}`} />
-                                                    </div>
-                                                    <p className="text-[10px] font-medium text-white">{item.name}</p>
-                                                </div>
-                                                <p className="text-[8px] text-zinc-500">{item.cat}</p>
-                                            </div>
-                                            <span className="text-[10px] font-bold text-[#d4a853]">{item.price}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </BrowserMockup>
-                        <div className="md:order-last">
-                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d4a853]/20 bg-[#d4a853]/[0.06] px-3 py-1 text-xs font-medium text-[#d4a853]">
-                                <UtensilsCrossed className="h-3 w-3" />
-                                Menu Editor
-                            </div>
-                            <h3 className="text-2xl font-bold mb-3">Edit your menu in seconds</h3>
-                            <p className="text-zinc-400 leading-relaxed mb-6">
-                                Add dishes, set prices, upload photos, and mark dietary preferences. 
-                                Changes go live instantly — no reprinting, no waiting.
-                            </p>
-                            <ul className="space-y-2">
-                                {["Drag-and-drop categories", "Image upload for each dish", "Veg/Non-veg/Egg tags", "Instant availability toggle"].map(item => (
-                                    <li key={item} className="flex items-center gap-2 text-sm text-zinc-300">
-                                        <Check className="h-3.5 w-3.5 text-[#d4a853]" />
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
+                                </article>
+                            ))}
                         </div>
                     </div>
+                </section>
 
-                    {/* Row 3: QR Printing */}
-                    <div className="grid gap-12 md:grid-cols-2 md:items-center">
+                {/* ─── For hotels ─── */}
+                <section id="for-hotels" className="scroll-mt-24 py-16 md:py-24">
+                    <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
+                        <div className="order-last mx-auto w-full max-w-xl overflow-hidden rounded-[2rem] border-2 border-[#1f2340] bg-[#fdf3e2] shadow-[8px_8px_0_#1f2340] lg:order-first">
+                            <Image
+                                src="/illustrations/manager-desk.jpg"
+                                alt="Hotel manager managing menus, rooms and orders from a laptop"
+                                width={1024}
+                                height={768}
+                                sizes="(min-width: 1024px) 560px, 100vw"
+                                className="h-auto w-full"
+                            />
+                        </div>
+
                         <div>
-                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d4a853]/20 bg-[#d4a853]/[0.06] px-3 py-1 text-xs font-medium text-[#d4a853]">
-                                <QrCode className="h-3 w-3" />
-                                QR Printing
-                            </div>
-                            <h3 className="text-2xl font-bold mb-3">Print-ready QR cards</h3>
-                            <p className="text-zinc-400 leading-relaxed mb-6">
-                                Choose layouts, add WiFi credentials, customize taglines, and print with cut guides.
-                                Each card has your hotel name and room number — ready to place on nightstands.
-                            </p>
-                            <ul className="space-y-2">
-                                {["4, 6, or 8 cards per page", "Hotel branding on every card", "WiFi credentials included", "Cut guides for clean edges"].map(item => (
-                                    <li key={item} className="flex items-center gap-2 text-sm text-zinc-300">
-                                        <Check className="h-3.5 w-3.5 text-[#d4a853]" />
-                                        {item}
+                            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+                                Your whole hotel,
+                                <br />
+                                one simple dashboard.
+                            </h2>
+                            <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+                                {OWNER_PERKS.map(({ icon: Icon, label }) => (
+                                    <li
+                                        key={label}
+                                        className="flex items-center gap-3 rounded-2xl border-2 border-[#1f2340] bg-white p-4 font-semibold"
+                                    >
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fde7c2]">
+                                            <Icon className="h-5 w-5 text-[#1f2340]" />
+                                        </span>
+                                        <span className="text-sm leading-snug">{label}</span>
                                     </li>
                                 ))}
                             </ul>
                         </div>
-                        <div className="rounded-2xl border border-white/[0.08] bg-[#111113] p-6 shadow-2xl shadow-black/40">
-                            <div className="flex items-center gap-2 mb-5">
-                                <Printer className="h-4 w-4 text-[#d4a853]" />
-                                <p className="text-[12px] font-semibold text-white">Room QR Codes</p>
-                                <span className="ml-auto rounded-full bg-[#d4a853]/15 px-2.5 py-0.5 text-[9px] font-medium text-[#d4a853]">6 per page</span>
-                            </div>
-                            {/* QR grid */}
-                            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                                {["101", "102", "103", "201", "202", "203"].map(room => (
-                                    <MockupQrCard key={room} room={`Room ${room}`} />
-                                ))}
-                            </div>
-                            {/* WiFi bar */}
-                            <div className="mt-4 flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                                <Wifi className="h-3 w-3 text-zinc-500" />
-                                <span className="text-[10px] text-zinc-400">GrandPalace_WiFi</span>
-                                <span className="ml-auto text-[9px] text-zinc-600">••••••••</span>
-                            </div>
-                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* ─── How It Works ─── */}
-            <section id="how-it-works" className="border-y border-white/[0.04] bg-white/[0.01] py-16 md:py-32">
-                <div className="mx-auto max-w-5xl px-4 sm:px-6">
-                    <div className="mx-auto max-w-2xl text-center">
-                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-                            Live in 5 minutes
+                {/* ─── Pricing ─── */}
+                <section id="pricing" className="scroll-mt-24 py-16 md:py-24">
+                    <div className="mx-auto max-w-4xl px-4 sm:px-6">
+                        <h2 className="text-center text-3xl font-extrabold tracking-tight sm:text-4xl">
+                            Simple pricing
                         </h2>
-                        <p className="mt-4 text-base text-zinc-400 sm:text-lg">
-                            From sign-up to guests scanning — faster than ordering lunch.
-                        </p>
-                    </div>
+                        <p className="mt-3 text-center text-[#4a4e6a]">Start free. Upgrade when you grow.</p>
 
-                    {/* Desktop: horizontal grid */}
-                    <div className="mt-16 hidden gap-8 md:grid md:grid-cols-4">
-                        {[
-                            { step: "01", title: "Register", desc: "Create your hotel account with one form. Instant access." },
-                            { step: "02", title: "Add Your Menu", desc: "Upload dishes, set prices, add images. Organize by category." },
-                            { step: "03", title: "Set Up Rooms", desc: "Add room numbers (bulk supported). QR codes generated instantly." },
-                            { step: "04", title: "Print & Place", desc: "Print QR cards and place them in rooms. Guests scan and browse." },
-                        ].map((item, i) => (
-                            <div key={item.step} className="relative text-center">
-                                {i < 3 && (
-                                    <div className="absolute right-0 top-8 h-px w-full translate-x-1/2 bg-gradient-to-r from-[#d4a853]/30 to-transparent" />
-                                )}
-                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#d4a853]/20 bg-[#d4a853]/[0.06] text-2xl font-bold text-[#d4a853]">
-                                    {item.step}
-                                </div>
-                                <h3 className="mb-2 text-lg font-semibold">{item.title}</h3>
-                                <p className="text-sm text-zinc-400">{item.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Mobile: vertical timeline */}
-                    <div className="mt-12 space-y-0 md:hidden">
-                        {[
-                            { step: "01", title: "Register", desc: "Create your hotel account with one form. Instant access." },
-                            { step: "02", title: "Add Your Menu", desc: "Upload dishes, set prices, add images. Organize by category." },
-                            { step: "03", title: "Set Up Rooms", desc: "Add room numbers (bulk supported). QR codes generated instantly." },
-                            { step: "04", title: "Print & Place", desc: "Print QR cards and place them in rooms. Guests scan and browse." },
-                        ].map((item, i, arr) => (
-                            <div key={item.step} className="flex gap-4">
-                                {/* Timeline column */}
-                                <div className="flex flex-col items-center">
-                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#d4a853]/20 bg-[#d4a853]/[0.06] text-lg font-bold text-[#d4a853]">
-                                        {item.step}
-                                    </div>
-                                    {i < arr.length - 1 && (
-                                        <div className="w-px flex-1 bg-gradient-to-b from-[#d4a853]/30 to-transparent" />
+                        <div className="mt-12 grid gap-6 md:grid-cols-2">
+                            {PLANS.map((p) => (
+                                <div
+                                    key={p.name}
+                                    className={`relative flex flex-col rounded-3xl border-2 border-[#1f2340] p-7 shadow-[5px_5px_0_#1f2340] ${p.featured ? "bg-[#fde7c2]" : "bg-white"}`}
+                                >
+                                    {p.featured && (
+                                        <span className="absolute -top-3.5 right-6 rounded-full border-2 border-[#1f2340] bg-[#f07a5f] px-3 py-0.5 text-xs font-bold text-white">
+                                            Popular
+                                        </span>
                                     )}
+                                    <h3 className="text-lg font-bold">{p.name}</h3>
+                                    <p className="mt-3 flex items-baseline gap-1">
+                                        <span className="text-4xl font-extrabold">{p.price}</span>
+                                        {p.period && <span className="text-[#4a4e6a]">{p.period}</span>}
+                                    </p>
+                                    <ul className="mt-6 mb-8 space-y-2.5">
+                                        {p.features.map((f) => (
+                                            <li key={f} className="flex items-center gap-2.5 font-medium">
+                                                <Check className="h-4 w-4 shrink-0 text-[#3f8f8c]" strokeWidth={3} />
+                                                {f}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <Link
+                                        href="/register"
+                                        className={`mt-auto flex cursor-pointer items-center justify-center rounded-2xl border-2 border-[#1f2340] py-3 font-semibold transition-colors ${p.featured ? "bg-[#1f2340] text-white hover:bg-[#2c3157]" : "bg-white hover:bg-[#fff6e8]"}`}
+                                    >
+                                        {p.cta}
+                                    </Link>
                                 </div>
-                                {/* Content */}
-                                <div className="pb-8">
-                                    <h3 className="text-base font-semibold">{item.title}</h3>
-                                    <p className="mt-1 text-sm text-zinc-400">{item.desc}</p>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* ─── Pricing ─── */}
-            <section id="pricing" className="py-16 md:py-32">
-                <div className="mx-auto max-w-5xl px-4 sm:px-6">
-                    <div className="mx-auto max-w-2xl text-center">
-                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-                            Simple, honest pricing
+                {/* ─── CTA ─── */}
+                <section className="px-4 pt-8 pb-20 sm:px-6 md:pb-28">
+                    <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] border-2 border-[#1f2340] bg-[#d4a853] px-6 py-14 text-center shadow-[8px_8px_0_#1f2340] sm:px-12">
+                        <div className="pointer-events-none absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/20" />
+                        <div className="pointer-events-none absolute -right-8 -bottom-12 h-48 w-48 rounded-full bg-[#f07a5f]/30" />
+                        <h2 className="relative text-3xl font-extrabold tracking-tight sm:text-4xl">
+                            Ready to ditch paper menus?
                         </h2>
-                        <p className="mt-4 text-lg text-zinc-400">
-                            Less than the cost of printing paper menus for one floor.
-                        </p>
-                    </div>
-
-                    <div className="mt-16 grid gap-8 md:grid-cols-2 lg:max-w-3xl lg:mx-auto">
-                        {/* Free */}
-                        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8">
-                            <div className="mb-6">
-                                <h3 className="text-lg font-semibold">Starter</h3>
-                                <p className="mt-1 text-sm text-zinc-400">Perfect for trying things out</p>
-                            </div>
-                            <div className="mb-8 flex items-baseline gap-1">
-                                <span className="text-4xl font-bold">Free</span>
-                            </div>
-                            <ul className="mb-8 space-y-3">
-                                {[
-                                    "Up to 5 rooms",
-                                    "20 menu items",
-                                    "QR code generation",
-                                    "Mobile-optimized menu",
-                                    "DreamCanvas branding",
-                                ].map((item) => (
-                                    <li key={item} className="flex items-center gap-3 text-sm text-zinc-300">
-                                        <Check className="h-4 w-4 shrink-0 text-[#d4a853]" />
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
-                            <Link
-                                href="/register"
-                                className="flex w-full items-center justify-center rounded-xl border border-white/10 py-3 text-sm font-semibold text-white transition-all hover:border-white/20 hover:bg-white/[0.03]"
-                            >
-                                Get started
-                            </Link>
-                        </div>
-
-                        {/* Pro */}
-                        <div className="relative rounded-2xl border border-[#d4a853]/30 bg-[#d4a853]/[0.04] p-8">
-                            <div className="absolute -top-3 right-6 rounded-full bg-gradient-to-r from-[#d4a853] to-[#b8862d] px-4 py-1 text-xs font-bold text-white shadow-lg shadow-[#d4a853]/20">
-                                POPULAR
-                            </div>
-                            <div className="mb-6">
-                                <h3 className="text-lg font-semibold">Pro</h3>
-                                <p className="mt-1 text-sm text-zinc-400">For hotels ready to go digital</p>
-                            </div>
-                            <div className="mb-8 flex items-baseline gap-1">
-                                <span className="text-4xl font-bold">&#8377;299</span>
-                                <span className="text-sm text-zinc-400">/month</span>
-                            </div>
-                            <ul className="mb-8 space-y-3">
-                                {[
-                                    "Unlimited rooms",
-                                    "Unlimited menu items",
-                                    "Your hotel branding",
-                                    "Staff accounts (all roles)",
-                                    "Advanced QR print layouts",
-                                    "WiFi info on QR cards",
-                                    "Priority support",
-                                    "No DreamCanvas branding",
-                                ].map((item) => (
-                                    <li key={item} className="flex items-center gap-3 text-sm text-zinc-300">
-                                        <Check className="h-4 w-4 shrink-0 text-[#d4a853]" />
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
-                            <Link
-                                href="/register"
-                                className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#d4a853] to-[#b8862d] py-3 text-sm font-semibold text-white shadow-lg shadow-[#d4a853]/20 transition-all hover:shadow-[#d4a853]/30 hover:brightness-110"
-                            >
-                                Start 14-day free trial
-                            </Link>
-                            <p className="mt-3 text-center text-xs text-zinc-500">No credit card required</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ─── Testimonial ─── */}
-            <section className="border-y border-white/[0.04] bg-white/[0.01] py-16 md:py-20">
-                <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-                    <div className="mb-4 flex items-center justify-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className="h-5 w-5 fill-[#d4a853] text-[#d4a853]" />
-                        ))}
-                    </div>
-                    <blockquote className="text-lg font-medium leading-relaxed text-zinc-200 sm:text-xl md:text-2xl">
-                        &ldquo;We replaced all our printed menus in 30 minutes.
-                        Guests love scanning the QR — and we save thousands on reprinting every season.&rdquo;
-                    </blockquote>
-                    <p className="mt-6 text-sm text-zinc-500">
-                        Hotel Manager, Boutique Property in Jaipur
-                    </p>
-                </div>
-            </section>
-
-            {/* ─── CTA ─── */}
-            <section className="py-16 md:py-32">
-                <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-                    <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
-                        Ready to go paperless?
-                    </h2>
-                    <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
-                        Join hotels across India who switched to DreamCanvas.
-                        Set up your digital menu in minutes, not weeks.
-                    </p>
-                    <div className="mt-10">
+                        <p className="relative mt-3 font-medium text-[#1f2340]/80">Set up in minutes. Free forever plan.</p>
                         <Link
                             href="/register"
-                            className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#d4a853] to-[#b8862d] px-10 py-4 text-base font-semibold text-white shadow-xl shadow-[#d4a853]/25 transition-all hover:shadow-[#d4a853]/40 hover:brightness-110"
+                            className="group relative mt-8 inline-flex cursor-pointer items-center gap-2 rounded-2xl border-2 border-[#1f2340] bg-white px-8 py-4 font-semibold shadow-[4px_4px_0_#1f2340] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#1f2340] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/60"
                         >
                             Create your free account
                             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                         </Link>
                     </div>
-                    <p className="mt-4 text-xs text-zinc-500">Free plan available. Upgrade anytime.</p>
-                </div>
-            </section>
+                </section>
+            </main>
 
             {/* ─── Footer ─── */}
-            <footer className="border-t border-white/[0.06] py-10 md:py-12">
-                <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 sm:px-6 md:flex-row">
-                    <div className="flex items-center gap-2.5">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#d4a853] to-[#b8862d]">
-                            <UtensilsCrossed className="h-3.5 w-3.5 text-white" />
-                        </div>
-                        <span className="text-sm font-semibold tracking-tight">dreamcanvas</span>
+            <footer className="border-t-2 border-[#1f2340]/10 py-8">
+                <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 sm:px-6 md:flex-row">
+                    <Logo small />
+                    <div className="flex items-center gap-6 text-sm text-[#4a4e6a]">
+                        <Link href="/terms" className="flex min-h-[44px] cursor-pointer items-center hover:text-[#1f2340]">Terms</Link>
+                        <Link href="/privacy" className="flex min-h-[44px] cursor-pointer items-center hover:text-[#1f2340]">Privacy</Link>
+                        <Link href="/login" className="flex min-h-[44px] cursor-pointer items-center hover:text-[#1f2340]">Hotel login</Link>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-zinc-500 sm:gap-6">
-                        <Link href="/terms" className="min-h-[44px] flex items-center transition-colors hover:text-zinc-300">Terms</Link>
-                        <Link href="/privacy" className="min-h-[44px] flex items-center transition-colors hover:text-zinc-300">Privacy</Link>
-                        <Link href="/login" className="min-h-[44px] flex items-center transition-colors hover:text-zinc-300">Hotel Login</Link>
-                    </div>
-                    <p className="text-xs text-zinc-600">
-                        &copy; {new Date().getFullYear()} DreamCanvas. All rights reserved.
-                    </p>
+                    <p className="text-sm text-[#4a4e6a]">&copy; {new Date().getFullYear()} DreamCanvas</p>
                 </div>
             </footer>
         </div>
