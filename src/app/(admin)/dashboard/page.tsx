@@ -12,6 +12,7 @@ import {
     ChefHat,
     ClipboardList,
     Headset,
+    IndianRupee,
     Utensils,
     Users,
 } from "lucide-react";
@@ -232,6 +233,8 @@ export default function DashboardPage() {
                       detail: change.text,
                       tone: change.tone,
                       href: "/orders",
+                      icon: IndianRupee,
+                      accent: "bg-[#d4a853]/20 text-[#8a5a12] dark:text-[#e8c875]",
                   },
                   {
                       label: "Open orders",
@@ -243,6 +246,8 @@ export default function DashboardPage() {
                                     .filter(Boolean)
                                     .join(" · "),
                       href: "/orders",
+                      icon: ClipboardList,
+                      accent: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
                   },
               ]
             : []),
@@ -251,6 +256,8 @@ export default function DashboardPage() {
             value: rooms.length === 0 ? "0" : `${occupied}/${rooms.length}`,
             detail: rooms.length === 0 ? "No rooms added yet" : `${rooms.length - occupied} available`,
             href: "/rooms",
+            icon: BedDouble,
+            accent: "bg-teal-500/15 text-teal-700 dark:text-teal-300",
         },
         ...(isRequestsEnabled
             ? [
@@ -259,6 +266,8 @@ export default function DashboardPage() {
                       value: String(openRequests),
                       detail: openRequests === 0 ? "All requests handled" : "Needs a response",
                       href: "/services",
+                      icon: Headset,
+                      accent: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
                   },
               ]
             : []),
@@ -267,49 +276,54 @@ export default function DashboardPage() {
             value: String(menuItems),
             detail: categoryCount === 0 ? "No categories yet" : `Across ${categoryCount} categories`,
             href: "/menu",
+            icon: Utensils,
+            accent: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
         },
     ];
 
     return (
-        <div className="space-y-8 pb-[env(safe-area-inset-bottom,0px)] animate-in fade-in duration-500">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div className="min-w-0">
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                        {greeting(timeZone)}
-                        {firstName ? `, ${firstName}` : ""}
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        {longDate(timeZone)}
-                        {hotel?.name ? ` · ${hotel.name}` : ""}
-                    </p>
-                </div>
-                {isOrderingEnabled && (
-                    <div className="flex gap-2">
-                        <Link
-                            href="/kitchen"
-                            className="inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:flex-none"
-                        >
-                            <ChefHat className="h-4 w-4" />
-                            Kitchen
-                        </Link>
-                        <Link
-                            href="/orders"
-                            className="inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:flex-none"
-                        >
-                            <ClipboardList className="h-4 w-4" />
-                            Orders
-                        </Link>
+        <div className="space-y-6 pb-[env(safe-area-inset-bottom,0px)] animate-in fade-in duration-500">
+            <div className="relative overflow-hidden rounded-2xl border border-[#d4a853]/30 bg-gradient-to-br from-[#d4a853]/25 via-card to-card px-5 py-6 sm:px-7 sm:py-7">
+                <div className="pointer-events-none absolute -top-16 -right-10 h-40 w-40 rounded-full bg-[#d4a853]/20 blur-2xl" />
+                <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a5a12] dark:text-[#e8c875]">
+                            {hotel?.name || "Your hotel"}
+                        </p>
+                        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                            {greeting(timeZone)}
+                            {firstName ? `, ${firstName}` : ""}
+                        </h1>
+                        <p className="mt-1 text-sm text-muted-foreground">{longDate(timeZone)}</p>
                     </div>
-                )}
+                    {isOrderingEnabled && (
+                        <div className="flex gap-2">
+                            <Link
+                                href="/kitchen"
+                                className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853] sm:flex-none"
+                            >
+                                <ChefHat className="h-4 w-4" />
+                                Kitchen
+                            </Link>
+                            <Link
+                                href="/orders"
+                                className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#d4a853] px-4 text-sm font-semibold text-[#1f2340] shadow-sm transition-colors hover:bg-[#e0b866] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853] sm:flex-none"
+                            >
+                                <ClipboardList className="h-4 w-4" />
+                                Orders
+                            </Link>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {attention.length > 0 && (
-                <div className="flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2">
+                <div className="flex flex-wrap gap-2">
                     {attention.map((item) => (
                         <Link
                             key={item.text}
                             href={item.href}
-                            className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-amber-800 hover:underline dark:text-amber-200"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/10 px-3.5 py-2 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:text-amber-100"
                         >
                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
                             {item.text}
@@ -322,7 +336,6 @@ export default function DashboardPage() {
             <div
                 className={cn(
                     "grid grid-cols-2 gap-3 sm:gap-4",
-                    kpis.length <= 2 && "sm:grid-cols-2",
                     kpis.length === 3 && "lg:grid-cols-3",
                     kpis.length === 4 && "xl:grid-cols-4",
                     kpis.length >= 5 && "xl:grid-cols-5",
@@ -336,11 +349,11 @@ export default function DashboardPage() {
             <div className={cn("grid grid-cols-1 gap-6", isOrderingEnabled && "xl:grid-cols-3")}>
                 {isOrderingEnabled && (
                     <div className="space-y-6 xl:col-span-2">
-                        <section className="dashboard-card p-5 sm:p-6">
+                        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div className="flex items-baseline justify-between gap-3">
-                                <h2 className="text-sm font-semibold text-foreground">Today&apos;s orders</h2>
+                                <h2 className="text-base font-semibold text-foreground">Today&apos;s orders</h2>
                                 <p className="text-xs text-muted-foreground">
-                                    {pipelineTotal} completed or in progress
+                                    {pipelineTotal} in the kitchen flow
                                     {cancelledToday > 0 ? ` · ${cancelledToday} cancelled` : ""}
                                 </p>
                             </div>
@@ -348,38 +361,37 @@ export default function DashboardPage() {
                                 <p className="mt-6 text-sm text-muted-foreground">No orders yet today.</p>
                             ) : (
                                 <>
-                                    <div className="mt-5 flex h-2.5 overflow-hidden rounded-full bg-secondary">
+                                    <div className="mt-5 flex h-3 overflow-hidden rounded-full bg-secondary">
                                         {PIPELINE.map((step) => {
                                             const count = todaysOrders.filter((order) => order.status === step.status).length;
                                             if (count === 0) return null;
                                             return (
                                                 <div
                                                     key={step.status}
-                                                    className={cn("h-full", step.bar)}
+                                                    className={cn("h-full first:rounded-l-full last:rounded-r-full", step.bar)}
                                                     style={{ width: `${(count / pipelineTotal) * 100}%` }}
                                                 />
                                             );
                                         })}
                                     </div>
-                                    <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                                    <div className="mt-4 grid grid-cols-5 gap-2">
                                         {PIPELINE.map((step) => {
                                             const count = todaysOrders.filter((order) => order.status === step.status).length;
                                             return (
-                                                <li key={step.status} className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                    <span className={cn("h-2 w-2 rounded-full", step.bar)} />
-                                                    <span className="tabular-nums font-medium text-foreground">{count}</span>
-                                                    {step.label}
-                                                </li>
+                                                <div key={step.status} className="rounded-xl bg-secondary/70 px-1 py-3 text-center">
+                                                    <p className="text-lg font-semibold tabular-nums text-foreground">{count}</p>
+                                                    <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground sm:text-xs">{step.label}</p>
+                                                </div>
                                             );
                                         })}
-                                    </ul>
+                                    </div>
                                 </>
                             )}
                         </section>
 
                         <section>
                             <div className="mb-3 flex items-center justify-between">
-                                <h2 className="text-sm font-semibold text-foreground">Recent orders</h2>
+                                <h2 className="text-base font-semibold text-foreground">Recent orders</h2>
                                 <Link
                                     href="/orders"
                                     className="inline-flex cursor-pointer items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -393,7 +405,7 @@ export default function DashboardPage() {
                                     <Link
                                         key={order.id}
                                         href="/orders"
-                                        className="dashboard-card flex cursor-pointer items-center justify-between gap-3 p-4"
+                                        className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-[#d4a853]/50"
                                     >
                                         <div className="min-w-0">
                                             <p className="font-medium text-foreground">
@@ -413,9 +425,9 @@ export default function DashboardPage() {
                                 {recent.length === 0 && <EmptyOrders />}
                             </div>
 
-                            <div className="dashboard-card hidden overflow-hidden md:block">
+                            <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:block">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                                    <thead className="border-b border-border bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
                                         <tr>
                                             <th className="px-5 py-3 font-medium">Order</th>
                                             <th className="px-5 py-3 font-medium">Room</th>
@@ -452,33 +464,34 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                <aside className={cn("space-y-4", !isOrderingEnabled && "grid gap-4 space-y-0 md:grid-cols-2 xl:grid-cols-2")}>
+                <aside className={cn("space-y-4", !isOrderingEnabled && "grid gap-4 space-y-0 md:grid-cols-2")}>
                     <div>
-                        <h2 className="mb-3 text-sm font-semibold text-foreground">Shortcuts</h2>
-                        <div className="dashboard-card p-2">
-                            <ActionRow icon={Utensils} title="Update menu" subtitle="Items, prices and photos" href="/menu" />
-                            <ActionRow icon={BedDouble} title="Rooms" subtitle="Occupancy and QR cards" href="/rooms" />
+                        <h2 className="mb-3 text-base font-semibold text-foreground">Shortcuts</h2>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Shortcut icon={Utensils} title="Menu" subtitle="Prices and photos" href="/menu" accent="bg-amber-500/15 text-amber-800 dark:text-amber-300" />
+                            <Shortcut icon={BedDouble} title="Rooms" subtitle="QR cards" href="/rooms" accent="bg-teal-500/15 text-teal-700 dark:text-teal-300" />
                             {isOrderingEnabled && (
-                                <ActionRow icon={ClipboardList} title="Orders" subtitle="Confirm, prepare, deliver" href="/orders" />
+                                <Shortcut icon={ClipboardList} title="Orders" subtitle="Live queue" href="/orders" accent="bg-sky-500/15 text-sky-700 dark:text-sky-300" />
                             )}
                             {isRequestsEnabled && (
-                                <ActionRow icon={Headset} title="Guest requests" subtitle="Housekeeping and complaints" href="/services" />
+                                <Shortcut icon={Headset} title="Requests" subtitle="From guests" href="/services" accent="bg-rose-500/15 text-rose-700 dark:text-rose-300" />
                             )}
                             {isStaffEnabled && (
-                                <ActionRow
+                                <Shortcut
                                     icon={Users}
                                     title="Staff"
-                                    subtitle="Invite your team"
+                                    subtitle="Your team"
                                     href="/staff"
+                                    accent="bg-violet-500/15 text-violet-700 dark:text-violet-300"
                                     disabled={admin?.role !== "OWNER" && admin?.role !== "GENERAL_MANAGER"}
-                                    disabledHint="Only the owner or general manager can manage staff"
+                                    disabledHint="Owner or general manager only"
                                 />
                             )}
                         </div>
                     </div>
 
                     {!isOrderingEnabled && (
-                        <div className="dashboard-card flex flex-col justify-center p-5">
+                        <div className="flex flex-col justify-center rounded-2xl border border-border bg-card p-5 shadow-sm">
                             <h2 className="text-sm font-semibold text-foreground">Digital ordering is off</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
                                 Guests can still browse the menu from the QR card in their room.
@@ -496,34 +509,44 @@ interface KpiProps {
     value: string;
     detail: string;
     href: string;
+    icon: ComponentType<{ className?: string }>;
+    accent: string;
     tone?: "up" | "down" | "flat";
 }
 
-function Kpi({ label, value, detail, href, tone = "flat" }: KpiProps) {
+function Kpi({ label, value, detail, href, icon: Icon, accent, tone = "flat" }: KpiProps) {
     return (
         <Link
             href={href}
-            className="dashboard-card flex min-h-[7.5rem] cursor-pointer flex-col justify-between p-4 transition-colors hover:border-primary/30 sm:p-5"
+            className="group flex min-h-[8.5rem] cursor-pointer flex-col justify-between rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors duration-200 hover:border-[#d4a853]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853] sm:p-5"
         >
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums text-foreground sm:text-3xl">{value}</p>
-            <p
-                className={cn(
-                    "mt-2 text-xs",
-                    tone === "up" && "text-emerald-600 dark:text-emerald-400",
-                    tone === "down" && "text-red-600 dark:text-red-400",
-                    tone === "flat" && "text-muted-foreground",
-                )}
-            >
-                {detail}
-            </p>
+            <span className="flex items-start justify-between gap-2">
+                <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl", accent)}>
+                    <Icon className="h-5 w-5" />
+                </span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            </span>
+            <span>
+                <span className="mt-3 block text-2xl font-semibold tracking-tight tabular-nums text-foreground">{value}</span>
+                <span className="mt-0.5 block text-xs font-medium text-muted-foreground">{label}</span>
+                <span
+                    className={cn(
+                        "mt-1 block text-xs",
+                        tone === "up" && "text-emerald-600 dark:text-emerald-400",
+                        tone === "down" && "text-red-600 dark:text-red-400",
+                        tone === "flat" && "text-muted-foreground",
+                    )}
+                >
+                    {detail}
+                </span>
+            </span>
         </Link>
     );
 }
 
 function EmptyOrders() {
     return (
-        <div className="dashboard-card p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
             No orders yet. They will appear here as guests order from their rooms.
         </div>
     );
@@ -554,11 +577,12 @@ function StatusBadge({ status }: { status: OrderStatus }) {
     );
 }
 
-function ActionRow({
+function Shortcut({
     icon: Icon,
     title,
     subtitle,
     href,
+    accent,
     disabled,
     disabledHint,
 }: {
@@ -566,23 +590,23 @@ function ActionRow({
     title: string;
     subtitle: string;
     href: string;
+    accent: string;
     disabled?: boolean;
     disabledHint?: string;
 }) {
     const className = cn(
-        "flex items-center gap-3 rounded-lg p-3 transition-colors",
-        disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer hover:bg-secondary",
+        "flex min-h-[6.5rem] flex-col justify-between rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors duration-200",
+        disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer hover:border-[#d4a853]/50",
     );
     const inner = (
         <>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground">
+            <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", accent)}>
                 <Icon className="h-4 w-4" />
             </span>
-            <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-foreground">{title}</span>
+            <span className="mt-3">
+                <span className="block text-sm font-semibold text-foreground">{title}</span>
                 <span className="block text-xs text-muted-foreground">{disabled && disabledHint ? disabledHint : subtitle}</span>
             </span>
-            {!disabled && <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
         </>
     );
     if (disabled) {
@@ -593,7 +617,7 @@ function ActionRow({
         );
     }
     return (
-        <Link href={href} className={className}>
+        <Link href={href} className={cn(className, "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]")}>
             {inner}
         </Link>
     );
