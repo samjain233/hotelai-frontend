@@ -137,6 +137,22 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     }, [resolvedRoomId, loading, digitalOrderingEnabled, serviceRequestsEnabled]);
 
     useEffect(() => {
+        if (!hotel?.id) return;
+        const sessionKey = `menu_viewed_${hotel.id}`;
+        if (!sessionStorage.getItem(sessionKey)) {
+            sessionStorage.setItem(sessionKey, "true");
+            
+            // Fire and forget, no await
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            fetch(`${apiUrl}/platform/analytics/menu-view`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hotelId: hotel.id })
+            }).catch(() => {});
+        }
+    }, [hotel?.id]);
+
+    useEffect(() => {
         if (categories.length > 0 && !activeCategory) setActiveCategory(categories[0].id);
     }, [categories, activeCategory]);
 
