@@ -12,6 +12,8 @@ import {
     Info,
     Sparkles,
     QrCode,
+    Check,
+    LayoutTemplate,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/context/AuthContext";
@@ -23,6 +25,11 @@ import { LegalFooter } from "@/components/LegalFooter";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
+import {
+    GUEST_MENU_TEMPLATES,
+    resolveGuestMenuTemplate,
+    type GuestMenuTemplate,
+} from "@/lib/guestMenuTemplates";
 
 const PICKER_FALLBACK_BG = "#09090b";
 const PICKER_FALLBACK_TEXT = "#fafafa";
@@ -89,7 +96,76 @@ function ColorField({ label, hint, value, onChange, fallback, placeholder, ariaL
     );
 }
 
-function GuestMenuPreviewMock({ style }: { style: React.CSSProperties }) {
+function TemplateThumbnail({ template }: { template: GuestMenuTemplate }) {
+    if (template === "gallery") {
+        return (
+            <div className="grid grid-cols-2 gap-1.5">
+                {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="overflow-hidden rounded-md bg-zinc-800 ring-1 ring-white/5">
+                        <div className="h-5 bg-zinc-600" />
+                        <div className="space-y-1 p-1">
+                            <div className="h-1 w-3/4 rounded-full bg-zinc-500" />
+                            <div className="h-1 w-1/3 rounded-full bg-rose-400/80" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    return (
+        <div className="space-y-1.5">
+            {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-1.5 rounded-md bg-zinc-800 p-1.5 ring-1 ring-white/5">
+                    <div className="min-w-0 flex-1 space-y-1">
+                        <div className="h-1 w-3/4 rounded-full bg-zinc-500" />
+                        <div className="h-1 w-1/3 rounded-full bg-rose-400/80" />
+                    </div>
+                    <div className="h-5 w-5 shrink-0 rounded bg-zinc-600" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function TemplatePicker({ value, onChange }: { value: GuestMenuTemplate; onChange: (t: GuestMenuTemplate) => void }) {
+    return (
+        <div role="radiogroup" aria-label="Menu template" className="grid gap-3 sm:grid-cols-2">
+            {GUEST_MENU_TEMPLATES.map((t) => {
+                const selected = value === t.id;
+                return (
+                    <button
+                        key={t.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => onChange(t.id)}
+                        className={cn(
+                            "relative flex cursor-pointer flex-col gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60",
+                            selected
+                                ? "border-brand bg-brand/5 ring-1 ring-brand"
+                                : "border-border/80 bg-secondary/20 hover:border-border hover:bg-secondary/30",
+                        )}
+                    >
+                        <div className="h-[92px] overflow-hidden rounded-lg bg-zinc-900 p-2.5">
+                            <TemplateThumbnail template={t.id} />
+                        </div>
+                        <div className="pr-6">
+                            <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{t.description}</p>
+                        </div>
+                        {selected && (
+                            <span className="absolute bottom-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-black">
+                                <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function GuestMenuPreviewMock({ style, template }: { style: React.CSSProperties; template: GuestMenuTemplate }) {
     return (
         <div
             className="flex min-h-0 flex-1 flex-col text-left"
@@ -137,6 +213,30 @@ function GuestMenuPreviewMock({ style }: { style: React.CSSProperties }) {
                         <UtensilsCrossed className="h-3 w-3 text-[var(--guest-accent)]" aria-hidden />
                         Starters
                     </p>
+                    {template === "gallery" ? (
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { name: "Sample dish name", price: "₹499" },
+                                { name: "Second item", price: "₹350" },
+                                { name: "Chef's special", price: "₹620" },
+                                { name: "House salad", price: "₹280" },
+                            ].map((dish) => (
+                                <div
+                                    key={dish.name}
+                                    className="overflow-hidden rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)]"
+                                >
+                                    <div className="aspect-[4/3] bg-[var(--guest-shimmer)]/50" />
+                                    <div className="p-2">
+                                        <p className="truncate text-[10px] font-semibold text-[var(--guest-text)]">{dish.name}</p>
+                                        <p className="mt-0.5 text-[10px] font-bold text-[var(--guest-accent)]">{dish.price}</p>
+                                        <div className="mt-1.5 flex h-5 items-center justify-center rounded-md border border-[var(--guest-accent-70)] text-[8px] font-extrabold tracking-wider text-[var(--guest-accent)]">
+                                            ADD +
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
                     <div className="space-y-2.5">
                         <div className="flex gap-2.5 rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-2.5">
                             <div className="h-14 w-14 shrink-0 rounded-lg bg-[var(--guest-shimmer)]/50 ring-1 ring-[var(--guest-line)]" />
@@ -156,6 +256,7 @@ function GuestMenuPreviewMock({ style }: { style: React.CSSProperties }) {
                             </div>
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
 
@@ -178,6 +279,7 @@ export default function MenuDesignPage() {
     const [qrFgHex, setQrFgHex] = useState("");
     const [qrBgHex, setQrBgHex] = useState("");
     const [showItemInsights, setShowItemInsights] = useState(false);
+    const [template, setTemplate] = useState<GuestMenuTemplate>("classic");
     const [saving, setSaving] = useState(false);
     const [qrPreviewUrl, setQrPreviewUrl] = useState("https://example.com/menu");
 
@@ -200,6 +302,7 @@ export default function MenuDesignPage() {
         setQrFgHex(hotel?.qrCodeForegroundHex?.trim() ?? "");
         setQrBgHex(hotel?.qrCodeBackgroundHex?.trim() ?? "");
         setShowItemInsights(Boolean(hotel?.guestMenuShowItemInsights));
+        setTemplate(resolveGuestMenuTemplate(hotel?.guestMenuTemplate));
     }, [
         hotel?.guestMenuBackgroundHex,
         hotel?.guestMenuTextHex,
@@ -207,6 +310,7 @@ export default function MenuDesignPage() {
         hotel?.qrCodeForegroundHex,
         hotel?.qrCodeBackgroundHex,
         hotel?.guestMenuShowItemInsights,
+        hotel?.guestMenuTemplate,
     ]);
 
     useEffect(() => {
@@ -243,6 +347,7 @@ export default function MenuDesignPage() {
                 qrCodeForegroundHex: qrFgHex.trim(),
                 qrCodeBackgroundHex: qrBgHex.trim(),
                 guestMenuShowItemInsights: showItemInsights,
+                guestMenuTemplate: template,
             });
             await refreshHotel();
             toast.success("Guest menu appearance saved.");
@@ -325,13 +430,26 @@ export default function MenuDesignPage() {
                 <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] xl:gap-10">
                     {/* Colours */}
                     <section className="flex h-full flex-col rounded-2xl border border-border bg-card/80 p-6 shadow-sm backdrop-blur-sm sm:p-8">
-                        <div className="mb-6 flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-primary" aria-hidden />
-                            <h2 className="text-lg font-semibold text-foreground">Colours</h2>
-                        </div>
-
                         <form onSubmit={handleSave} className="flex flex-1 flex-col gap-6">
                             <div className="space-y-4">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <LayoutTemplate className="h-4 w-4 text-primary" aria-hidden />
+                                        <h2 className="text-lg font-semibold text-foreground">Template</h2>
+                                    </div>
+                                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                        How dishes are laid out on the guest menu. Your colours apply to every template.
+                                    </p>
+                                </div>
+                                <TemplatePicker value={template} onChange={setTemplate} />
+                            </div>
+
+                            <div className="flex items-center gap-2 border-t border-border pt-6">
+                                <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+                                <h2 className="text-lg font-semibold text-foreground">Colours</h2>
+                            </div>
+
+                            <div className="-mt-2 space-y-4">
                                 <ColorField
                                     label="Background"
                                     hint="Main page colour behind categories and dish cards."
@@ -457,7 +575,7 @@ export default function MenuDesignPage() {
                             >
                                 <div className="absolute left-1/2 top-0 h-4 w-20 -translate-x-1/2 rounded-b-lg bg-zinc-800" aria-hidden />
                                 <div className="relative mt-3 flex max-h-[min(520px,calc(100vh-12rem))] min-h-[420px] flex-col overflow-hidden rounded-2xl ring-1 ring-black/30">
-                                    <GuestMenuPreviewMock style={previewStyle} />
+                                    <GuestMenuPreviewMock style={previewStyle} template={template} />
                                 </div>
                             </div>
                         </div>

@@ -18,6 +18,7 @@ import {
     RegisterPendingResponse,
     GuestStay,
 } from './types';
+import type { GuestMenuTemplate } from './guestMenuTemplates';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -225,6 +226,7 @@ class ApiClient {
         qrCodeForegroundHex?: string;
         qrCodeBackgroundHex?: string;
         guestMenuShowItemInsights?: boolean;
+        guestMenuTemplate?: GuestMenuTemplate;
     }) {
         return this.request<Hotel>('/auth/hotel/guest-menu-theme', {
             method: 'PATCH',

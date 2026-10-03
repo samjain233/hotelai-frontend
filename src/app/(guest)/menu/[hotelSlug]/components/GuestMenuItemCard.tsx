@@ -17,7 +17,7 @@ interface GuestMenuItemCardProps {
     setExpandedDescId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-function formatPrice(price: number | string) {
+export function formatPrice(price: number | string) {
     const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
     const hasDecimals = n % 1 !== 0;
     return `₹${n.toLocaleString("en-IN", {
@@ -26,35 +26,43 @@ function formatPrice(price: number | string) {
     })}`;
 }
 
-export function GuestMenuItemCard({
-    item,
-    itemIndex,
-    catIndex,
-    isPriorityImage,
-    expandedDescId,
-    setExpandedDescId,
-}: GuestMenuItemCardProps) {
-    const ctx = useGuestMenuContext();
+export function GuestMenuDietMark({
+    preference,
+    placeholder = false,
+}: {
+    preference: MenuItem["dietaryPreference"];
+    /** Reserve the mark's space when there is no diet mark, so names stay aligned. */
+    placeholder?: boolean;
+}) {
+    if (preference === "VEG") return <IndianVegMark />;
+    if (preference === "NON_VEG") return <IndianNonVegMark />;
+    if (preference === "EGGITARIAN") {
+        return (
+            <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded border border-amber-500/60" title="Contains egg">
+                <Egg className="h-3 w-3 text-amber-400" />
+            </span>
+        );
+    }
+    return placeholder ? <span className="inline-block h-[18px] w-[18px]" aria-hidden /> : null;
+}
 
+/** ADD button / quantity stepper; renders nothing when digital ordering is off. */
+export function GuestMenuItemAction({ item, widthClass = "w-[100px] sm:w-28" }: { item: MenuItem; widthClass?: string }) {
+    const ctx = useGuestMenuContext();
     const qty = ctx.getCartQuantity(item.id);
     const itemIsAvailable = item.available !== false;
-    const desc = item.description?.trim() ?? "";
-    const descLong = desc.length > 72;
-    const descOpen = expandedDescId === item.id;
-    const imageSrc = item.imageUrl?.trim() ?? "";
-    const hasImage = imageSrc.length > 0;
 
-    let actionBlock: React.ReactNode = null;
-    if (!ctx.digitalOrderingEnabled) {
-        // Hidden
-    } else if (qty === 0) {
-        actionBlock = (
+    if (!ctx.digitalOrderingEnabled) return null;
+
+    if (qty === 0) {
+        return (
             <button
                 type="button"
                 onClick={() => ctx.addToCart(item)}
                 disabled={!itemIsAvailable}
                 className={cn(
-                    "flex h-9 w-[100px] sm:w-28 items-center justify-center rounded-xl border-2 border-[var(--guest-accent-70)] bg-[var(--guest-surface)] text-center text-xs font-extrabold uppercase tracking-wider text-[var(--guest-accent)] shadow-md shadow-black/20 transition-all hover:bg-[var(--guest-accent-12)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
+                    "flex h-9 items-center justify-center rounded-xl border-2 border-[var(--guest-accent-70)] bg-[var(--guest-surface)] text-center text-xs font-extrabold uppercase tracking-wider text-[var(--guest-accent)] shadow-md shadow-black/20 transition-all hover:bg-[var(--guest-accent-12)] hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
+                    widthClass,
                 )}
             >
                 {itemIsAvailable ? (
@@ -66,9 +74,15 @@ export function GuestMenuItemCard({
                 )}
             </button>
         );
-    } else {
-        actionBlock = (
-            <div className="flex h-9 w-[100px] sm:w-28 items-center justify-between rounded-xl border border-[var(--guest-accent-40)] bg-[var(--guest-surface)] px-1 shadow-md shadow-black/20">
+    }
+
+    return (
+        <div
+            className={cn(
+                "flex h-9 items-center justify-between rounded-xl border border-[var(--guest-accent-40)] bg-[var(--guest-surface)] px-1 shadow-md shadow-black/20",
+                widthClass,
+            )}
+        >
                 <button
                     type="button"
                     onClick={() => ctx.removeFromCart(item.id)}
@@ -90,9 +104,25 @@ export function GuestMenuItemCard({
                 >
                     <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
                 </button>
-            </div>
-        );
-    }
+        </div>
+    );
+}
+
+export function GuestMenuItemCard({
+    item,
+    itemIndex,
+    isPriorityImage,
+    expandedDescId,
+    setExpandedDescId,
+}: GuestMenuItemCardProps) {
+    const ctx = useGuestMenuContext();
+
+    const desc = item.description?.trim() ?? "";
+    const descLong = desc.length > 72;
+    const descOpen = expandedDescId === item.id;
+    const imageSrc = item.imageUrl?.trim() ?? "";
+    const hasImage = imageSrc.length > 0;
+    const actionBlock = <GuestMenuItemAction item={item} />;
 
     return (
         <li
@@ -102,17 +132,7 @@ export function GuestMenuItemCard({
             <div className="min-w-0 flex-1">
                 <div className="flex gap-2">
                     <div className="mt-0.5 shrink-0">
-                        {item.dietaryPreference === "VEG" ? (
-                            <IndianVegMark />
-                        ) : item.dietaryPreference === "NON_VEG" ? (
-                            <IndianNonVegMark />
-                        ) : item.dietaryPreference === "EGGITARIAN" ? (
-                            <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded border border-amber-500/60" title="Contains egg">
-                                <Egg className="h-3 w-3 text-amber-400" />
-                            </span>
-                        ) : (
-                            <span className="inline-block h-[18px] w-[18px]" aria-hidden />
-                        )}
+                        <GuestMenuDietMark preference={item.dietaryPreference} placeholder />
                     </div>
                     <div className="min-w-0 flex-1">
                         <h3 className="text-[15px] font-bold leading-snug text-[var(--guest-text)]" title={item.name}>

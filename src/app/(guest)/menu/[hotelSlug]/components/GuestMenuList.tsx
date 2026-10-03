@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { GuestPublicMenuCategory } from "@/lib/types";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
 import { GuestMenuItemCard } from "./GuestMenuItemCard";
+import { GuestMenuGalleryCard } from "./GuestMenuGalleryCard";
+import { resolveGuestMenuTemplate } from "@/lib/guestMenuTemplates";
 import { useState } from "react";
 import { useGuestMenuContext } from "./GuestMenuContext";
 
@@ -21,6 +23,8 @@ export function GuestMenuList({
     searchNormalized,
 }: GuestMenuListProps) {
     const [expandedDescId, setExpandedDescId] = useState<string | null>(null);
+    const { hotel } = useGuestMenuContext();
+    const template = resolveGuestMenuTemplate(hotel?.guestMenuTemplate);
 
     return (
         <>
@@ -46,22 +50,35 @@ export function GuestMenuList({
                             {cat.name}
                         </h2>
                     </div>
-                    <ul className="relative z-0 divide-y divide-[var(--guest-line)]/80">
-                        {(cat.items ?? []).map((item, itemIndex) => {
-                            const isPriorityImage = !searchNormalized && catIndex === 0 && itemIndex < 4;
-                            return (
-                                <GuestMenuItemCard
+                    {template === "gallery" ? (
+                        <ul className="relative z-0 mb-6 grid grid-cols-2 gap-3">
+                            {(cat.items ?? []).map((item, itemIndex) => (
+                                <GuestMenuGalleryCard
                                     key={item.id}
                                     item={item}
                                     itemIndex={itemIndex}
-                                    catIndex={catIndex}
-                                    isPriorityImage={!!isPriorityImage}
-                                    expandedDescId={expandedDescId}
-                                    setExpandedDescId={setExpandedDescId}
+                                    isPriorityImage={!searchNormalized && catIndex === 0 && itemIndex < 4}
                                 />
-                            );
-                        })}
-                    </ul>
+                            ))}
+                        </ul>
+                    ) : (
+                        <ul className="relative z-0 divide-y divide-[var(--guest-line)]/80">
+                            {(cat.items ?? []).map((item, itemIndex) => {
+                                const isPriorityImage = !searchNormalized && catIndex === 0 && itemIndex < 4;
+                                return (
+                                    <GuestMenuItemCard
+                                        key={item.id}
+                                        item={item}
+                                        itemIndex={itemIndex}
+                                        catIndex={catIndex}
+                                        isPriorityImage={!!isPriorityImage}
+                                        expandedDescId={expandedDescId}
+                                        setExpandedDescId={setExpandedDescId}
+                                    />
+                                );
+                            })}
+                        </ul>
+                    )}
                 </div>
             ))}
         </>

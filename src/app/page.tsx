@@ -98,7 +98,9 @@ function PrimaryButton({ href, children, className = "" }: { href: string; child
 }
 
 export default async function LandingPage() {
-    const loggedIn = Boolean((await cookies()).get("auth_token")?.value);
+    const cookieStore = await cookies();
+    // The access token expires after ~15 min; the refresh cookie keeps the session alive much longer.
+    const loggedIn = Boolean(cookieStore.get("auth_token")?.value || cookieStore.get("auth_refresh")?.value);
 
     return (
         <div className="min-h-screen overflow-x-hidden bg-[#fff6e8] text-[#1f2340]">
@@ -166,8 +168,8 @@ export default async function LandingPage() {
                             </p>
 
                             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start">
-                                <PrimaryButton href="/register">
-                                    Start for free
+                                <PrimaryButton href={loggedIn ? "/dashboard" : "/register"}>
+                                    {loggedIn ? "Go to dashboard" : "Start for free"}
                                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                                 </PrimaryButton>
                                 <a
@@ -337,10 +339,10 @@ export default async function LandingPage() {
                         </h2>
                         <p className="relative mt-3 font-medium text-[#1f2340]/80">Set up in minutes. Free forever plan.</p>
                         <Link
-                            href="/register"
+                            href={loggedIn ? "/dashboard" : "/register"}
                             className="group relative mt-8 inline-flex cursor-pointer items-center gap-2 rounded-2xl border-2 border-[#1f2340] bg-white px-8 py-4 font-semibold shadow-[4px_4px_0_#1f2340] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#1f2340] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/60"
                         >
-                            Create your free account
+                            {loggedIn ? "Go to dashboard" : "Create your free account"}
                             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                         </Link>
                     </div>
