@@ -99,7 +99,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col">
+        <div className="dark flex min-h-screen flex-col bg-[#0e0e10] text-zinc-100">
             {impersonating && (
                 <div className="shrink-0 z-[60] flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-amber-500/15 border-b border-amber-500/40 text-amber-950 dark:text-amber-100 print:hidden">
                     <div className="flex items-center gap-2 text-sm font-medium">
@@ -122,7 +122,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 </div>
             )}
             <div className="flex flex-1 min-h-0">
-                <aside className="hidden print:hidden lg:flex w-[260px] flex-col fixed inset-y-0 z-40 bg-background/80 backdrop-blur-3xl border-r border-border">
+                <aside className="fixed inset-y-0 z-40 hidden w-[240px] flex-col border-r border-white/[0.06] bg-[#0e0e10] print:hidden lg:flex">
                     <div className="h-16 flex items-center px-6 border-b border-border">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 shadow-sm flex items-center justify-center text-primary mr-3">
                             <Hotel className="w-4 h-4" />
@@ -144,15 +144,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                                     className={cn(
                                         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
                                         isActive
-                                            ? "bg-primary/10 text-primary"
-                                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                            ? "bg-white/[0.08] text-white"
+                                            : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
                                     )}
                                 >
-                                    <IconComponent className={cn("w-4 h-4 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                                    <IconComponent className="h-4 w-4 shrink-0" />
                                     <span>{item.name}</span>
-                                    {isActive && (
-                                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
-                                    )}
                                 </Link>
                             );
                         })}
@@ -174,8 +171,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     </div>
                 </aside>
 
-                <div className="flex-1 flex flex-col min-w-0 lg:pl-[260px] print:pl-0 transition-all duration-300">
-                    <header className="h-16 sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 lg:px-8 print:hidden">
+                <div className="flex min-w-0 flex-1 flex-col print:pl-0 lg:pl-[240px]">
+                    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/[0.06] bg-[#0e0e10]/90 px-6 backdrop-blur-md print:hidden lg:px-8">
                         <button
                             className="lg:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
                             onClick={() => setMobileMenuOpen(true)}
