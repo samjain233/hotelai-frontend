@@ -143,12 +143,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             sessionStorage.setItem(sessionKey, "true");
             
             // Fire and forget, no await
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-            fetch(`${apiUrl}/analytics/menu-view`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hotelId: hotel.id })
-            }).catch(() => {});
+            api.trackMenuView(hotel.id).catch(() => {});
         }
     }, [hotel?.id]);
 

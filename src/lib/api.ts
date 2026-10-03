@@ -582,6 +582,13 @@ class ApiClient {
     async getPublicRooms(hotelSlug: string): Promise<{ id: string; number: string; floor?: string; type?: string }[]> {
         return this.request(`/guest/rooms/${hotelSlug}`);
     }
+    
+    async trackMenuView(hotelId: string): Promise<void> {
+        return this.request('/analytics/menu-view', {
+            method: 'POST',
+            body: JSON.stringify({ hotelId }),
+        });
+    }
 
     // ─── Services (Guest) ───────────────────────────────────
     
