@@ -1,4 +1,8 @@
-/** Must match GUEST_MENU_TEMPLATES in hotel-ai `update-guest-menu-theme.dto.ts`. */
+/**
+ * Catalog of guest menu layouts. Adding an id here widens `GuestMenuTemplate`, which
+ * forces a matching entry in `templates/registry.tsx`. The same id must be added to
+ * `GUEST_MENU_TEMPLATES` in hotel-ai `update-guest-menu-theme.dto.ts`.
+ */
 export const GUEST_MENU_TEMPLATES = [
     {
         id: "classic",

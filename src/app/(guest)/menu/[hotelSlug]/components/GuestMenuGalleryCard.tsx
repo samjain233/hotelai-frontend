@@ -4,7 +4,7 @@ import { MenuItem } from "@/lib/types";
 import { UtensilsCrossed } from "lucide-react";
 import { GuestMenuItemInsights } from "../GuestMenuItemInsights";
 import { useGuestMenuContext } from "./GuestMenuContext";
-import { GuestMenuDietMark, GuestMenuItemAction, formatPrice } from "./GuestMenuItemCard";
+import { GuestMenuDietMark, GuestMenuItemAction, formatPrice } from "./GuestMenuItemParts";
 
 interface GuestMenuGalleryCardProps {
     item: MenuItem;

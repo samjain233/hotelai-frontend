@@ -30,6 +30,7 @@ import {
     resolveGuestMenuTemplate,
     type GuestMenuTemplate,
 } from "@/lib/guestMenuTemplates";
+import { GUEST_MENU_TEMPLATE_REGISTRY } from "@/app/(guest)/menu/[hotelSlug]/templates/registry";
 
 const PICKER_FALLBACK_BG = "#09090b";
 const PICKER_FALLBACK_TEXT = "#fafafa";
@@ -96,42 +97,12 @@ function ColorField({ label, hint, value, onChange, fallback, placeholder, ariaL
     );
 }
 
-function TemplateThumbnail({ template }: { template: GuestMenuTemplate }) {
-    if (template === "gallery") {
-        return (
-            <div className="grid grid-cols-2 gap-1.5">
-                {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className="overflow-hidden rounded-md bg-zinc-800 ring-1 ring-white/5">
-                        <div className="h-5 bg-zinc-600" />
-                        <div className="space-y-1 p-1">
-                            <div className="h-1 w-3/4 rounded-full bg-zinc-500" />
-                            <div className="h-1 w-1/3 rounded-full bg-rose-400/80" />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
-    }
-    return (
-        <div className="space-y-1.5">
-            {[0, 1, 2].map((i) => (
-                <div key={i} className="flex items-center gap-1.5 rounded-md bg-zinc-800 p-1.5 ring-1 ring-white/5">
-                    <div className="min-w-0 flex-1 space-y-1">
-                        <div className="h-1 w-3/4 rounded-full bg-zinc-500" />
-                        <div className="h-1 w-1/3 rounded-full bg-rose-400/80" />
-                    </div>
-                    <div className="h-5 w-5 shrink-0 rounded bg-zinc-600" />
-                </div>
-            ))}
-        </div>
-    );
-}
-
 function TemplatePicker({ value, onChange }: { value: GuestMenuTemplate; onChange: (t: GuestMenuTemplate) => void }) {
     return (
         <div role="radiogroup" aria-label="Menu template" className="grid gap-3 sm:grid-cols-2">
             {GUEST_MENU_TEMPLATES.map((t) => {
                 const selected = value === t.id;
+                const Thumbnail = GUEST_MENU_TEMPLATE_REGISTRY[t.id].Thumbnail;
                 return (
                     <button
                         key={t.id}
@@ -147,7 +118,7 @@ function TemplatePicker({ value, onChange }: { value: GuestMenuTemplate; onChang
                         )}
                     >
                         <div className="h-[92px] overflow-hidden rounded-lg bg-zinc-900 p-2.5">
-                            <TemplateThumbnail template={t.id} />
+                            <Thumbnail />
                         </div>
                         <div className="pr-6">
                             <p className="text-sm font-semibold text-foreground">{t.name}</p>
@@ -166,6 +137,7 @@ function TemplatePicker({ value, onChange }: { value: GuestMenuTemplate; onChang
 }
 
 function GuestMenuPreviewMock({ style, template }: { style: React.CSSProperties; template: GuestMenuTemplate }) {
+    const PreviewDishes = GUEST_MENU_TEMPLATE_REGISTRY[template].PreviewDishes;
     return (
         <div
             className="flex min-h-0 flex-1 flex-col text-left"
@@ -213,50 +185,7 @@ function GuestMenuPreviewMock({ style, template }: { style: React.CSSProperties;
                         <UtensilsCrossed className="h-3 w-3 text-[var(--guest-accent)]" aria-hidden />
                         Starters
                     </p>
-                    {template === "gallery" ? (
-                        <div className="grid grid-cols-2 gap-2">
-                            {[
-                                { name: "Sample dish name", price: "₹499" },
-                                { name: "Second item", price: "₹350" },
-                                { name: "Chef's special", price: "₹620" },
-                                { name: "House salad", price: "₹280" },
-                            ].map((dish) => (
-                                <div
-                                    key={dish.name}
-                                    className="overflow-hidden rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)]"
-                                >
-                                    <div className="aspect-[4/3] bg-[var(--guest-shimmer)]/50" />
-                                    <div className="p-2">
-                                        <p className="truncate text-[10px] font-semibold text-[var(--guest-text)]">{dish.name}</p>
-                                        <p className="mt-0.5 text-[10px] font-bold text-[var(--guest-accent)]">{dish.price}</p>
-                                        <div className="mt-1.5 flex h-5 items-center justify-center rounded-md border border-[var(--guest-accent-70)] text-[8px] font-extrabold tracking-wider text-[var(--guest-accent)]">
-                                            ADD +
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                    <div className="space-y-2.5">
-                        <div className="flex gap-2.5 rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-2.5">
-                            <div className="h-14 w-14 shrink-0 rounded-lg bg-[var(--guest-shimmer)]/50 ring-1 ring-[var(--guest-line)]" />
-                            <div className="min-w-0 flex-1">
-                                <p className="text-xs font-semibold text-[var(--guest-text)]">Sample dish name</p>
-                                <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-[var(--guest-muted)]">
-                                    Description uses the muted tone so longer copy stays readable.
-                                </p>
-                                <p className="mt-1 text-xs font-bold text-[var(--guest-accent)]">₹499</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-2.5 rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-2.5">
-                            <div className="h-14 w-14 shrink-0 rounded-lg bg-[var(--guest-shimmer)]/50 ring-1 ring-[var(--guest-line)]" />
-                            <div className="min-w-0 flex-1">
-                                <p className="text-xs font-semibold text-[var(--guest-text)]">Second item</p>
-                                <p className="mt-1 text-xs font-bold text-[var(--guest-accent)]">₹350</p>
-                            </div>
-                        </div>
-                    </div>
-                    )}
+                    <PreviewDishes />
                 </div>
             </div>
 

@@ -22,7 +22,7 @@ export interface Hotel {
     qrCodeBackgroundHex?: string | null;
     /** When true, guest menu shows optional per-item insights (allergens, tags, spice, etc.). */
     guestMenuShowItemInsights?: boolean;
-    /** Guest menu layout template id (see `guestMenuTemplates.ts`); unset = "classic". */
+    /** Guest menu layout template id (see `guestMenuTemplates.ts` and `templates/registry.tsx`); unset = "classic". */
     guestMenuTemplate?: string;
     /** IANA timezone for category serving windows (default Asia/Kolkata). */
     timezone?: string;

@@ -3,10 +3,8 @@
 import { cn } from "@/lib/utils";
 import { GuestPublicMenuCategory } from "@/lib/types";
 import { CategoryIconDisplay } from "@/lib/categoryIcons";
-import { GuestMenuItemCard } from "./GuestMenuItemCard";
-import { GuestMenuGalleryCard } from "./GuestMenuGalleryCard";
 import { resolveGuestMenuTemplate } from "@/lib/guestMenuTemplates";
-import { useState } from "react";
+import { GUEST_MENU_TEMPLATE_REGISTRY } from "../templates/registry";
 import { useGuestMenuContext } from "./GuestMenuContext";
 
 interface GuestMenuListProps {
@@ -22,12 +20,11 @@ export function GuestMenuList({
     menuFiltersActive,
     searchNormalized,
 }: GuestMenuListProps) {
-    const [expandedDescId, setExpandedDescId] = useState<string | null>(null);
     const { hotel } = useGuestMenuContext();
-    const template = resolveGuestMenuTemplate(hotel?.guestMenuTemplate);
+    const { DishList, State } = GUEST_MENU_TEMPLATE_REGISTRY[resolveGuestMenuTemplate(hotel?.guestMenuTemplate)];
 
     return (
-        <>
+        <State>
             {displayCategories.map((cat, catIndex) => (
                 <div
                     key={cat.id}
@@ -50,37 +47,9 @@ export function GuestMenuList({
                             {cat.name}
                         </h2>
                     </div>
-                    {template === "gallery" ? (
-                        <ul className="relative z-0 mb-6 grid grid-cols-2 gap-3">
-                            {(cat.items ?? []).map((item, itemIndex) => (
-                                <GuestMenuGalleryCard
-                                    key={item.id}
-                                    item={item}
-                                    itemIndex={itemIndex}
-                                    isPriorityImage={!searchNormalized && catIndex === 0 && itemIndex < 4}
-                                />
-                            ))}
-                        </ul>
-                    ) : (
-                        <ul className="relative z-0 divide-y divide-[var(--guest-line)]/80">
-                            {(cat.items ?? []).map((item, itemIndex) => {
-                                const isPriorityImage = !searchNormalized && catIndex === 0 && itemIndex < 4;
-                                return (
-                                    <GuestMenuItemCard
-                                        key={item.id}
-                                        item={item}
-                                        itemIndex={itemIndex}
-                                        catIndex={catIndex}
-                                        isPriorityImage={!!isPriorityImage}
-                                        expandedDescId={expandedDescId}
-                                        setExpandedDescId={setExpandedDescId}
-                                    />
-                                );
-                            })}
-                        </ul>
-                    )}
+                    <DishList items={cat.items ?? []} prioritizeImages={!searchNormalized && catIndex === 0} />
                 </div>
             ))}
-        </>
+        </State>
     );
 }
