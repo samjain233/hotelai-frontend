@@ -181,8 +181,8 @@ function KitchenContent() {
             <div className="flex justify-between items-center flex-shrink-0">
                 <div className="flex items-center gap-4">
                     <div>
-                        <h1 className={cn("font-bold tracking-tight text-foreground", isFullscreen ? "text-3xl" : "text-2xl")}>
-                            🔥 Kitchen Display
+                        <h1 className={cn("font-semibold tracking-tight text-foreground", isFullscreen ? "text-3xl" : "text-2xl sm:text-[28px]")}>
+                            Kitchen display
                         </h1>
                         <p className="text-muted-foreground mt-0.5 text-sm">
                             {totalActive} active order{totalActive !== 1 ? "s" : ""} · Live updates

@@ -251,11 +251,11 @@ function ServiceCatalogueContent() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div className="min-w-0">
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                        Services
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">
+                        Manage services
                     </h1>
 
-                    <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Manage the services guests can request.
                     </p>
                 </div>

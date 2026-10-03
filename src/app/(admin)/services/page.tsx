@@ -516,11 +516,11 @@ function AdminServicesContent() {
 
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                        Guest Services
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">
+                        Services
                     </h1>
 
-                    <p className="text-muted-foreground mt-1">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         {totalActive} active request
                         {totalActive !== 1 ? "s" : ""}
                         {" · "}

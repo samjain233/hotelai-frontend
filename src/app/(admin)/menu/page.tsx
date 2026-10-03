@@ -39,7 +39,9 @@ import {
     Sparkles,
     Flame,
     Wine,
+    UtensilsCrossed,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 function toggleNumberList(list: number[], id: number): number[] {
     return list.includes(id)
@@ -584,8 +586,10 @@ export default function MenuPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div className="min-w-0">
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Menu Management</h1>
-                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Organize your offerings into categories</p>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">Menu</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        {items.length} dish{items.length !== 1 ? "es" : ""} across {categories.length} categor{categories.length !== 1 ? "ies" : "y"}
+                    </p>
                 </div>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 w-full md:w-auto md:justify-end">
                     <Button
@@ -655,6 +659,41 @@ export default function MenuPage() {
             <AnimatePresence mode="wait">
                 {activeTab === "items" ? (
                     <motion.div key="items" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                        {filteredItems.length === 0 && (
+                            <EmptyState
+                                className="col-span-full"
+                                icon={items.length === 0 ? UtensilsCrossed : Search}
+                                title={items.length === 0 ? "No dishes yet" : "No dishes match your search"}
+                                description={
+                                    items.length === 0
+                                        ? "Add your first dish, or import a whole menu from JSON. Guests see it as soon as it is available."
+                                        : `Nothing found for "${search}". Try a different name.`
+                                }
+                                action={
+                                    items.length === 0 ? (
+                                        <>
+                                            <Button className="min-h-10" onClick={openNewItem}>
+                                                <Plus className="w-4 h-4 mr-2" /> Add item
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                className="min-h-10"
+                                                onClick={() => {
+                                                    setBulkImportError(null);
+                                                    setShowBulkImportModal(true);
+                                                }}
+                                            >
+                                                <FileJson2 className="w-4 h-4 mr-2" /> Import JSON
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <Button variant="outline" className="min-h-10" onClick={() => setSearch("")}>
+                                            Clear search
+                                        </Button>
+                                    )
+                                }
+                            />
+                        )}
                         {filteredItems.map((item) => (
                             <div key={item.id} className="dashboard-card overflow-hidden group flex flex-col h-full">
                                 {/* Image Area */}
@@ -700,6 +739,27 @@ export default function MenuPage() {
                     </motion.div>
                 ) : (
                     <motion.div key="categories" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+                        {categories.length === 0 && (
+                            <EmptyState
+                                className="col-span-full"
+                                icon={FolderOpen}
+                                title="No categories yet"
+                                description="Group dishes into sections like Starters, Mains or Drinks so guests can find them quickly."
+                                action={
+                                    <Button
+                                        className="min-h-10"
+                                        onClick={() => {
+                                            selectNewCategoryInItemForm.current = false;
+                                            setEditingCategory(null);
+                                            setCatForm({ name: "", icon: "", serveTimeStart: "", serveTimeEnd: "", serveDaysOfWeek: [] });
+                                            setShowCatModal(true);
+                                        }}
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" /> New category
+                                    </Button>
+                                }
+                            />
+                        )}
                         {categories.map((cat) => (
                             <div key={cat.id} className="dashboard-card p-4 sm:p-8 flex flex-col items-center text-center group hover:border-primary/50">
                                 {hasCategoryIcon(cat.icon) ? (

@@ -32,6 +32,10 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-canvas: var(--canvas);
+  --color-panel: var(--panel);
+  --color-brand: #d4a853;
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -75,6 +79,9 @@
   --ring: #cbd5e1;
   /* slate-300 */
 
+  --canvas: #f1f3f6;
+  --panel: #ffffff;
+
   --radius: 0.5rem;
 }
 
@@ -109,6 +116,9 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.08);
   --ring: rgba(255, 255, 255, 0.4);
+
+  --canvas: #09090b;
+  --panel: #121214;
 }
 
 @layer base {

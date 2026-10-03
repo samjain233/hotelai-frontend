@@ -36,7 +36,9 @@ import {
     Users,
     ChevronDown,
     ChevronUp,
+    BedDouble,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { parseRoomNumbersInput } from "@/lib/parseRoomNumbersInput";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -354,8 +356,8 @@ export default function RoomsPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div className="min-w-0">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Rooms & QR Codes</h1>
-                        <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage physical spaces and digital access points</p>
+                        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">Rooms & QR codes</h1>
+                        <p className="mt-1 text-sm text-muted-foreground">Each room gets its own QR code for guests to scan and order.</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full md:w-auto shrink-0">
                         <Button variant="secondary" className="w-full sm:w-auto min-h-11 justify-center bg-secondary/80 hover:bg-secondary/100" onClick={showAllQrs}>
@@ -387,6 +389,29 @@ export default function RoomsPage() {
 
                 {/* Room Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-6">
+                    {filteredRooms.length === 0 && (
+                        <EmptyState
+                            className="col-span-full"
+                            icon={rooms.length === 0 ? BedDouble : Search}
+                            title={rooms.length === 0 ? "No rooms yet" : "No rooms match your search"}
+                            description={
+                                rooms.length === 0
+                                    ? "Add your rooms to generate a QR code for each one. Guests scan it to open the menu and order to their room."
+                                    : `Nothing found for "${search}".`
+                            }
+                            action={
+                                rooms.length === 0 ? (
+                                    <Button className="min-h-10" onClick={() => setShowModal(true)}>
+                                        <Plus className="w-4 h-4 mr-2" /> Add room
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" className="min-h-10" onClick={() => setSearch("")}>
+                                        Clear search
+                                    </Button>
+                                )
+                            }
+                        />
+                    )}
                     <AnimatePresence>
                         {filteredRooms.map((room) => (
                             <motion.div

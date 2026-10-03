@@ -294,12 +294,12 @@ export default function MenuDesignPage() {
             <div className="mx-auto max-w-6xl space-y-8 pb-8">
                 <header className="space-y-3">
                     <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-                            <Palette className="h-5 w-5 text-primary" aria-hidden />
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 ring-1 ring-brand/25">
+                            <Palette className="h-5 w-5 text-brand" aria-hidden />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Menu design</h1>
-                            <p className="text-sm text-muted-foreground">
+                            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">Menu design</h1>
+                            <p className="mt-1 text-sm text-muted-foreground">
                                 Theme your <span className="font-medium text-foreground">guest-facing menu</span> and{" "}
                                 <span className="font-medium text-foreground">printed room QR codes</span> (export from Rooms).
                             </p>

@@ -8,6 +8,7 @@ import { useActivityStreamAdmin } from "@/hooks/useActivityStream";
 import { Bell, ClipboardList, Headset, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ENABLE_ORDERING_ADMIN_NAV } from "@/lib/adminNavConfig";
+import { useAuth } from "@/context/AuthContext";
 
 function ordersNavPath() {
     return ENABLE_ORDERING_ADMIN_NAV ? "/orders" : "/dashboard";
@@ -52,17 +53,21 @@ function playNotificationSound(urgent = false) {
 
 export function NotificationsDropdown() {
     const router = useRouter();
+    const { hotel } = useAuth();
     const [open, setOpen] = useState(false);
     const [orders, setOrders] = useState<Order[]>([]);
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [loading, setLoading] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    const ordersEnabled = hotel?.features?.includes("DIGITAL_ORDERING") ?? false;
+    const requestsEnabled = hotel?.features?.includes("SERVICE_REQUESTS") ?? false;
+
     const loadNotifications = useCallback(async () => {
         try {
             const [ordersRes, requestsRes] = await Promise.all([
-                api.getOrders("PLACED"),
-                api.getServiceRequests(undefined, "SUBMITTED"),
+                ordersEnabled ? api.getOrders("PLACED") : Promise.resolve([] as Order[]),
+                requestsEnabled ? api.getServiceRequests(undefined, "SUBMITTED") : Promise.resolve([] as ServiceRequest[]),
             ]);
             setOrders(ordersRes);
             setRequests(requestsRes);
@@ -71,7 +76,7 @@ export function NotificationsDropdown() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [ordersEnabled, requestsEnabled]);
 
     useActivityStreamAdmin({
         onOrderNew: useCallback((order: Order) => {
@@ -135,19 +140,19 @@ export function NotificationsDropdown() {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setOpen((o) => !o)}
-                className="relative p-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary"
+                className="relative flex h-9 w-9 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary"
                 aria-label="Notifications"
             >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-[18px] h-[18px]" />
                 {count > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-primary rounded-full ring-2 ring-background">
+                    <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-[#1f2340] bg-brand rounded-full ring-2 ring-panel">
                         {count > 99 ? "99+" : count}
                     </span>
                 )}
             </button>
 
             {open && (
-                <div className="absolute top-full right-0 mt-2 w-[360px] max-h-[400px] overflow-hidden bg-card border border-border rounded-xl shadow-xl z-50 flex flex-col">
+                <div className="absolute top-full right-0 mt-3 w-[min(360px,calc(100vw-2rem))] max-h-[400px] overflow-hidden bg-panel border border-border rounded-2xl shadow-xl z-50 flex flex-col">
                     <div className="px-4 py-3 border-b border-border bg-secondary/30">
                         <h3 className="font-semibold text-foreground text-sm">Notifications</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">

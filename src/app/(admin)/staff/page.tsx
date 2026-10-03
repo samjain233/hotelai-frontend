@@ -202,8 +202,8 @@ function StaffContent() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Staff Management</h1>
-                    <p className="mt-1 text-muted-foreground">
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">Staff</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
                         {staff.length} team member{staff.length !== 1 ? "s" : ""}
                         {pending.length > 0 ? ` · ${pending.length} pending invite${pending.length !== 1 ? "s" : ""}` : ""}
                     </p>

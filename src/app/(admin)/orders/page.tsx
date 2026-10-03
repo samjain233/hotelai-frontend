@@ -72,8 +72,8 @@ function OrdersContent() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Orders</h1>
-                    <p className="text-muted-foreground mt-1">Manage guest orders and fulfillment pipeline</p>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">Orders</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Track every room order from placed to delivered.</p>
                 </div>
 
                 {/* Search & Filter Bar */}
