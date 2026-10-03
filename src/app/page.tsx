@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -96,7 +97,9 @@ function PrimaryButton({ href, children, className = "" }: { href: string; child
     );
 }
 
-export default function LandingPage() {
+export default async function LandingPage() {
+    const loggedIn = Boolean((await cookies()).get("auth_token")?.value);
+
     return (
         <div className="min-h-screen overflow-x-hidden bg-[#fff6e8] text-[#1f2340]">
             {/* ─── Navbar ─── */}
@@ -109,19 +112,30 @@ export default function LandingPage() {
                         <a href="#pricing" className="cursor-pointer transition-colors hover:text-[#1f2340]">Pricing</a>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Link
-                            href="/login"
-                            className="hidden cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold text-[#1f2340] transition-colors hover:bg-[#1f2340]/5 md:block"
-                        >
-                            Sign in
-                        </Link>
-                        <Link
-                            href="/register"
-                            className="cursor-pointer rounded-xl border-2 border-[#1f2340] bg-[#d4a853] px-3 py-1.5 text-sm font-semibold text-[#1f2340] transition-colors hover:bg-[#e0b866] sm:px-4 sm:py-2"
-                        >
-                            Get started
-                        </Link>
-                        <LandingMobileNav />
+                        {loggedIn ? (
+                            <Link
+                                href="/dashboard"
+                                className="cursor-pointer rounded-xl border-2 border-[#1f2340] bg-[#d4a853] px-3 py-1.5 text-sm font-semibold text-[#1f2340] transition-colors hover:bg-[#e0b866] sm:px-4 sm:py-2"
+                            >
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <>
+                                <Link
+                                    href="/login"
+                                    className="hidden cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold text-[#1f2340] transition-colors hover:bg-[#1f2340]/5 md:block"
+                                >
+                                    Sign in
+                                </Link>
+                                <Link
+                                    href="/register"
+                                    className="cursor-pointer rounded-xl border-2 border-[#1f2340] bg-[#d4a853] px-3 py-1.5 text-sm font-semibold text-[#1f2340] transition-colors hover:bg-[#e0b866] sm:px-4 sm:py-2"
+                                >
+                                    Get started
+                                </Link>
+                            </>
+                        )}
+                        <LandingMobileNav loggedIn={loggedIn} />
                     </div>
                 </nav>
             </header>
@@ -340,7 +354,9 @@ export default function LandingPage() {
                     <div className="flex items-center gap-6 text-sm text-[#4a4e6a]">
                         <Link href="/terms" className="flex min-h-[44px] cursor-pointer items-center hover:text-[#1f2340]">Terms</Link>
                         <Link href="/privacy" className="flex min-h-[44px] cursor-pointer items-center hover:text-[#1f2340]">Privacy</Link>
-                        <Link href="/login" className="flex min-h-[44px] cursor-pointer items-center hover:text-[#1f2340]">Hotel login</Link>
+                        <Link href={loggedIn ? "/dashboard" : "/login"} className="flex min-h-[44px] cursor-pointer items-center hover:text-[#1f2340]">
+                            {loggedIn ? "Dashboard" : "Hotel login"}
+                        </Link>
                     </div>
                     <p className="text-sm text-[#4a4e6a]">&copy; {new Date().getFullYear()} DreamCanvas</p>
                 </div>

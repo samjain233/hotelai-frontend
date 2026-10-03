@@ -10,7 +10,7 @@ const NAV_LINKS = [
     { href: "#pricing", label: "Pricing" },
 ];
 
-export function LandingMobileNav() {
+export function LandingMobileNav({ loggedIn = false }: { loggedIn?: boolean }) {
     const [open, setOpen] = useState(false);
 
     const close = useCallback(() => setOpen(false), []);
@@ -60,20 +60,32 @@ export function LandingMobileNav() {
                                 </a>
                             ))}
                             <div className="my-1 h-0.5 bg-[#1f2340]/10" />
-                            <Link
-                                href="/login"
-                                onClick={close}
-                                className="flex min-h-[44px] items-center rounded-xl px-3 text-base font-semibold text-[#1f2340] transition-colors hover:bg-[#fff6e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]"
-                            >
-                                Sign in
-                            </Link>
-                            <Link
-                                href="/register"
-                                onClick={close}
-                                className="mt-1 flex min-h-[44px] items-center justify-center rounded-xl border-2 border-[#1f2340] bg-[#d4a853] px-5 text-base font-semibold text-[#1f2340] transition-colors hover:bg-[#e0b866] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f2340]"
-                            >
-                                Get started free
-                            </Link>
+                            {loggedIn ? (
+                                <Link
+                                    href="/dashboard"
+                                    onClick={close}
+                                    className="mt-1 flex min-h-[44px] items-center justify-center rounded-xl border-2 border-[#1f2340] bg-[#d4a853] px-5 text-base font-semibold text-[#1f2340] transition-colors hover:bg-[#e0b866] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f2340]"
+                                >
+                                    Dashboard
+                                </Link>
+                            ) : (
+                                <>
+                                    <Link
+                                        href="/login"
+                                        onClick={close}
+                                        className="flex min-h-[44px] items-center rounded-xl px-3 text-base font-semibold text-[#1f2340] transition-colors hover:bg-[#fff6e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a853]"
+                                    >
+                                        Sign in
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        onClick={close}
+                                        className="mt-1 flex min-h-[44px] items-center justify-center rounded-xl border-2 border-[#1f2340] bg-[#d4a853] px-5 text-base font-semibold text-[#1f2340] transition-colors hover:bg-[#e0b866] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f2340]"
+                                    >
+                                        Get started free
+                                    </Link>
+                                </>
+                            )}
                         </div>
                     </nav>
                 </>
