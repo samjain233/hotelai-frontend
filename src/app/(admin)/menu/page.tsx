@@ -89,6 +89,50 @@ function DietMark({ preference }: { preference: MenuItem["dietaryPreference"] })
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 /** Max size for Gemini menu photo (base64 request body). */
 const MAX_MENU_PHOTO_BYTES = 8 * 1024 * 1024;
+/** Matches the API. Gemini bills 768px tiles; 1536px stays inside four tiles. */
+const MENU_SCAN_MAX_EDGE = 1536;
+const MENU_SCAN_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"]);
+
+function readBlobAsDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === "string") resolve(reader.result);
+            else reject(new Error("Could not read the image."));
+        };
+        reader.onerror = () => reject(new Error("Could not read the file."));
+        reader.readAsDataURL(blob);
+    });
+}
+
+function parseImageDataUrl(dataUrl: string): { mimeType: string; imageBase64: string } | null {
+    const match = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl);
+    if (!match) return null;
+    const declared = match[1].split(";")[0].trim().toLowerCase();
+    return { mimeType: declared === "image/jpg" ? "image/jpeg" : declared, imageBase64: match[2] };
+}
+
+/** Draw onto a small canvas so phones never allocate a full-resolution canvas. */
+async function shrinkMenuPhoto(file: File): Promise<Blob> {
+    const bitmap = await createImageBitmap(file);
+    try {
+        const longest = Math.max(bitmap.width, bitmap.height);
+        const scale = longest > MENU_SCAN_MAX_EDGE ? MENU_SCAN_MAX_EDGE / longest : 1;
+        const width = Math.max(1, Math.round(bitmap.width * scale));
+        const height = Math.max(1, Math.round(bitmap.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Could not prepare the image.");
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.8));
+        if (!blob) throw new Error("Could not prepare the image.");
+        return blob;
+    } finally {
+        bitmap.close();
+    }
+}
 
 const DELETE_CONFIRM_WORD = "delete";
 
@@ -557,62 +601,51 @@ export default function MenuPage() {
             toast.error("Image must be 8 MB or smaller for menu scanning.");
             return;
         }
+        if (file.type && !MENU_SCAN_MIME.has(file.type.toLowerCase())) {
+            toast.error("Use a JPEG, PNG, WebP, or GIF image.");
+            return;
+        }
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            const dataUrl = reader.result;
-            if (typeof dataUrl !== "string") return;
-            const m = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl);
-            if (!m) {
-                toast.error("Could not read the image.");
-                return;
-            }
-            const [, declaredMime, imageBase64] = m;
-            const resolvedMime =
-                declaredMime.split(";")[0].trim().toLowerCase() === "image/jpg"
-                    ? "image/jpeg"
-                    : declaredMime.split(";")[0].trim().toLowerCase();
-
-            const allowedMime = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-            if (!allowedMime.has(resolvedMime)) {
-                toast.error("Use a JPEG, PNG, WebP, or GIF image.");
-                return;
-            }
-
-            void (async () => {
-                setBulkImportError(null);
-                setExtractingMenuPhoto(true);
+        void (async () => {
+            setBulkImportError(null);
+            setExtractingMenuPhoto(true);
+            try {
+                let source: Blob = file;
                 try {
-                    const { items } = await api.extractMenuFromImage({
-                        imageBase64,
-                        mimeType: resolvedMime,
-                    });
-                    setBulkJsonText(JSON.stringify({ items }, null, 2));
-                    if (items.length === 0) {
-                        toast.message("No items detected", {
-                            description: "Try a straighter, well-lit photo of the full menu.",
-                        });
-                    } else {
-                        toast.success(`Extracted ${items.length} item(s)`, {
-                            description: "Review and edit the JSON, then tap Import items.",
-                        });
-                    }
-                } catch (err) {
-                    const raw = err instanceof Error ? err.message : "Menu scan failed";
-                    const msg = /too many requests/i.test(raw)
-                        ? "Menu scanning is limited to 10 photos every 15 minutes. Wait a few minutes and try again."
-                        : raw;
-                    setBulkImportError(msg);
-                    toast.error(msg);
-                } finally {
-                    setExtractingMenuPhoto(false);
+                    source = await shrinkMenuPhoto(file);
+                } catch {
+                    source = file;
                 }
-            })();
-        };
-        reader.onerror = () => {
-            toast.error("Could not read the file.");
-        };
-        reader.readAsDataURL(file);
+                const parsed = parseImageDataUrl(await readBlobAsDataUrl(source));
+                if (!parsed || !MENU_SCAN_MIME.has(parsed.mimeType)) {
+                    toast.error("Could not read the image.");
+                    return;
+                }
+                const { items } = await api.extractMenuFromImage({
+                    imageBase64: parsed.imageBase64,
+                    mimeType: parsed.mimeType,
+                });
+                setBulkJsonText(JSON.stringify({ items }, null, 2));
+                if (items.length === 0) {
+                    toast.message("No items detected", {
+                        description: "Try a straighter, well-lit photo of the full menu.",
+                    });
+                } else {
+                    toast.success(`Extracted ${items.length} item(s)`, {
+                        description: "Review and edit the JSON, then tap Import items.",
+                    });
+                }
+            } catch (err) {
+                const raw = err instanceof Error ? err.message : "Menu scan failed";
+                const msg = /too many requests/i.test(raw)
+                    ? "Menu scanning is limited to 10 photos every 15 minutes. Wait a few minutes and try again."
+                    : raw;
+                setBulkImportError(msg);
+                toast.error(msg);
+            } finally {
+                setExtractingMenuPhoto(false);
+            }
+        })();
     }
 
     async function toggleAvailable(item: MenuItem) {
@@ -1598,7 +1631,8 @@ export default function MenuPage() {
                                     </div>
                                     <p className="text-[11px] text-muted-foreground leading-relaxed">
                                         Upload a clear photo of your printed menu. Google Gemini turns it into JSON below — always
-                                        review prices and names before importing. You can scan up to 10 photos every 15 minutes.
+                                        review prices and names before importing. Large photos are reduced automatically.
+                                        You can scan up to 10 photos every 15 minutes.
                                         A large or busy photo can take <span className="text-foreground/90">30–90 seconds</span>; keep
                                         this tab open until it finishes.
                                     </p>
