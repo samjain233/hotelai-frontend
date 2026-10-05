@@ -40,6 +40,7 @@ import {
     Flame,
     Wine,
     UtensilsCrossed,
+    ChevronDown,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -63,6 +64,9 @@ const ISO_WEEKDAY_OPTIONS: { iso: number; label: string }[] = [
 function toggleIsoDay(list: number[], day: number): number[] {
     return list.includes(day) ? list.filter((d) => d !== day) : [...list, day].sort((a, b) => a - b);
 }
+
+const ITEM_LABEL = "mb-1.5 block text-sm font-medium text-foreground";
+const ITEM_FIELD = "h-11 rounded-xl border-border bg-background shadow-none focus:border-brand/60 focus:ring-brand/40";
 
 function formatMenuPrice(price: number | string) {
     const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
@@ -127,6 +131,7 @@ export default function MenuPage() {
     const [activeTab, setActiveTab] = useState<"items" | "categories">("items");
     const [search, setSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
+    const [showItemDetails, setShowItemDetails] = useState(false);
     const [togglingId, setTogglingId] = useState<string | null>(null);
     const [showItemModal, setShowItemModal] = useState(false);
     const [showCatModal, setShowCatModal] = useState(false);
@@ -314,6 +319,7 @@ export default function MenuPage() {
             chefRecommended: false,
             containsAlcohol: false,
         });
+        setShowItemDetails(false);
         setShowItemModal(true);
     }
 
@@ -411,6 +417,15 @@ export default function MenuPage() {
             chefRecommended: Boolean(item.chefRecommended),
             containsAlcohol: Boolean(item.containsAlcohol),
         });
+        setShowItemDetails(
+            (item.spiceLevel ?? "NONE") !== "NONE" ||
+                (item.allergens?.length ?? 0) > 0 ||
+                (item.dietaryTags?.length ?? 0) > 0 ||
+                (item.calories ?? 0) > 0 ||
+                Boolean(item.portionLabel) ||
+                Boolean(item.chefRecommended) ||
+                Boolean(item.containsAlcohol),
+        );
         setShowItemModal(true);
     }
     async function saveItem(e: React.FormEvent) {
@@ -980,514 +995,497 @@ export default function MenuPage() {
             <AnimatePresence>
                 {showItemModal && (
                     <div
-                        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md overflow-y-auto sm:py-8 pb-[env(safe-area-inset-bottom,0px)]"
+                        className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6"
                         onClick={() => closeItemModal()}
                     >
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                            initial={{ opacity: 0, scale: 0.97, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: 8 }}
-                            transition={{ duration: 0.2 }}
+                            exit={{ opacity: 0, scale: 0.97, y: 10 }}
+                            transition={{ duration: 0.18 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-4xl sm:my-auto bg-card border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-black/40 overflow-hidden max-h-[100dvh] sm:max-h-[min(100dvh,56rem)] flex flex-col"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="item-modal-title"
+                            className="flex max-h-[100dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl border border-border bg-panel shadow-2xl shadow-black/40 sm:my-auto sm:max-h-[min(92dvh,52rem)] sm:rounded-2xl"
                         >
-                            {/* Header */}
-                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent shrink-0">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold text-foreground tracking-tight">{editingItem ? "Edit Item" : "New Item"}</h3>
-                                    <button
-                                        onClick={() => closeItemModal()}
-                                        className="p-2 -m-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
+                            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
+                                <div className="min-w-0">
+                                    <h3 id="item-modal-title" className="truncate text-lg font-semibold tracking-tight text-foreground">
+                                        {editingItem ? `Edit ${editingItem.name}` : "Add a dish"}
+                                    </h3>
+                                    <p className="mt-0.5 text-sm text-muted-foreground">
+                                        {editingItem ? "Changes show on the guest menu as soon as you save." : "Name, price and category are all you need to start."}
+                                    </p>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => closeItemModal()}
+                                    className="-mr-2 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                                    aria-label="Close"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
                             </div>
 
-                            <form onSubmit={saveItem} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                                <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 overflow-y-auto min-h-0 max-h-[calc(100dvh-11rem)] sm:max-h-[calc(100vh-14rem)]">
-                                    {/* Left column: Basic info */}
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="text-sm font-medium text-foreground mb-1.5 block">Item name</label>
-                                            <Input placeholder="e.g. Masala Dosa" value={itemForm.name} onChange={e => setItemForm({ ...itemForm, name: e.target.value })} required className="h-11" />
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <form onSubmit={saveItem} className="flex min-h-0 flex-1 flex-col">
+                                <div className="min-h-0 flex-1 overflow-y-auto">
+                                    <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[260px_minmax(0,1fr)]">
+                                        {/* Photo, availability, diet */}
+                                        <div className="space-y-5 md:sticky md:top-0 md:self-start">
                                             <div>
-                                                <label className="text-sm font-medium text-foreground mb-1.5 block">Price (₹)</label>
-                                                <Input type="number" placeholder="0" value={itemForm.price} onChange={e => setItemForm({ ...itemForm, price: e.target.value })} required className="h-11" />
-                                            </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-foreground mb-1.5 block">Category</label>
-                                                <SearchableSelect
-                                                    options={categories.map((c) => ({ value: c.id, label: c.name }))}
-                                                    value={itemForm.categoryId}
-                                                    onChange={(v) => setItemForm({ ...itemForm, categoryId: v })}
-                                                    placeholder="Select category"
-                                                    searchPlaceholder="Type to search..."
-                                                    emptyMessage="No categories found"
-                                                    footerAction={{
-                                                        label: "Create new category",
-                                                        onClick: (searchQuery) => {
-                                                            selectNewCategoryInItemForm.current = true;
-                                                            setEditingCategory(null);
-                                                            setCatForm({
-                                                                name: searchQuery.trim(),
-                                                                icon: "",
-                                                                serveTimeStart: "",
-                                                                serveTimeEnd: "",
-                                                                serveDaysOfWeek: [],
-                                                            });
-                                                            setShowCatModal(true);
-                                                        },
+                                                <p className={ITEM_LABEL}>Photo</p>
+                                                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-label={itemForm.imageUrl ? "Change photo" : "Upload photo"}
+                                                    onKeyDown={(e) => {
+                                                        if ((e.key === "Enter" || e.key === " ") && !uploading) {
+                                                            e.preventDefault();
+                                                            fileInputRef.current?.click();
+                                                        }
                                                     }}
-                                                    className="[&>button]:h-11 [&>button]:rounded-xl"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-foreground mb-1.5 block">Description</label>
-                                            <textarea
-                                                placeholder="Brief description of the dish"
-                                                className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 min-h-[180px] resize-none transition-all"
-                                                value={itemForm.description}
-                                                onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-foreground">
-                                                    {itemForm.available ? "On menu" : "Out of stock"}
-                                                </p>
-
-                                                <p className="text-xs text-muted-foreground">
-                                                    {itemForm.available
-                                                        ? "Guests can see and order this dish"
-                                                        : "Guests can see the dish but cannot add it to the cart"}
-                                                </p>
-                                            </div>
-
-                                            <button
-                                                type="button"
-                                                role="switch"
-                                                aria-checked={itemForm.available}
-                                                aria-label={itemForm.available ? "Mark item as out of stock" : "Mark item as available"}
-                                                onClick={() =>
-                                                    setItemForm((prev) => ({
-                                                        ...prev,
-                                                        available: !prev.available,
-                                                    }))
-                                                }
-                                                className={cn(
-                                                    "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
-                                                    itemForm.available
-                                                        ? "border-emerald-500/40 bg-emerald-500"
-                                                        : "border-white/15 bg-secondary",
-                                                )}
-                                            >
-                                                <span
+                                                    onDragOver={(e) => {
+                                                        if (uploading) return;
+                                                        e.preventDefault();
+                                                        e.currentTarget.classList.add("!border-brand", "!bg-brand/10");
+                                                    }}
+                                                    onDragLeave={(e) => {
+                                                        e.preventDefault();
+                                                        e.currentTarget.classList.remove("!border-brand", "!bg-brand/10");
+                                                    }}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        e.currentTarget.classList.remove("!border-brand", "!bg-brand/10");
+                                                        if (uploading) return;
+                                                        const f = e.dataTransfer.files?.[0];
+                                                        if (f) void processImageFile(f);
+                                                    }}
+                                                    onClick={() => !uploading && fileInputRef.current?.click()}
                                                     className={cn(
-                                                        "h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200",
-                                                        itemForm.available
-                                                            ? "translate-x-6"
-                                                            : "translate-x-1",
+                                                        "group relative flex aspect-square w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-dashed text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
+                                                        uploading ? "pointer-events-none cursor-wait" : "cursor-pointer",
+                                                        itemForm.imageUrl
+                                                            ? "border-transparent bg-secondary"
+                                                            : "border-border bg-background hover:border-brand/60 hover:bg-brand/5",
                                                     )}
-                                                />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Right column: Image + Dietary */}
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-foreground block">Image</label>
-                                            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
-                                            <div
-                                                onDragOver={(e) => {
-                                                    if (uploading) return;
-                                                    e.preventDefault();
-                                                    e.currentTarget.classList.add("!border-primary/60", "!bg-primary/10");
-                                                }}
-                                                onDragLeave={(e) => {
-                                                    e.preventDefault();
-                                                    e.currentTarget.classList.remove("!border-primary/60", "!bg-primary/10");
-                                                }}
-                                                onDrop={(e) => {
-                                                    e.preventDefault();
-                                                    e.currentTarget.classList.remove("!border-primary/60", "!bg-primary/10");
-                                                    if (uploading) return;
-                                                    const f = e.dataTransfer.files?.[0];
-                                                    if (f) void processImageFile(f);
-                                                }}
-                                                onClick={() => !uploading && fileInputRef.current?.click()}
-                                                className={cn(
-                                                    "relative border-2 border-dashed rounded-xl p-4 sm:p-6 flex flex-col items-center justify-center gap-2 transition-all duration-200 min-h-[200px] sm:min-h-[280px] group overflow-hidden",
-                                                    uploading ? "cursor-wait pointer-events-none" : "cursor-pointer",
-                                                    itemForm.imageUrl
-                                                        ? "border-white/20 bg-secondary/40 hover:border-white/30"
-                                                        : "border-white/15 bg-white/[0.02] hover:border-primary/40 hover:bg-primary/5",
-                                                )}
-                                            >
-                                                {uploading && (
-                                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 rounded-xl bg-background/85 backdrop-blur-sm px-8">
-                                                        <Loader2 className="w-9 h-9 text-primary animate-spin" aria-hidden />
-                                                        <div className="w-full max-w-[240px] space-y-2">
-                                                            <div className="h-2.5 rounded-full bg-secondary overflow-hidden border border-border">
+                                                >
+                                                    {uploading && (
+                                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-background/85 px-6 backdrop-blur-sm">
+                                                            <Loader2 className="h-7 w-7 animate-spin text-brand" aria-hidden />
+                                                            <div className="h-1.5 w-full max-w-[180px] overflow-hidden rounded-full bg-secondary">
                                                                 <div
-                                                                    className="h-full rounded-full bg-gradient-to-r from-primary to-amber-500/90 transition-[width] duration-200 ease-out"
+                                                                    className="h-full rounded-full bg-brand transition-[width] duration-200 ease-out"
                                                                     style={{ width: `${Math.min(100, Math.max(uploadProgress, 2))}%` }}
                                                                 />
                                                             </div>
-                                                            <p className="text-xs text-center text-muted-foreground">
-                                                                Uploading image…{" "}
-                                                                {uploadProgress > 0 ? (
-                                                                    <span className="tabular-nums text-foreground/90">{uploadProgress}%</span>
-                                                                ) : null}
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Uploading{uploadProgress > 0 ? ` ${uploadProgress}%` : "…"}
                                                             </p>
                                                         </div>
-                                                    </div>
-                                                )}
-                                                {itemForm.imageUrl ? (
-                                                    <>
-                                                        <div className="w-full aspect-video rounded-lg overflow-hidden bg-secondary ring-1 ring-white/10">
-                                                            <img src={itemForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                                                        </div>
-                                                        <div
-                                                            className={cn(
-                                                                "absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity rounded-xl",
-                                                                uploading ? "opacity-0" : "opacity-0 group-hover:opacity-100",
-                                                            )}
-                                                        >
-                                                            <span className="px-4 py-2 bg-white/90 text-black text-sm font-medium rounded-lg">Change image</span>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                                                            <Upload className="w-6 h-6 text-primary" />
-                                                        </div>
-                                                        <div className="text-center space-y-0.5">
-                                                            <p className="text-sm font-medium text-foreground">Drop or click to upload</p>
-                                                            <p className="text-xs text-muted-foreground">JPEG, PNG, WebP • max 10 MB</p>
-                                                        </div>
-                                                    </>
+                                                    )}
+                                                    {itemForm.imageUrl ? (
+                                                        <>
+                                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                            <img src={itemForm.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                                                            <span
+                                                                className={cn(
+                                                                    "absolute inset-x-3 bottom-3 rounded-lg bg-black/70 py-2 text-xs font-medium text-white backdrop-blur-sm transition-opacity",
+                                                                    uploading ? "opacity-0" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
+                                                                )}
+                                                            >
+                                                                Change photo
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-brand ring-1 ring-brand/25">
+                                                                <Upload className="h-5 w-5" />
+                                                            </span>
+                                                            <span className="text-sm font-medium text-foreground">Upload a photo</span>
+                                                            <span className="px-4 text-xs text-muted-foreground">Drag and drop, or click. JPEG, PNG or WebP up to 10 MB.</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                {itemForm.imageUrl && !uploading && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setItemForm({ ...itemForm, imageUrl: "" })}
+                                                        className="mt-2 cursor-pointer text-xs font-medium text-muted-foreground hover:text-red-500"
+                                                    >
+                                                        Remove photo
+                                                    </button>
                                                 )}
                                             </div>
-                                        </div>
 
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-foreground block">Dietary preference</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {(
-                                                    [
-                                                        {
-                                                            value: "NONE" as const,
-                                                            label: "None",
-                                                            icon: null,
-                                                            selected:
-                                                                "border-white/70 bg-white/20 text-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_8px_24px_rgba(0,0,0,0.45)] ring-2 ring-white/50 ring-offset-2 ring-offset-card scale-[1.02]",
-                                                            idle: "border-white/10 bg-white/[0.04] text-muted-foreground hover:border-white/20 hover:bg-white/[0.08]",
-                                                        },
-                                                        {
-                                                            value: "VEG" as const,
-                                                            label: "Veg",
-                                                            icon: <Leaf className="w-4 h-4" />,
-                                                            selected:
-                                                                "border-emerald-400 bg-emerald-500/35 text-emerald-200 shadow-[0_0_0_1px_rgba(52,211,153,0.5),0_8px_24px_rgba(6,78,59,0.5)] ring-2 ring-emerald-400/80 ring-offset-2 ring-offset-card scale-[1.02]",
-                                                            idle: "border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-500/55 hover:border-emerald-500/40 hover:text-emerald-400/80",
-                                                        },
-                                                        {
-                                                            value: "NON_VEG" as const,
-                                                            label: "Non-Veg",
-                                                            icon: <Beef className="w-4 h-4" />,
-                                                            selected:
-                                                                "border-red-400 bg-red-500/35 text-red-200 shadow-[0_0_0_1px_rgba(248,113,113,0.5),0_8px_24px_rgba(127,29,29,0.45)] ring-2 ring-red-400/80 ring-offset-2 ring-offset-card scale-[1.02]",
-                                                            idle: "border-red-500/20 bg-red-500/[0.06] text-red-500/55 hover:border-red-500/40 hover:text-red-400/80",
-                                                        },
-                                                        {
-                                                            value: "EGGITARIAN" as const,
-                                                            label: "Egg",
-                                                            icon: <Egg className="w-4 h-4" />,
-                                                            selected:
-                                                                "border-amber-400 bg-amber-500/35 text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_8px_24px_rgba(120,53,15,0.45)] ring-2 ring-amber-400/80 ring-offset-2 ring-offset-card scale-[1.02]",
-                                                            idle: "border-amber-500/20 bg-amber-500/[0.06] text-amber-500/55 hover:border-amber-500/40 hover:text-amber-400/80",
-                                                        },
-                                                    ] as const
-                                                ).map((opt) => {
-                                                    const selected = itemForm.dietaryPreference === opt.value;
-                                                    return (
-                                                        <button
-                                                            key={opt.value}
-                                                            type="button"
-                                                            aria-pressed={selected}
-                                                            onClick={() => setItemForm({ ...itemForm, dietaryPreference: opt.value })}
-                                                            className={cn(
-                                                                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all duration-200",
-                                                                selected ? opt.selected : opt.idle,
-                                                            )}
-                                                        >
-                                                            {selected && (
-                                                                <Check className="w-4 h-4 shrink-0 stroke-[3] opacity-95" aria-hidden />
-                                                            )}
-                                                            {opt.icon}
-                                                            {opt.label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
+                                            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3">
+                                                <span className="min-w-0">
+                                                    <span className="block text-sm font-medium text-foreground">
+                                                        {itemForm.available ? "On the menu" : "Sold out"}
+                                                    </span>
+                                                    <span className="block text-xs text-muted-foreground">
+                                                        {itemForm.available ? "Guests can order it" : "Shown, but guests can't order it"}
+                                                    </span>
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    role="switch"
+                                                    aria-checked={itemForm.available}
+                                                    aria-label={itemForm.available ? "Mark sold out" : "Put back on the menu"}
+                                                    onClick={() => setItemForm((prev) => ({ ...prev, available: !prev.available }))}
+                                                    className={cn(
+                                                        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
+                                                        itemForm.available ? "bg-emerald-500" : "bg-secondary",
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
+                                                            itemForm.available ? "translate-x-[22px]" : "translate-x-0.5",
+                                                        )}
+                                                    />
+                                                </button>
+                                            </label>
 
-                                        <div className="space-y-4 border-t border-white/10 pt-5">
                                             <div>
-                                                <p className="text-sm font-medium text-foreground">Guest menu details</p>
-                                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                                    Shown on the guest menu only when{" "}
-                                                    <strong className="font-medium text-foreground">Menu design → Show extra dish details</strong>{" "}
-                                                    is enabled.
-                                                </p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-foreground block">Spice level</label>
-                                                <div className="flex flex-wrap gap-2">
+                                                <p className={ITEM_LABEL}>Food type</p>
+                                                <div role="radiogroup" aria-label="Food type" className="grid grid-cols-2 gap-2">
                                                     {(
                                                         [
-                                                            { value: "NONE" as const, label: "None" },
-                                                            { value: "MILD" as const, label: "Mild", icon: <Flame className="h-3.5 w-3.5" /> },
-                                                            { value: "MEDIUM" as const, label: "Medium", icon: <Flame className="h-3.5 w-3.5" /> },
-                                                            { value: "HOT" as const, label: "Hot", icon: <Flame className="h-3.5 w-3.5" /> },
+                                                            { value: "VEG", label: "Veg", icon: <Leaf className="h-4 w-4" />, on: "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
+                                                            { value: "NON_VEG", label: "Non-veg", icon: <Beef className="h-4 w-4" />, on: "border-red-500 bg-red-500/10 text-red-700 dark:text-red-300" },
+                                                            { value: "EGGITARIAN", label: "Egg", icon: <Egg className="h-4 w-4" />, on: "border-amber-500 bg-amber-500/10 text-amber-800 dark:text-amber-300" },
+                                                            { value: "NONE", label: "Not set", icon: null, on: "border-foreground/40 bg-secondary text-foreground" },
                                                         ] as const
                                                     ).map((opt) => {
-                                                        const selected = itemForm.spiceLevel === opt.value;
+                                                        const selected = itemForm.dietaryPreference === opt.value;
                                                         return (
                                                             <button
                                                                 key={opt.value}
                                                                 type="button"
-                                                                aria-pressed={selected}
-                                                                onClick={() => setItemForm({ ...itemForm, spiceLevel: opt.value })}
+                                                                role="radio"
+                                                                aria-checked={selected}
+                                                                onClick={() => setItemForm({ ...itemForm, dietaryPreference: opt.value })}
                                                                 className={cn(
-                                                                    "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors",
-                                                                    selected
-                                                                        ? "border-amber-500/60 bg-amber-500/20 text-amber-100"
-                                                                        : "border-white/10 bg-white/[0.04] text-muted-foreground hover:border-white/20",
+                                                                    "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-xl border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
+                                                                    selected ? opt.on : "border-border bg-background text-muted-foreground hover:text-foreground",
                                                                 )}
                                                             >
-                                                                {"icon" in opt && opt.icon}
+                                                                {opt.icon}
                                                                 {opt.label}
                                                             </button>
                                                         );
                                                     })}
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-foreground block">Allergens</label>
+                                        </div>
 
-                                                <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
-                                                    {allergenTags.map((tag) => {
-                                                        const on = itemForm.allergenTagIds.includes(tag.id);
-                                                        const isCustom = Boolean(tag.hotelId);
+                                        {/* Basics + optional details */}
+                                        <div className="min-w-0 space-y-5">
+                                            <div>
+                                                <label htmlFor="item-name" className={ITEM_LABEL}>
+                                                    Dish name
+                                                </label>
+                                                <Input
+                                                    id="item-name"
+                                                    placeholder="e.g. Masala Dosa"
+                                                    value={itemForm.name}
+                                                    onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                                                    required
+                                                    autoFocus={!editingItem}
+                                                    className={ITEM_FIELD}
+                                                />
+                                            </div>
 
-                                                        return (
-                                                            <div key={tag.id} className="group relative">
-                                                                <button
-                                                                    type="button"
-                                                                    aria-pressed={on}
-                                                                    onClick={() =>
-                                                                        setItemForm({
-                                                                            ...itemForm,
-                                                                            allergenTagIds: toggleNumberList(
-                                                                                itemForm.allergenTagIds,
-                                                                                tag.id,
-                                                                            ),
-                                                                        })
-                                                                    }
+                                            <div className="grid gap-4 sm:grid-cols-2">
+                                                <div>
+                                                    <label htmlFor="item-price" className={ITEM_LABEL}>
+                                                        Price
+                                                    </label>
+                                                    <div className="relative">
+                                                        <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                                                        <Input
+                                                            id="item-price"
+                                                            type="number"
+                                                            inputMode="decimal"
+                                                            min="0"
+                                                            step="0.01"
+                                                            placeholder="250"
+                                                            value={itemForm.price}
+                                                            onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
+                                                            required
+                                                            className={cn(ITEM_FIELD, "pl-8 tabular-nums")}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className={ITEM_LABEL}>Category</p>
+                                                    <SearchableSelect
+                                                        options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                                                        value={itemForm.categoryId}
+                                                        onChange={(v) => setItemForm({ ...itemForm, categoryId: v })}
+                                                        placeholder="Select category"
+                                                        searchPlaceholder="Type to search..."
+                                                        emptyMessage="No categories found"
+                                                        footerAction={{
+                                                            label: "Create new category",
+                                                            onClick: (searchQuery) => {
+                                                                selectNewCategoryInItemForm.current = true;
+                                                                setEditingCategory(null);
+                                                                setCatForm({
+                                                                    name: searchQuery.trim(),
+                                                                    icon: "",
+                                                                    serveTimeStart: "",
+                                                                    serveTimeEnd: "",
+                                                                    serveDaysOfWeek: [],
+                                                                });
+                                                                setShowCatModal(true);
+                                                            },
+                                                        }}
+                                                        className="[&>button]:h-11 [&>button]:rounded-xl [&>button]:border-border [&>button]:bg-background"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                                                    <label htmlFor="item-description" className="text-sm font-medium text-foreground">
+                                                        Description
+                                                    </label>
+                                                    <span className="text-xs tabular-nums text-muted-foreground">{itemForm.description.length} characters</span>
+                                                </div>
+                                                <textarea
+                                                    id="item-description"
+                                                    placeholder="What's in it, how it's cooked, what it's served with."
+                                                    rows={4}
+                                                    className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-3 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40"
+                                                    value={itemForm.description}
+                                                    onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                                                />
+                                                <p className="mt-1 text-xs text-muted-foreground">Guests see the first two lines in the menu list.</p>
+                                            </div>
+
+                                            <div className="rounded-xl border border-border">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowItemDetails((open) => !open)}
+                                                    aria-expanded={showItemDetails}
+                                                    className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left"
+                                                >
+                                                    <span className="min-w-0">
+                                                        <span className="block text-sm font-medium text-foreground">More details</span>
+                                                        <span className="block text-xs text-muted-foreground">
+                                                            Spice, allergens, tags, calories. Shown when Menu design → Show extra dish details is on.
+                                                        </span>
+                                                    </span>
+                                                    <ChevronDown
+                                                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", showItemDetails && "rotate-180")}
+                                                    />
+                                                </button>
+
+                                                {showItemDetails && (
+                                                    <div className="space-y-5 border-t border-border px-4 py-4">
+                                                        <div>
+                                                            <p className={ITEM_LABEL}>Spice level</p>
+                                                            <div className="inline-flex rounded-xl border border-border bg-background p-1">
+                                                                {(
+                                                                    [
+                                                                        { value: "NONE", label: "None", flames: 0 },
+                                                                        { value: "MILD", label: "Mild", flames: 1 },
+                                                                        { value: "MEDIUM", label: "Medium", flames: 2 },
+                                                                        { value: "HOT", label: "Hot", flames: 3 },
+                                                                    ] as const
+                                                                ).map((opt) => {
+                                                                    const selected = itemForm.spiceLevel === opt.value;
+                                                                    return (
+                                                                        <button
+                                                                            key={opt.value}
+                                                                            type="button"
+                                                                            aria-pressed={selected}
+                                                                            onClick={() => setItemForm({ ...itemForm, spiceLevel: opt.value })}
+                                                                            className={cn(
+                                                                                "flex h-8 cursor-pointer items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors",
+                                                                                selected ? "bg-secondary text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                                                                            )}
+                                                                        >
+                                                                            {Array.from({ length: opt.flames }).map((_, i) => (
+                                                                                <Flame key={i} className={cn("h-3 w-3", selected ? "text-orange-500" : "")} />
+                                                                            ))}
+                                                                            <span className={opt.flames ? "ml-0.5" : ""}>{opt.label}</span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+
+                                                        {(
+                                                            [
+                                                                {
+                                                                    type: "ALLERGEN",
+                                                                    title: "Allergens",
+                                                                    addLabel: "Add allergen",
+                                                                    tags: allergenTags,
+                                                                    selectedIds: itemForm.allergenTagIds,
+                                                                    on: "border-rose-500/60 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+                                                                    toggle: (id: number) =>
+                                                                        setItemForm({ ...itemForm, allergenTagIds: toggleNumberList(itemForm.allergenTagIds, id) }),
+                                                                },
+                                                                {
+                                                                    type: "DIETARY",
+                                                                    title: "Dietary tags",
+                                                                    addLabel: "Add tag",
+                                                                    tags: dietaryTags,
+                                                                    selectedIds: itemForm.dietaryTagIds,
+                                                                    on: "border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+                                                                    toggle: (id: number) =>
+                                                                        setItemForm({ ...itemForm, dietaryTagIds: toggleNumberList(itemForm.dietaryTagIds, id) }),
+                                                                },
+                                                            ] as const
+                                                        ).map((group) => (
+                                                            <div key={group.type}>
+                                                                <p className={ITEM_LABEL}>
+                                                                    {group.title}
+                                                                    {group.selectedIds.length > 0 && (
+                                                                        <span className="ml-1.5 font-normal text-muted-foreground">· {group.selectedIds.length} selected</span>
+                                                                    )}
+                                                                </p>
+                                                                <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto pr-1 pt-1">
+                                                                    {group.tags.map((tag) => {
+                                                                        const on = group.selectedIds.includes(tag.id);
+                                                                        const isCustom = Boolean(tag.hotelId);
+                                                                        return (
+                                                                            <div key={tag.id} className="group relative">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    aria-pressed={on}
+                                                                                    onClick={() => group.toggle(tag.id)}
+                                                                                    className={cn(
+                                                                                        "flex h-8 cursor-pointer items-center gap-1 rounded-full border px-3 text-xs font-medium capitalize transition-colors",
+                                                                                        on ? group.on : "border-border bg-background text-muted-foreground hover:text-foreground",
+                                                                                    )}
+                                                                                >
+                                                                                    {on && <Check className="h-3 w-3" aria-hidden />}
+                                                                                    {tag.name.replace(/_/g, " ").toLowerCase()}
+                                                                                </button>
+                                                                                {isCustom && (
+                                                                                    <div className="absolute -right-1 -top-2 flex gap-1 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                openEditTag(tag);
+                                                                                            }}
+                                                                                            aria-label={`Edit ${tag.name}`}
+                                                                                            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-border bg-panel text-muted-foreground shadow-sm hover:text-foreground"
+                                                                                        >
+                                                                                            <Edit2 className="h-3 w-3" />
+                                                                                        </button>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                openDeleteTagModal(tag);
+                                                                                            }}
+                                                                                            aria-label={`Delete ${tag.name}`}
+                                                                                            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-border bg-panel text-red-500 shadow-sm hover:bg-red-500 hover:text-white"
+                                                                                        >
+                                                                                            <Trash2 className="h-3 w-3" />
+                                                                                        </button>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => openCreateTag(group.type)}
+                                                                        className="flex h-8 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border px-3 text-xs font-medium text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+                                                                    >
+                                                                        <Plus className="h-3 w-3" /> {group.addLabel}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+
+                                                        <div className="grid gap-4 sm:grid-cols-2">
+                                                            <div>
+                                                                <label className={ITEM_LABEL} htmlFor="item-calories">
+                                                                    Calories
+                                                                </label>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        id="item-calories"
+                                                                        inputMode="numeric"
+                                                                        value={itemForm.calories}
+                                                                        onChange={(e) => setItemForm({ ...itemForm, calories: e.target.value.replace(/\D/g, "") })}
+                                                                        placeholder="420"
+                                                                        className={cn(ITEM_FIELD, "pr-12 tabular-nums")}
+                                                                    />
+                                                                    <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">kcal</span>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label className={ITEM_LABEL} htmlFor="item-portion">
+                                                                    Portion
+                                                                </label>
+                                                                <Input
+                                                                    id="item-portion"
+                                                                    value={itemForm.portionLabel}
+                                                                    onChange={(e) => setItemForm({ ...itemForm, portionLabel: e.target.value })}
+                                                                    placeholder="Serves 2"
+                                                                    maxLength={80}
+                                                                    className={ITEM_FIELD}
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid gap-2 sm:grid-cols-2">
+                                                            {(
+                                                                [
+                                                                    {
+                                                                        key: "chefRecommended",
+                                                                        label: "Chef's pick",
+                                                                        icon: <Sparkles className="h-4 w-4 text-brand" aria-hidden />,
+                                                                    },
+                                                                    {
+                                                                        key: "containsAlcohol",
+                                                                        label: "Contains alcohol",
+                                                                        icon: <Wine className="h-4 w-4 text-muted-foreground" aria-hidden />,
+                                                                    },
+                                                                ] as const
+                                                            ).map((flag) => (
+                                                                <label
+                                                                    key={flag.key}
                                                                     className={cn(
-                                                                        "rounded-md border px-2 py-1 text-[10px] font-medium uppercase tracking-wide",
-                                                                        on
-                                                                            ? "border-rose-500/50 bg-rose-500/15 text-rose-100"
-                                                                            : "border-white/10 text-muted-foreground hover:border-white/25",
+                                                                        "flex h-11 cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 text-sm text-foreground transition-colors",
+                                                                        itemForm[flag.key] ? "border-brand/60 bg-brand/5" : "border-border bg-background",
                                                                     )}
                                                                 >
-                                                                    {tag.name.replace(/_/g, " ")}
-                                                                </button>
-
-                                                                {isCustom && (
-                                                                    <div className="absolute -right-1 -top-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                openEditTag(tag);
-                                                                            }}
-                                                                            aria-label={`Edit ${tag.name}`}
-                                                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm hover:bg-secondary hover:text-foreground"
-                                                                        >
-                                                                            <Edit2 className="h-3.5 w-3.5" />
-                                                                        </button>
-
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                openDeleteTagModal(tag);
-                                                                            }}
-                                                                            aria-label={`Delete ${tag.name}`}
-                                                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-destructive/30 bg-card text-destructive shadow-sm hover:bg-destructive hover:text-destructive-foreground"
-                                                                        >
-                                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openCreateTag("ALLERGEN")}
-                                                        className="rounded-md border border-dashed border-white/20 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:border-white/40 hover:text-foreground"
-                                                    >
-                                                        + Add allergen
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-foreground block">
-                                                    Dietary tags
-                                                </label>
-
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {dietaryTags.map((tag) => {
-                                                        const on = itemForm.dietaryTagIds.includes(tag.id);
-                                                        const isCustom = Boolean(tag.hotelId);
-
-                                                        return (
-                                                            <div key={tag.id} className="group relative">
-                                                                <button
-                                                                    type="button"
-                                                                    aria-pressed={on}
-                                                                    onClick={() =>
-                                                                        setItemForm({
-                                                                            ...itemForm,
-                                                                            dietaryTagIds: toggleNumberList(
-                                                                                itemForm.dietaryTagIds,
-                                                                                tag.id,
-                                                                            ),
-                                                                        })
-                                                                    }
-                                                                    className={cn(
-                                                                        "rounded-md border px-2 py-1 text-[10px] font-medium",
-                                                                        on
-                                                                            ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100"
-                                                                            : "border-white/10 text-muted-foreground hover:border-white/25",
-                                                                    )}
-                                                                >
-                                                                    {tag.name.replace(/_/g, " ")}
-                                                                </button>
-
-                                                                {isCustom && (
-                                                                    <div className="absolute -right-1 -top-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                openEditTag(tag);
-                                                                            }}
-                                                                            aria-label={`Edit ${tag.name}`}
-                                                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm hover:bg-secondary hover:text-foreground"
-                                                                        >
-                                                                            <Edit2 className="h-3.5 w-3.5" />
-                                                                        </button>
-
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                openDeleteTagModal(tag);
-                                                                            }}
-                                                                            aria-label={`Delete ${tag.name}`}
-                                                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-destructive/30 bg-card text-destructive shadow-sm hover:bg-destructive hover:text-destructive-foreground"
-                                                                        >
-                                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openCreateTag("DIETARY")}
-                                                        className="rounded-md border border-dashed border-white/20 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:border-white/40 hover:text-foreground"
-                                                    >
-                                                        + Add dietary tag
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="grid gap-3 sm:grid-cols-2">
-                                                <div className="space-y-1.5">
-                                                    <label className="text-sm font-medium text-foreground block" htmlFor="item-calories">
-                                                        Calories (optional)
-                                                    </label>
-                                                    <Input
-                                                        id="item-calories"
-                                                        inputMode="numeric"
-                                                        value={itemForm.calories}
-                                                        onChange={(e) => setItemForm({ ...itemForm, calories: e.target.value.replace(/\D/g, "") })}
-                                                        placeholder="e.g. 420"
-                                                        className="h-10 bg-background/60"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    <label className="text-sm font-medium text-foreground block" htmlFor="item-portion">
-                                                        Portion / serving note
-                                                    </label>
-                                                    <Input
-                                                        id="item-portion"
-                                                        value={itemForm.portionLabel}
-                                                        onChange={(e) => setItemForm({ ...itemForm, portionLabel: e.target.value })}
-                                                        placeholder="e.g. Serves 2"
-                                                        maxLength={80}
-                                                        className="h-10 bg-background/60"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                                                <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={itemForm.chefRecommended}
-                                                        onChange={(e) => setItemForm({ ...itemForm, chefRecommended: e.target.checked })}
-                                                        className="h-4 w-4 rounded border-border text-primary"
-                                                    />
-                                                    <Sparkles className="h-4 w-4 text-amber-400/90" aria-hidden />
-                                                    Chef&apos;s pick
-                                                </label>
-                                                <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={itemForm.containsAlcohol}
-                                                        onChange={(e) => setItemForm({ ...itemForm, containsAlcohol: e.target.checked })}
-                                                        className="h-4 w-4 rounded border-border text-primary"
-                                                    />
-                                                    <Wine className="h-4 w-4 text-muted-foreground" aria-hidden />
-                                                    Contains alcohol
-                                                </label>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={itemForm[flag.key]}
+                                                                        onChange={(e) => setItemForm({ ...itemForm, [flag.key]: e.target.checked })}
+                                                                        className="h-4 w-4 cursor-pointer rounded accent-[var(--color-brand)]"
+                                                                    />
+                                                                    {flag.icon}
+                                                                    {flag.label}
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Actions - full width footer */}
-                                <div className="flex gap-3 px-4 sm:px-6 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:pb-6 pt-4 sm:pt-5 border-t border-white/10 shrink-0 bg-card">
-                                    <Button type="button" variant="outline" className="flex-1 h-11 rounded-xl" onClick={closeItemModal}>
+                                <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-panel px-5 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-4 sm:px-6">
+                                    <Button type="button" variant="ghost" className="h-10 px-4" onClick={closeItemModal}>
                                         Cancel
                                     </Button>
-                                    <Button
-                                        type="submit"
-                                        loading={saving}
-                                        disabled={uploading}
-                                        className="flex-1 h-11 rounded-xl shadow-lg shadow-primary/20"
-                                    >
-                                        Save Changes
+                                    <Button type="submit" loading={saving} disabled={uploading} className="h-10 min-w-[140px] px-5">
+                                        {uploading ? "Uploading photo…" : editingItem ? "Save changes" : "Add dish"}
                                     </Button>
                                 </div>
                             </form>
