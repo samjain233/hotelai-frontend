@@ -20,7 +20,7 @@ function servicesNavPath() {
 const NOTIFICATION_SOUND_KEY = "hotel-admin-notification-sound";
 
 /** Play a gentle notification sound when a new order/request arrives (respects Settings) */
-function playNotificationSound(urgent = false) {
+export function playNotificationSound(urgent = false) {
     if (typeof window !== "undefined" && localStorage.getItem(NOTIFICATION_SOUND_KEY) === "false") return;
     try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
