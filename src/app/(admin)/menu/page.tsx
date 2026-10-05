@@ -598,7 +598,10 @@ export default function MenuPage() {
                         });
                     }
                 } catch (err) {
-                    const msg = err instanceof Error ? err.message : "Menu scan failed";
+                    const raw = err instanceof Error ? err.message : "Menu scan failed";
+                    const msg = /too many requests/i.test(raw)
+                        ? "Menu scanning is limited to 10 photos every 15 minutes. Wait a few minutes and try again."
+                        : raw;
                     setBulkImportError(msg);
                     toast.error(msg);
                 } finally {
@@ -1595,10 +1598,9 @@ export default function MenuPage() {
                                     </div>
                                     <p className="text-[11px] text-muted-foreground leading-relaxed">
                                         Upload a clear photo of your printed menu. Google Gemini turns it into JSON below — always
-                                        review prices and names before importing. Requires{" "}
-                                        <code className="text-foreground">GEMINI_API_KEY</code> on your API server. A large or busy
-                                        photo can take <span className="text-foreground/90">30–90 seconds</span>; keep this tab open
-                                        until it finishes.
+                                        review prices and names before importing. You can scan up to 10 photos every 15 minutes.
+                                        A large or busy photo can take <span className="text-foreground/90">30–90 seconds</span>; keep
+                                        this tab open until it finishes.
                                     </p>
                                     <input
                                         ref={bulkMenuPhotoInputRef}
