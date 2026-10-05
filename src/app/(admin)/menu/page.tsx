@@ -64,6 +64,24 @@ function toggleIsoDay(list: number[], day: number): number[] {
     return list.includes(day) ? list.filter((d) => d !== day) : [...list, day].sort((a, b) => a - b);
 }
 
+function formatMenuPrice(price: number | string) {
+    const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
+    const hasDecimals = n % 1 !== 0;
+    return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: hasDecimals ? 2 : 0, maximumFractionDigits: 2 })}`;
+}
+
+function DietMark({ preference }: { preference: MenuItem["dietaryPreference"] }) {
+    if (!preference || preference === "NONE") return null;
+    const tone = preference === "VEG" ? "text-emerald-600" : preference === "NON_VEG" ? "text-red-600" : "text-amber-500";
+    const label = preference === "VEG" ? "Veg" : preference === "NON_VEG" ? "Non-veg" : "Contains egg";
+    return (
+        <span className={cn("inline-flex h-5 w-5 items-center justify-center rounded border-2 border-current bg-white", tone)} title={label}>
+            <span className="h-2 w-2 rounded-full bg-current" />
+            <span className="sr-only">{label}</span>
+        </span>
+    );
+}
+
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 /** Max size for Gemini menu photo (base64 request body). */
 const MAX_MENU_PHOTO_BYTES = 8 * 1024 * 1024;
@@ -108,6 +126,8 @@ export default function MenuPage() {
     const [tagSaving, setTagSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<"items" | "categories">("items");
     const [search, setSearch] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState<string>("all");
+    const [togglingId, setTogglingId] = useState<string | null>(null);
     const [showItemModal, setShowItemModal] = useState(false);
     const [showCatModal, setShowCatModal] = useState(false);
     const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
@@ -577,168 +597,309 @@ export default function MenuPage() {
         reader.readAsDataURL(file);
     }
 
-    const filteredItems = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.description?.toLowerCase().includes(search.toLowerCase()));
+    async function toggleAvailable(item: MenuItem) {
+        const next = item.available === false;
+        setTogglingId(item.id);
+        try {
+            await api.updateMenuItem(item.id, { available: next });
+            await invalidateMenuCache();
+            toast.success(next ? `${item.name} is back on the menu` : `${item.name} marked sold out`);
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Could not update availability");
+        } finally {
+            setTogglingId(null);
+        }
+    }
+
+    const query = search.trim().toLowerCase();
+    const categoryName = new Map(categories.map((c) => [c.id, c.name]));
+    const soldOutCount = items.filter((i) => i.available === false).length;
+    const filteredItems = items.filter(
+        (i) =>
+            (categoryFilter === "all" || i.categoryId === categoryFilter) &&
+            (!query || i.name.toLowerCase().includes(query) || i.description?.toLowerCase().includes(query)),
+    );
+
+    function openNewCategory() {
+        selectNewCategoryInItemForm.current = false;
+        setEditingCategory(null);
+        setCatForm({ name: "", icon: "", serveTimeStart: "", serveTimeEnd: "", serveDaysOfWeek: [] });
+        setShowCatModal(true);
+    }
+
+    function openBulkImport() {
+        setBulkImportError(null);
+        setShowBulkImportModal(true);
+    }
 
     if (loading) return <AdminPageSkeleton cardCount={9} />;
 
     return (
         <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-[env(safe-area-inset-bottom,0px)]">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div className="min-w-0">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">Menu</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {items.length} dish{items.length !== 1 ? "es" : ""} across {categories.length} categor{categories.length !== 1 ? "ies" : "y"}
+                        {soldOutCount > 0 ? ` · ${soldOutCount} sold out` : ""}
                     </p>
                 </div>
-                <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 w-full md:w-auto md:justify-end">
-                    <Button
-                        variant="outline"
-                        className="w-full sm:w-auto min-h-11 justify-center sm:justify-center"
-                        onClick={() => {
-                            selectNewCategoryInItemForm.current = false;
-                            setEditingCategory(null);
-                            setCatForm({ name: "", icon: "", serveTimeStart: "", serveTimeEnd: "", serveDaysOfWeek: [] });
-                            setShowCatModal(true);
-                        }}
-                    >
-                        <FolderOpen className="w-4 h-4 mr-2 shrink-0" /> New Category
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                    <Button variant="ghost" className="h-10 justify-center text-muted-foreground hover:text-foreground" onClick={openBulkImport}>
+                        <FileJson2 className="mr-2 h-4 w-4 shrink-0" /> Import JSON
                     </Button>
-                    <Button className="w-full sm:w-auto min-h-11 justify-center" onClick={openNewItem}>
-                        <Plus className="w-4 h-4 mr-2 shrink-0" /> Add Item
+                    <Button variant="outline" className="h-10 justify-center border-border hover:bg-secondary" onClick={openNewCategory}>
+                        <FolderOpen className="mr-2 h-4 w-4 shrink-0" /> New category
                     </Button>
-                    <Button
-                        variant="outline"
-                        className="w-full sm:w-auto min-h-11 justify-center"
-                        onClick={() => {
-                            setBulkImportError(null);
-                            setShowBulkImportModal(true);
-                        }}
-                    >
-                        <FileJson2 className="w-4 h-4 mr-2 shrink-0" /> Import JSON
+                    <Button className="col-span-2 h-10 justify-center sm:col-span-1" onClick={openNewItem}>
+                        <Plus className="mr-2 h-4 w-4 shrink-0" /> Add item
                     </Button>
                 </div>
             </div>
 
             {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between sm:items-end border-b border-border pb-1">
-                <div className="flex gap-6 sm:gap-8 shrink-0">
-                    {(["items", "categories"] as const).map((tab) => (
-                        <button
-                            key={tab}
-                            type="button"
-                            onClick={() => setActiveTab(tab)}
-                            className={cn(
-                                "text-sm font-medium min-h-11 py-2 border-b-2 transition-colors capitalize -mb-px",
-                                activeTab === tab
-                                    ? "border-primary text-primary"
-                                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
-                            )}
-                        >
-                            {tab}
-                        </button>
-                    ))}
+            <div className="space-y-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div role="tablist" aria-label="Menu view" className="inline-flex w-full rounded-xl border border-border bg-panel p-1 sm:w-auto">
+                        {(
+                            [
+                                { id: "items", label: "Dishes", count: items.length },
+                                { id: "categories", label: "Categories", count: categories.length },
+                            ] as const
+                        ).map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={cn(
+                                    "flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors sm:flex-none",
+                                    activeTab === tab.id
+                                        ? "bg-secondary text-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground",
+                                )}
+                            >
+                                {tab.label}
+                                <span
+                                    className={cn(
+                                        "rounded-md px-1.5 py-0.5 text-[11px] tabular-nums",
+                                        activeTab === tab.id ? "bg-background text-foreground" : "bg-secondary/60 text-muted-foreground",
+                                    )}
+                                >
+                                    {tab.count}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {activeTab === "items" && (
+                        <div className="relative w-full sm:w-72">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="search"
+                                enterKeyHint="search"
+                                placeholder="Search dishes"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="h-10 w-full rounded-xl border border-border bg-panel pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand/40"
+                            />
+                        </div>
+                    )}
                 </div>
 
-                {activeTab === "items" && (
-                    <div className="relative w-full sm:w-64 sm:max-w-xs pb-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <input
-                            type="search"
-                            enterKeyHint="search"
-                            placeholder="Search items..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full min-h-11 bg-secondary/50 border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                        />
+                {activeTab === "items" && categories.length > 0 && (
+                    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {[{ id: "all", name: "All", count: items.length }, ...categories.map((c) => ({ id: c.id, name: c.name, count: c._count?.items ?? 0 }))].map(
+                            (chip) => (
+                                <button
+                                    key={chip.id}
+                                    type="button"
+                                    onClick={() => setCategoryFilter(chip.id)}
+                                    aria-pressed={categoryFilter === chip.id}
+                                    className={cn(
+                                        "flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+                                        categoryFilter === chip.id
+                                            ? "border-brand/60 bg-brand/10 text-foreground"
+                                            : "border-border bg-panel text-muted-foreground hover:text-foreground",
+                                    )}
+                                >
+                                    {chip.name}
+                                    <span className="tabular-nums opacity-70">{chip.count}</span>
+                                </button>
+                            ),
+                        )}
                     </div>
                 )}
             </div>
 
-            {/* Content Key-based Animation */}
             <AnimatePresence mode="wait">
                 {activeTab === "items" ? (
-                    <motion.div key="items" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                    <motion.div
+                        key="items"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                    >
                         {filteredItems.length === 0 && (
                             <EmptyState
                                 className="col-span-full"
                                 icon={items.length === 0 ? UtensilsCrossed : Search}
-                                title={items.length === 0 ? "No dishes yet" : "No dishes match your search"}
+                                title={items.length === 0 ? "No dishes yet" : "No dishes match"}
                                 description={
                                     items.length === 0
                                         ? "Add your first dish, or import a whole menu from JSON. Guests see it as soon as it is available."
-                                        : `Nothing found for "${search}". Try a different name.`
+                                        : query
+                                          ? `Nothing found for "${search.trim()}" in this view.`
+                                          : "This category has no dishes yet."
                                 }
                                 action={
                                     items.length === 0 ? (
                                         <>
-                                            <Button className="min-h-10" onClick={openNewItem}>
-                                                <Plus className="w-4 h-4 mr-2" /> Add item
+                                            <Button className="h-10" onClick={openNewItem}>
+                                                <Plus className="mr-2 h-4 w-4" /> Add item
                                             </Button>
-                                            <Button
-                                                variant="outline"
-                                                className="min-h-10"
-                                                onClick={() => {
-                                                    setBulkImportError(null);
-                                                    setShowBulkImportModal(true);
-                                                }}
-                                            >
-                                                <FileJson2 className="w-4 h-4 mr-2" /> Import JSON
+                                            <Button variant="outline" className="h-10" onClick={openBulkImport}>
+                                                <FileJson2 className="mr-2 h-4 w-4" /> Import JSON
                                             </Button>
                                         </>
                                     ) : (
-                                        <Button variant="outline" className="min-h-10" onClick={() => setSearch("")}>
-                                            Clear search
+                                        <Button
+                                            variant="outline"
+                                            className="h-10"
+                                            onClick={() => {
+                                                setSearch("");
+                                                setCategoryFilter("all");
+                                            }}
+                                        >
+                                            Show all dishes
                                         </Button>
                                     )
                                 }
                             />
                         )}
-                        {filteredItems.map((item) => (
-                            <div key={item.id} className="dashboard-card overflow-hidden group flex flex-col h-full">
-                                {/* Image Area */}
-                                <div className="h-40 bg-secondary relative overflow-hidden">
-                                    {item.imageUrl ? (
-                                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-secondary/50">
-                                            <ImageIcon className="w-8 h-8 opacity-20" />
-                                        </div>
+                        {filteredItems.map((item) => {
+                            const soldOut = item.available === false;
+                            return (
+                                <article
+                                    key={item.id}
+                                    className={cn(
+                                        "group flex flex-col overflow-hidden rounded-2xl border border-border bg-panel transition-colors hover:border-foreground/20",
+                                        soldOut && "opacity-75",
                                     )}
-                                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex gap-1.5 sm:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            type="button"
-                                            onClick={() => openEditItem(item)}
-                                            className="p-2.5 sm:p-2 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 flex items-center justify-center bg-secondary/95 backdrop-blur-md rounded-lg text-foreground hover:bg-secondary border border-border shadow-sm"
-                                            aria-label={`Edit ${item.name}`}
-                                        >
-                                            <Edit2 className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => openDeleteItemModal(item)}
-                                            className="p-2.5 sm:p-2 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 flex items-center justify-center bg-destructive/90 backdrop-blur-md rounded-lg text-destructive-foreground hover:bg-destructive shadow-sm"
-                                            aria-label={`Delete ${item.name}`}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => openEditItem(item)}
+                                        className="relative block aspect-[16/10] w-full cursor-pointer overflow-hidden bg-secondary"
+                                        aria-label={`Edit ${item.name}`}
+                                    >
+                                        {item.imageUrl ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={item.imageUrl}
+                                                alt=""
+                                                loading="lazy"
+                                                className={cn(
+                                                    "h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]",
+                                                    soldOut && "grayscale",
+                                                )}
+                                            />
+                                        ) : (
+                                            <span className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-muted-foreground">
+                                                <ImageIcon className="h-6 w-6 opacity-40" />
+                                                <span className="text-xs">Add a photo</span>
+                                            </span>
+                                        )}
+                                        <span className="absolute left-3 top-3 flex items-center gap-1.5">
+                                            <DietMark preference={item.dietaryPreference} />
+                                            {item.chefRecommended && (
+                                                <span className="inline-flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+                                                    <Sparkles className="h-3 w-3 text-brand" /> Chef&apos;s pick
+                                                </span>
+                                            )}
+                                        </span>
+                                        {soldOut && (
+                                            <span className="absolute right-3 top-3 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">
+                                                Sold out
+                                            </span>
+                                        )}
+                                    </button>
 
-                                {/* Content */}
-                                <div className="p-5 flex-1 flex flex-col">
-                                    <h3 className="font-semibold text-foreground text-lg mb-1">{item.name}</h3>
-                                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">{item.description}</p>
+                                    <div className="flex flex-1 flex-col p-4">
+                                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                                            {categoryName.get(item.categoryId) ?? "Uncategorised"}
+                                        </p>
+                                        <div className="mt-1 flex items-start justify-between gap-3">
+                                            <h3 className="line-clamp-2 font-semibold leading-snug text-foreground">{item.name}</h3>
+                                            <span className="shrink-0 font-semibold tabular-nums text-foreground">{formatMenuPrice(item.price)}</span>
+                                        </div>
+                                        {item.description ? (
+                                            <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+                                        ) : (
+                                            <p className="mt-1.5 text-sm italic text-muted-foreground/70">No description</p>
+                                        )}
 
-                                    <div className="pt-4 border-t border-border">
-                                        <span className="text-lg font-bold text-foreground">₹{Number(item.price).toLocaleString()}</span>
+                                        <div className="min-h-4 flex-1" />
+                                        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+                                            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground">
+                                                <button
+                                                    type="button"
+                                                    role="switch"
+                                                    aria-checked={!soldOut}
+                                                    aria-label={soldOut ? `Put ${item.name} back on the menu` : `Mark ${item.name} sold out`}
+                                                    disabled={togglingId === item.id}
+                                                    onClick={() => toggleAvailable(item)}
+                                                    className={cn(
+                                                        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:cursor-wait disabled:opacity-60",
+                                                        soldOut ? "bg-secondary" : "bg-emerald-500",
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            "inline-block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                                                            soldOut ? "translate-x-0.5" : "translate-x-[18px]",
+                                                        )}
+                                                    />
+                                                </button>
+                                                <span className={soldOut ? "" : "text-emerald-600 dark:text-emerald-400"}>
+                                                    {soldOut ? "Sold out" : "Available"}
+                                                </span>
+                                            </label>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openEditItem(item)}
+                                                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                                                    aria-label={`Edit ${item.name}`}
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openDeleteItemModal(item)}
+                                                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500"
+                                                    aria-label={`Delete ${item.name}`}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        ))}
+                                </article>
+                            );
+                        })}
                     </motion.div>
                 ) : (
-                    <motion.div key="categories" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+                    <motion.div
+                        key="categories"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                    >
                         {categories.length === 0 && (
                             <EmptyState
                                 className="col-span-full"
@@ -746,65 +907,71 @@ export default function MenuPage() {
                                 title="No categories yet"
                                 description="Group dishes into sections like Starters, Mains or Drinks so guests can find them quickly."
                                 action={
-                                    <Button
-                                        className="min-h-10"
-                                        onClick={() => {
-                                            selectNewCategoryInItemForm.current = false;
-                                            setEditingCategory(null);
-                                            setCatForm({ name: "", icon: "", serveTimeStart: "", serveTimeEnd: "", serveDaysOfWeek: [] });
-                                            setShowCatModal(true);
-                                        }}
-                                    >
-                                        <Plus className="w-4 h-4 mr-2" /> New category
+                                    <Button className="h-10" onClick={openNewCategory}>
+                                        <Plus className="mr-2 h-4 w-4" /> New category
                                     </Button>
                                 }
                             />
                         )}
-                        {categories.map((cat) => (
-                            <div key={cat.id} className="dashboard-card p-4 sm:p-8 flex flex-col items-center text-center group hover:border-primary/50">
-                                {hasCategoryIcon(cat.icon) ? (
-                                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                                        <CategoryIconDisplay icon={cat.icon} size="xl" className="text-primary" />
+                        {categories.map((cat) => {
+                            const count = cat._count?.items ?? 0;
+                            const hasSchedule = Boolean(
+                                (cat.serveTimeStart && cat.serveTimeEnd) || (cat.serveDaysOfWeek && cat.serveDaysOfWeek.length > 0),
+                            );
+                            return (
+                                <article key={cat.id} className="flex items-center gap-4 rounded-2xl border border-border bg-panel p-4">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary">
+                                        {hasCategoryIcon(cat.icon) ? (
+                                            <CategoryIconDisplay icon={cat.icon} size="lg" className="text-brand" />
+                                        ) : (
+                                            <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="mb-4" aria-hidden />
-                                )}
-                                <h3 className="font-semibold text-foreground">{cat.name}</h3>
-                                <p className="text-sm text-muted-foreground mt-1">{cat._count?.items || 0} items active</p>
-                                {(cat.serveTimeStart && cat.serveTimeEnd) || (cat.serveDaysOfWeek && cat.serveDaysOfWeek.length > 0) ? (
-                                    <p className="mt-1 text-[10px] text-muted-foreground/90 max-w-[200px]">
-                                        {cat.serveTimeStart && cat.serveTimeEnd
-                                            ? `${cat.serveTimeStart}–${cat.serveTimeEnd}`
-                                            : "All day"}
-                                        {cat.serveDaysOfWeek && cat.serveDaysOfWeek.length > 0
-                                            ? ` · ${cat.serveDaysOfWeek.map((d) => ISO_WEEKDAY_OPTIONS.find((o) => o.iso === d)?.label ?? d).join(", ")}`
-                                            : ""}
-                                    </p>
-                                ) : null}
-                                <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:mt-4">
                                     <button
                                         type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openEditCategory(cat);
+                                        onClick={() => {
+                                            setCategoryFilter(cat.id);
+                                            setActiveTab("items");
                                         }}
-                                        className="min-h-10 px-3 text-xs font-medium text-primary opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:underline"
+                                        className="min-w-0 flex-1 cursor-pointer text-left"
                                     >
-                                        Edit
+                                        <h3 className="truncate font-semibold text-foreground">{cat.name}</h3>
+                                        <p className="mt-0.5 text-sm text-muted-foreground">
+                                            {count} dish{count !== 1 ? "es" : ""}
+                                        </p>
+                                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                            {hasSchedule
+                                                ? `${cat.serveTimeStart && cat.serveTimeEnd ? `${cat.serveTimeStart}–${cat.serveTimeEnd}` : "All day"}${
+                                                      cat.serveDaysOfWeek && cat.serveDaysOfWeek.length > 0
+                                                          ? ` · ${cat.serveDaysOfWeek
+                                                                .map((d) => ISO_WEEKDAY_OPTIONS.find((o) => o.iso === d)?.label ?? d)
+                                                                .join(", ")}`
+                                                          : ""
+                                                  }`
+                                                : "Served all day"}
+                                        </p>
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openDeleteCategoryModal(cat);
-                                        }}
-                                        className="min-h-10 px-3 text-xs font-medium text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:underline"
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                                    <div className="flex shrink-0 items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => openEditCategory(cat)}
+                                            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                                            aria-label={`Edit ${cat.name}`}
+                                        >
+                                            <Edit2 className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => openDeleteCategoryModal(cat)}
+                                            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500"
+                                            aria-label={`Delete ${cat.name}`}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </article>
+                            );
+                        })}
                     </motion.div>
                 )}
             </AnimatePresence>
