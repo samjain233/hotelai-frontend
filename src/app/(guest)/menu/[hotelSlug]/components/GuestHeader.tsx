@@ -8,8 +8,9 @@ import { IndianVegMark, IndianNonVegMark } from "../GuestMenuDietIcons";
 import { Egg } from "lucide-react";
 import { useGuestMenuContext } from "./GuestMenuContext";
 import { getStayToken } from "@/lib/staySession";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GuestMenuSort, GuestDietFilterKey } from "@/lib/guestMenuSearch";
+import type { GuestPublicMenuCategory } from "@/lib/types";
 
 interface GuestHeaderProps {
     guestHeaderRef: React.RefObject<HTMLElement>;
@@ -22,6 +23,19 @@ interface GuestHeaderProps {
     removeDietFilter: (key: GuestDietFilterKey) => void;
     toggleDietFilter: (key: GuestDietFilterKey) => void;
     stayPin?: string | null;
+    chipCategories: GuestPublicMenuCategory[];
+    activeCategory: string;
+    scrollToCategory: (categoryId: string) => void;
+}
+
+function formatClock(value?: string | null): string | null {
+    const match = value?.trim().match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+    const h = Number(match[1]);
+    const m = match[2];
+    const suffix = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return m === "00" ? `${h12} ${suffix}` : `${h12}:${m} ${suffix}`;
 }
 
 const SORT_MENU_OPTIONS: { value: GuestMenuSort; label: string }[] = [
@@ -43,9 +57,24 @@ export function GuestHeader({
     removeDietFilter,
     toggleDietFilter,
     stayPin,
+    chipCategories,
+    activeCategory,
+    scrollToCategory,
 }: GuestHeaderProps) {
     const ctx = useGuestMenuContext();
     const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+    const chipRowRef = useRef<HTMLDivElement>(null);
+    const opens = formatClock(ctx.hotel?.openTime);
+    const closes = formatClock(ctx.hotel?.closeTime);
+    const hoursLabel = ctx.isOpen ? (closes ? `Open until ${closes}` : "Open now") : opens ? `Closed · opens ${opens}` : "Closed now";
+
+    useEffect(() => {
+        const row = chipRowRef.current;
+        const chip = row?.querySelector<HTMLElement>(`[data-chip-id="${activeCategory}"]`);
+        if (!row || !chip) return;
+        const target = chip.offsetLeft - row.clientWidth / 2 + chip.clientWidth / 2;
+        row.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+    }, [activeCategory]);
 
     useEffect(() => {
         if (!showHeaderMenu) return;
@@ -60,12 +89,12 @@ export function GuestHeader({
         <>
             <header
                 ref={guestHeaderRef}
-                className="sticky top-0 z-50 w-full min-w-0 max-w-full border-b border-[var(--guest-line)] bg-[var(--guest-bg)] backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--guest-bg)]"
+                className="sticky top-0 z-50 w-full min-w-0 max-w-full border-b border-[var(--guest-line)] bg-[var(--guest-bg)]"
             >
                 <div
                     className={cn(
-                        "mx-auto w-full min-w-0 max-w-md px-4 pb-2 transition-[padding] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
-                        brandingBarHidden ? "pt-2" : "pt-3",
+                        "mx-auto w-full min-w-0 max-w-md px-4 pb-3 transition-[padding] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
+                        brandingBarHidden ? "pt-2.5" : "pt-4",
                     )}
                 >
                     <div
@@ -75,35 +104,39 @@ export function GuestHeader({
                         )}
                         aria-hidden={brandingBarHidden}
                     >
-                        <div className="flex items-center justify-between gap-2.5 pb-2.5">
-                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3 pb-3">
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
                                 {ctx.hotel?.logoUrl?.trim() && !guestLogoFailed ? (
                                     <Image
                                         src={ctx.hotel.logoUrl.trim()}
                                         alt=""
-                                        width={36}
-                                        height={36}
-                                        sizes="36px"
+                                        width={44}
+                                        height={44}
+                                        sizes="44px"
                                         priority
-                                        className="h-9 w-9 shrink-0 rounded-lg bg-[var(--guest-surface)] object-cover ring-1 ring-[var(--guest-line)]"
+                                        className="h-11 w-11 shrink-0 rounded-xl bg-[var(--guest-surface)] object-cover ring-1 ring-[var(--guest-line)]"
                                         onError={() => setGuestLogoFailed(true)}
                                     />
                                 ) : (
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--guest-cta)] to-[var(--guest-cta-hover)] text-sm font-bold text-[var(--guest-on-cta)] ring-1 ring-[var(--guest-line)]">
-                                        {ctx.hotel?.name?.charAt(0) || "H"}
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--guest-accent-15)] text-lg font-bold uppercase text-[var(--guest-accent)] ring-1 ring-[var(--guest-accent-25)]">
+                                        {ctx.hotel?.name?.trim().charAt(0) || "H"}
                                     </div>
                                 )}
                                 <div className="min-w-0 flex-1">
-                                    <h1 className="truncate text-sm font-bold leading-tight text-[var(--guest-text)]">{ctx.hotel?.name}</h1>
-                                    <p className="flex items-center gap-1 text-[11px] text-[var(--guest-muted)]">
+                                    <h1 className="truncate text-base font-bold capitalize leading-tight text-[var(--guest-text)]">{ctx.hotel?.name}</h1>
+                                    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-[var(--guest-muted)]">
+                                        <span
+                                            className={cn("h-1.5 w-1.5 shrink-0 rounded-full", ctx.isOpen ? "bg-emerald-500" : "bg-amber-500")}
+                                            aria-hidden
+                                        />
+                                        <span className="truncate">{hoursLabel}</span>
                                         {ctx.roomDisplayName ? (
                                             <>
-                                                <MapPin className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" />
-                                                <span>Room {ctx.roomDisplayName}</span>
+                                                <span className="text-[var(--guest-subtle)]" aria-hidden>·</span>
+                                                <MapPin className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                                                <span className="shrink-0 font-medium text-[var(--guest-text)]">Room {ctx.roomDisplayName}</span>
                                             </>
-                                        ) : (
-                                            <span className="italic text-[var(--guest-subtle)]">Digital menu</span>
-                                        )}
+                                        ) : null}
                                     </p>
                                     {ctx.guestCallNumber ? (
                                         <p className="mt-1 text-[11px] leading-snug text-[var(--guest-muted)]">
@@ -140,7 +173,8 @@ export function GuestHeader({
                                 placeholder='Search "biryani", "coffee"...'
                                 value={ctx.searchQuery}
                                 onChange={(e) => ctx.setSearchQuery(e.target.value)}
-                                className="w-full rounded-full border border-[var(--guest-line)] bg-[var(--guest-surface)] py-2.5 pl-10 pr-10 text-sm text-[var(--guest-text)] placeholder:text-[var(--guest-muted)] focus:border-[var(--guest-accent-40)] focus:outline-none focus:ring-1 focus:ring-[var(--guest-accent-30)]"
+                                aria-label="Search dishes"
+                                className="h-11 w-full rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] pl-10 pr-10 text-[15px] text-[var(--guest-text)] placeholder:text-[var(--guest-muted)] focus:border-[var(--guest-accent-40)] focus:outline-none focus:ring-2 focus:ring-[var(--guest-accent-30)]"
                             />
                             {ctx.searchQuery ? (
                                 <button
@@ -318,6 +352,39 @@ export function GuestHeader({
                             ) : null}
                         </div>
                     </div>
+
+                    {chipCategories.length > 1 ? (
+                        <nav aria-label="Menu sections" className="-mx-4 mt-2.5">
+                            <div
+                                ref={chipRowRef}
+                                className="flex gap-2 overflow-x-auto scroll-px-4 px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            >
+                                {chipCategories.map((cat) => {
+                                    const active = cat.id === activeCategory;
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            data-chip-id={cat.id}
+                                            aria-current={active ? "true" : undefined}
+                                            onClick={() => scrollToCategory(cat.id)}
+                                            className={cn(
+                                                "flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors",
+                                                active
+                                                    ? "border-transparent bg-[var(--guest-cta)] text-[var(--guest-on-cta)]"
+                                                    : "border-[var(--guest-line)] bg-[var(--guest-surface)] text-[var(--guest-text-70)] hover:text-[var(--guest-text)]",
+                                            )}
+                                        >
+                                            {cat.name}
+                                            <span className={cn("text-[11px] tabular-nums", active ? "opacity-80" : "text-[var(--guest-muted)]")}>
+                                                {(cat.items ?? []).length}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </nav>
+                    ) : null}
 
                     {menuFiltersActive ? (
                         <div className="mt-2.5 border-t border-[var(--guest-line)] pt-2.5" aria-label="Active filters">

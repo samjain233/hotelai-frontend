@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CartItem, Order, MenuItem } from "@/lib/types";
@@ -11,7 +11,6 @@ import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Utensils, X, CheckCircle2, Receipt, Clock, ChevronRight, Headset } from "lucide-react";
-import { cn } from "@/lib/utils";
 import {
     type GuestDietFilterKey,
     type GuestMenuSort,
@@ -30,8 +29,6 @@ import { toast } from "sonner";
 import { GuestMenuProvider, GuestMenuState } from "./components/GuestMenuContext";
 import { GuestHeader } from "./components/GuestHeader";
 import { GuestMenuList } from "./components/GuestMenuList";
-import { GuestCategoryNav } from "./components/GuestCategoryNav";
-
 function formatPrice(price: number | string) {
     const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
     const hasDecimals = n % 1 !== 0;
@@ -219,9 +216,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
 
     const chipCategoriesRef = useRef(chipCategories);
     chipCategoriesRef.current = chipCategories;
-    const brandingBarHiddenRef = useRef(brandingBarHidden);
-    brandingBarHiddenRef.current = brandingBarHidden;
-
     useEffect(() => {
         lastScrollYForBranding.current = typeof window !== "undefined" ? window.scrollY : 0;
         let raf = 0;
@@ -262,7 +256,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             raf = requestAnimationFrame(() => {
                 const cats = chipCategoriesRef.current;
                 if (cats.length === 0) return;
-                const line = (menuFiltersActive ? 182 : 128) - (brandingBarHiddenRef.current ? 56 : 0);
+                const line = (guestHeaderRef.current?.getBoundingClientRect().height ?? 128) + 24;
                 let currentId = cats[0].id;
                 for (const cat of cats) {
                     const el = document.getElementById(`cat-${cat.id}`);
@@ -644,6 +638,9 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     removeDietFilter={removeDietFilter}
                     toggleDietFilter={toggleDietFilter}
                     stayPin={stayPin}
+                    chipCategories={chipCategories}
+                    activeCategory={activeCategory}
+                    scrollToCategory={scrollToCategory}
                 />
 
                 <main className="mx-auto w-full min-w-0 max-w-md space-y-8 overflow-x-clip px-4 py-5">
@@ -778,12 +775,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         </div>
                     )}
                     
-                    <GuestMenuList
-                        displayCategories={displayCategories}
-                        brandingBarHidden={brandingBarHidden}
-                        menuFiltersActive={menuFiltersActive}
-                        searchNormalized={searchNormalized}
-                    />
+                    <GuestMenuList displayCategories={displayCategories} searchNormalized={searchNormalized} />
 
                 </main>
 
@@ -816,12 +808,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         setSelectedRoomId={setSelectedRoomId}
                     />
                 )}
-
-                <GuestCategoryNav
-                    chipCategories={chipCategories}
-                    activeCategory={activeCategory}
-                    scrollToCategory={scrollToCategory}
-                />
 
                 <StayPinModal
                     isOpen={showPinModal}
