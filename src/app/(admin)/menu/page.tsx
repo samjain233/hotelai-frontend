@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/api";
-import { BulkMenuImportRow, MenuItem, MenuTag, type MenuCategory } from "@/lib/types";
+import { MenuItem, MenuTag, type MenuCategory } from "@/lib/types";
 import { useCategories, useMenuItems, invalidateMenuCache } from "@/hooks/useSwrApi";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
@@ -34,8 +34,7 @@ import {
     Egg,
     Check,
     Loader2,
-    FileJson2,
-    Download,
+    Camera,
     Sparkles,
     Flame,
     Wine,
@@ -43,6 +42,8 @@ import {
     ChevronDown,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { DietMark, formatMenuPrice } from "./menuDisplay";
+import { MenuScanModal } from "./MenuScanModal";
 
 function toggleNumberList(list: number[], id: number): number[] {
     return list.includes(id)
@@ -68,96 +69,9 @@ function toggleIsoDay(list: number[], day: number): number[] {
 const ITEM_LABEL = "mb-1.5 block text-sm font-medium text-foreground";
 const ITEM_FIELD = "h-11 rounded-xl border-border bg-background shadow-none focus:border-brand/60 focus:ring-brand/40";
 
-function formatMenuPrice(price: number | string) {
-    const n = typeof price === "number" ? price : parseFloat(String(price ?? 0)) || 0;
-    const hasDecimals = n % 1 !== 0;
-    return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: hasDecimals ? 2 : 0, maximumFractionDigits: 2 })}`;
-}
-
-function DietMark({ preference }: { preference: MenuItem["dietaryPreference"] }) {
-    if (!preference || preference === "NONE") return null;
-    const tone = preference === "VEG" ? "text-emerald-600" : preference === "NON_VEG" ? "text-red-600" : "text-amber-500";
-    const label = preference === "VEG" ? "Veg" : preference === "NON_VEG" ? "Non-veg" : "Contains egg";
-    return (
-        <span className={cn("inline-flex h-5 w-5 items-center justify-center rounded border-2 border-current bg-white", tone)} title={label}>
-            <span className="h-2 w-2 rounded-full bg-current" />
-            <span className="sr-only">{label}</span>
-        </span>
-    );
-}
-
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-/** Max size for Gemini menu photo (base64 request body). */
-const MAX_MENU_PHOTO_BYTES = 8 * 1024 * 1024;
-/** Matches the API. Gemini bills 768px tiles; 1536px stays inside four tiles. */
-const MENU_SCAN_MAX_EDGE = 1536;
-const MENU_SCAN_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"]);
-
-function readBlobAsDataUrl(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            if (typeof reader.result === "string") resolve(reader.result);
-            else reject(new Error("Could not read the image."));
-        };
-        reader.onerror = () => reject(new Error("Could not read the file."));
-        reader.readAsDataURL(blob);
-    });
-}
-
-function parseImageDataUrl(dataUrl: string): { mimeType: string; imageBase64: string } | null {
-    const match = /^data:([^;]+);base64,([\s\S]+)$/.exec(dataUrl);
-    if (!match) return null;
-    const declared = match[1].split(";")[0].trim().toLowerCase();
-    return { mimeType: declared === "image/jpg" ? "image/jpeg" : declared, imageBase64: match[2] };
-}
-
-/** Draw onto a small canvas so phones never allocate a full-resolution canvas. */
-async function shrinkMenuPhoto(file: File): Promise<Blob> {
-    const bitmap = await createImageBitmap(file);
-    try {
-        const longest = Math.max(bitmap.width, bitmap.height);
-        const scale = longest > MENU_SCAN_MAX_EDGE ? MENU_SCAN_MAX_EDGE / longest : 1;
-        const width = Math.max(1, Math.round(bitmap.width * scale));
-        const height = Math.max(1, Math.round(bitmap.height * scale));
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Could not prepare the image.");
-        ctx.drawImage(bitmap, 0, 0, width, height);
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.8));
-        if (!blob) throw new Error("Could not prepare the image.");
-        return blob;
-    } finally {
-        bitmap.close();
-    }
-}
 
 const DELETE_CONFIRM_WORD = "delete";
-
-const SAMPLE_BULK_JSON = JSON.stringify(
-    {
-        items: [
-            {
-                name: "Paneer Tikka",
-                price: 280,
-                categoryName: "Starters",
-                description: "Grilled cottage cheese",
-                dietaryPreference: "VEG",
-                available: true,
-            },
-            {
-                name: "Chicken Biryani",
-                price: 420,
-                categoryName: "Main Course",
-                dietaryPreference: "NON_VEG",
-            },
-        ],
-    },
-    null,
-    2,
-);
 
 export default function MenuPage() {
     const { data: categories = [], isLoading: categoriesLoading } = useCategories();
@@ -208,13 +122,7 @@ export default function MenuPage() {
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const bulkFileInputRef = useRef<HTMLInputElement>(null);
-    const bulkMenuPhotoInputRef = useRef<HTMLInputElement>(null);
-    const [showBulkImportModal, setShowBulkImportModal] = useState(false);
-    const [bulkJsonText, setBulkJsonText] = useState("");
-    const [bulkImporting, setBulkImporting] = useState(false);
-    const [extractingMenuPhoto, setExtractingMenuPhoto] = useState(false);
-    const [bulkImportError, setBulkImportError] = useState<string | null>(null);
+    const [showMenuScan, setShowMenuScan] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<{
         type: "item" | "category" | "tag";
         id: string;
@@ -582,70 +490,16 @@ export default function MenuPage() {
         setShowCatModal(true);
     }
 
-    function closeBulkImportModal() {
-        setShowBulkImportModal(false);
-        setBulkImportError(null);
-        setExtractingMenuPhoto(false);
-    }
-
-    function handleMenuPhotoForExtraction(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0];
-        e.target.value = "";
-        if (!file) return;
-
-        if (!file.type.startsWith("image/")) {
-            toast.error("Please choose a JPEG, PNG, or WebP image.");
-            return;
-        }
-        if (file.size > MAX_MENU_PHOTO_BYTES) {
-            toast.error("Image must be 8 MB or smaller for menu scanning.");
-            return;
-        }
-        if (file.type && !MENU_SCAN_MIME.has(file.type.toLowerCase())) {
-            toast.error("Use a JPEG, PNG, WebP, or GIF image.");
-            return;
-        }
-
-        void (async () => {
-            setBulkImportError(null);
-            setExtractingMenuPhoto(true);
-            try {
-                let source: Blob = file;
-                try {
-                    source = await shrinkMenuPhoto(file);
-                } catch {
-                    source = file;
-                }
-                const parsed = parseImageDataUrl(await readBlobAsDataUrl(source));
-                if (!parsed || !MENU_SCAN_MIME.has(parsed.mimeType)) {
-                    toast.error("Could not read the image.");
-                    return;
-                }
-                const { items } = await api.extractMenuFromImage({
-                    imageBase64: parsed.imageBase64,
-                    mimeType: parsed.mimeType,
-                });
-                setBulkJsonText(JSON.stringify({ items }, null, 2));
-                if (items.length === 0) {
-                    toast.message("No items detected", {
-                        description: "Try a straighter, well-lit photo of the full menu.",
-                    });
-                } else {
-                    toast.success(`Extracted ${items.length} item(s)`, {
-                        description: "Review and edit the JSON, then tap Import items.",
-                    });
-                }
-            } catch (err) {
-                const raw = err instanceof Error ? err.message : "Menu scan failed";
-                const msg = /too many requests/i.test(raw)
-                    ? "Menu scanning is limited to 10 photos every 15 minutes. Wait a few minutes and try again."
-                    : raw;
-                setBulkImportError(msg);
-                toast.error(msg);
-            } finally {
-                setExtractingMenuPhoto(false);
-            }
-        })();
+    async function handleMenuScanSaved(result: { created: number; categoriesCreated: number }) {
+        await invalidateMenuCache();
+        setActiveTab("items");
+        setCategoryFilter("all");
+        toast.success(`Added ${result.created} dish${result.created === 1 ? "" : "es"} to your menu`, {
+            description:
+                result.categoriesCreated > 0
+                    ? `${result.categoriesCreated} new categor${result.categoriesCreated === 1 ? "y" : "ies"} created.`
+                    : undefined,
+        });
     }
 
     async function toggleAvailable(item: MenuItem) {
@@ -678,11 +532,6 @@ export default function MenuPage() {
         setShowCatModal(true);
     }
 
-    function openBulkImport() {
-        setBulkImportError(null);
-        setShowBulkImportModal(true);
-    }
-
     if (loading) return <AdminPageSkeleton cardCount={9} />;
 
     return (
@@ -697,8 +546,8 @@ export default function MenuPage() {
                     </p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
-                    <Button variant="ghost" className="h-10 justify-center text-muted-foreground hover:text-foreground" onClick={openBulkImport}>
-                        <FileJson2 className="mr-2 h-4 w-4 shrink-0" /> Import JSON
+                    <Button variant="ghost" className="h-10 justify-center text-muted-foreground hover:text-foreground" onClick={() => setShowMenuScan(true)}>
+                        <Camera className="mr-2 h-4 w-4 shrink-0" /> Scan menu photo
                     </Button>
                     <Button variant="outline" className="h-10 justify-center border-border hover:bg-secondary" onClick={openNewCategory}>
                         <FolderOpen className="mr-2 h-4 w-4 shrink-0" /> New category
@@ -801,7 +650,7 @@ export default function MenuPage() {
                                 title={items.length === 0 ? "No dishes yet" : "No dishes match"}
                                 description={
                                     items.length === 0
-                                        ? "Add your first dish, or import a whole menu from JSON. Guests see it as soon as it is available."
+                                        ? "Add your first dish, or scan a photo of your printed menu. Guests see dishes as soon as they are added."
                                         : query
                                           ? `Nothing found for "${search.trim()}" in this view.`
                                           : "This category has no dishes yet."
@@ -812,8 +661,8 @@ export default function MenuPage() {
                                             <Button className="h-10" onClick={openNewItem}>
                                                 <Plus className="mr-2 h-4 w-4" /> Add item
                                             </Button>
-                                            <Button variant="outline" className="h-10" onClick={openBulkImport}>
-                                                <FileJson2 className="mr-2 h-4 w-4" /> Import JSON
+                                            <Button variant="outline" className="h-10" onClick={() => setShowMenuScan(true)}>
+                                                <Camera className="mr-2 h-4 w-4" /> Scan menu photo
                                             </Button>
                                         </>
                                     ) : (
@@ -1530,225 +1379,13 @@ export default function MenuPage() {
                 )}
             </AnimatePresence>
 
-            <AnimatePresence>
-                {showBulkImportModal && (
-                    <div
-                        className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md overflow-y-auto py-0 sm:py-8 pb-[env(safe-area-inset-bottom,0px)]"
-                        onClick={closeBulkImportModal}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.96, y: 8 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: 8 }}
-                            transition={{ duration: 0.2 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-2xl sm:my-auto bg-card border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-black/40 overflow-hidden max-h-[95dvh] sm:max-h-[min(90vh,720px)] flex flex-col"
-                        >
-                            <div className="px-6 py-4 border-b border-white/10 bg-gradient-to-r from-white/5 to-transparent shrink-0">
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <FileJson2 className="w-5 h-5 text-primary shrink-0" />
-                                        <h3 className="text-lg font-semibold text-foreground tracking-tight truncate">
-                                            Import from JSON (bulk)
-                                        </h3>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={closeBulkImportModal}
-                                        className="p-2 -m-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
-                                        aria-label="Close"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="p-6 space-y-3 overflow-y-auto flex-1 min-h-0">
-                                <p className="text-xs text-muted-foreground">
-                                    Paste JSON or choose a file. Each row needs <code className="text-foreground">name</code>,{" "}
-                                    <code className="text-foreground">price</code>, and either{" "}
-                                    <code className="text-foreground">categoryName</code> (auto-creates category if new) or{" "}
-                                    <code className="text-foreground">categoryId</code>. Optional:{" "}
-                                    <code className="text-foreground">description</code>, <code className="text-foreground">imageUrl</code>,{" "}
-                                    <code className="text-foreground">dietaryPreference</code> (VEG | NON_VEG | EGGITARIAN | NONE),{" "}
-                                    <code className="text-foreground">available</code>. Optional:{" "}
-                                    <code className="text-foreground">spiceLevel</code> (NONE | MILD | MEDIUM | HOT),{" "}
-                                    <code className="text-foreground">allergenCodes</code> (array of codes like GLUTEN, MILK, PEANUTS),{" "}
-                                    <code className="text-foreground">dietaryTags</code> (VEGAN, HALAL, JAIN, …),{" "}
-                                    <code className="text-foreground">calories</code>, <code className="text-foreground">portionLabel</code>,{" "}
-                                    <code className="text-foreground">chefRecommended</code>, <code className="text-foreground">containsAlcohol</code>.
-                                    Max 500 items per import. Category names are case-sensitive.
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs"
-                                        onClick={() => {
-                                            const blob = new Blob([SAMPLE_BULK_JSON], { type: "application/json" });
-                                            const a = document.createElement("a");
-                                            a.href = URL.createObjectURL(blob);
-                                            a.download = "dreamcanvas-menu-sample.json";
-                                            a.click();
-                                            URL.revokeObjectURL(a.href);
-                                        }}
-                                    >
-                                        <Download className="w-3.5 h-3.5 mr-1.5" />
-                                        Sample JSON
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs"
-                                        onClick={() => bulkFileInputRef.current?.click()}
-                                    >
-                                        <Upload className="w-3.5 h-3.5 mr-1.5" />
-                                        Choose file
-                                    </Button>
-                                    <input
-                                        ref={bulkFileInputRef}
-                                        type="file"
-                                        accept="application/json,.json"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                            const f = e.target.files?.[0];
-                                            e.target.value = "";
-                                            if (!f) return;
-                                            const r = new FileReader();
-                                            r.onload = () => {
-                                                if (typeof r.result === "string") setBulkJsonText(r.result);
-                                            };
-                                            r.readAsText(f);
-                                        }}
-                                    />
-                                </div>
-
-                                <div className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 space-y-2">
-                                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                                        <Sparkles className="w-4 h-4 text-primary shrink-0" aria-hidden />
-                                        Scan menu from a photo
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                        Upload a clear photo of your printed menu. Google Gemini turns it into JSON below — always
-                                        review prices and names before importing. Large photos are reduced automatically.
-                                        You can scan up to 10 photos every 15 minutes.
-                                        A large or busy photo can take <span className="text-foreground/90">30–90 seconds</span>; keep
-                                        this tab open until it finishes.
-                                    </p>
-                                    <input
-                                        ref={bulkMenuPhotoInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp,image/gif"
-                                        className="hidden"
-                                        disabled={extractingMenuPhoto || bulkImporting}
-                                        onChange={handleMenuPhotoForExtraction}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs w-full sm:w-auto"
-                                        disabled={extractingMenuPhoto || bulkImporting}
-                                        loading={extractingMenuPhoto}
-                                        onClick={() => bulkMenuPhotoInputRef.current?.click()}
-                                    >
-                                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" />
-                                        {extractingMenuPhoto ? "Scanning…" : "Choose menu photo (AI)"}
-                                    </Button>
-                                </div>
-
-                                <textarea
-                                    value={bulkJsonText}
-                                    onChange={(e) => setBulkJsonText(e.target.value)}
-                                    placeholder='{ "items": [ { "name": "...", "price": 99, "categoryName": "..." } ] }'
-                                    className="w-full min-h-[200px] rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                    spellCheck={false}
-                                />
-                                {bulkImportError && (
-                                    <p className="text-sm text-destructive whitespace-pre-wrap" role="alert">
-                                        {bulkImportError}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="flex gap-3 px-4 sm:px-6 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:pb-6 pt-2 border-t border-border/60 shrink-0">
-                                <Button type="button" variant="outline" className="flex-1" onClick={closeBulkImportModal}>
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="button"
-                                    className="flex-1"
-                                    disabled={bulkImporting || extractingMenuPhoto || !bulkJsonText.trim()}
-                                    onClick={async () => {
-                                        setBulkImportError(null);
-                                        let parsed: unknown;
-                                        try {
-                                            parsed = JSON.parse(bulkJsonText);
-                                        } catch {
-                                            setBulkImportError("Invalid JSON — check commas and quotes.");
-                                            return;
-                                        }
-                                        if (
-                                            typeof parsed !== "object" ||
-                                            parsed === null ||
-                                            !Array.isArray((parsed as { items?: unknown }).items)
-                                        ) {
-                                            setBulkImportError('JSON must be an object with an "items" array.');
-                                            return;
-                                        }
-                                        const bulkItems = (parsed as { items: unknown[] }).items;
-                                        if (bulkItems.length === 0) {
-                                            setBulkImportError("items array is empty.");
-                                            return;
-                                        }
-                                        setBulkImporting(true);
-                                        try {
-                                            const result = await api.bulkImportMenuItems({
-                                                items: bulkItems as BulkMenuImportRow[],
-                                            });
-                                            await invalidateMenuCache();
-                                            setBulkJsonText("");
-                                            closeBulkImportModal();
-                                            const itemLabel = `${result.created} item${result.created === 1 ? "" : "s"}`;
-                                            const catNote =
-                                                result.categoriesCreated && result.categoriesCreated > 0
-                                                    ? `${result.categoriesCreated} new categor${result.categoriesCreated === 1 ? "y" : "ies"} created.`
-                                                    : undefined;
-                                            toast.success(`Imported ${itemLabel}`, {
-                                                description: catNote,
-                                                duration: 8000,
-                                                action: {
-                                                    label: "View menu",
-                                                    onClick: () => {
-                                                        setActiveTab("items");
-                                                        window.scrollTo({ top: 0, behavior: "smooth" });
-                                                    },
-                                                },
-                                            });
-                                        } catch (err) {
-                                            setBulkImportError(err instanceof Error ? err.message : "Import failed");
-                                        } finally {
-                                            setBulkImporting(false);
-                                        }
-                                    }}
-                                >
-                                    {bulkImporting ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            Importing…
-                                        </>
-                                    ) : (
-                                        <>
-                                            <FileJson2 className="w-4 h-4 mr-2" />
-                                            Import items
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            <MenuScanModal
+                open={showMenuScan}
+                onClose={() => setShowMenuScan(false)}
+                existingItems={items}
+                categories={categories}
+                onSaved={handleMenuScanSaved}
+            />
 
             {/* Category modal */}
             <AnimatePresence>
