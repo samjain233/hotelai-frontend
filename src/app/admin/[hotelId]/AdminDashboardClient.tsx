@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getSiteUrl } from "@/lib/site-config";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -314,7 +315,7 @@ export function AdminDashboardClient({
                                 Guests scan this QR to view the menu
                             </p>
                             <p className="text-xs text-[var(--color-text-muted)] bg-[rgba(255,255,255,0.04)] px-4 py-2 rounded-lg font-mono">
-                                {qrData?.scanUrl || `http://localhost:3000/menu/${hotelId}`}
+                                {qrData?.scanUrl || `${getSiteUrl()}/menu/${hotelId}`}
                             </p>
                         </div>
                         <div className="flex gap-3">
@@ -326,7 +327,7 @@ export function AdminDashboardClient({
                             </a>
                             <button
                                 onClick={() => {
-                                    const url = `http://localhost:3000/menu/${hotelId}`;
+                                    const url = qrData?.scanUrl || `${getSiteUrl()}/menu/${hotelId}`;
                                     navigator.clipboard.writeText(url);
                                     alert("Link copied!");
                                 }}

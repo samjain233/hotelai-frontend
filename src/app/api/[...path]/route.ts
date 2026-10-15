@@ -57,10 +57,10 @@ async function proxyRequest(request: NextRequest, { path }: { path: string[] }) 
     });
 
     const data = await res.text();
-    return new NextResponse(data, {
-        status: res.status,
-        headers: {
-            'Content-Type': res.headers.get('content-type') || 'application/json',
-        },
-    });
+    const responseHeaders: Record<string, string> = {
+        'Content-Type': res.headers.get('content-type') || 'application/json',
+    };
+    const retryAfter = res.headers.get('retry-after');
+    if (retryAfter) responseHeaders['Retry-After'] = retryAfter;
+    return new NextResponse(data, { status: res.status, headers: responseHeaders });
 }
