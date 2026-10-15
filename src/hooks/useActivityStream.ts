@@ -9,6 +9,8 @@ import { getStayToken } from "@/lib/staySession";
 const PROACTIVE_ACCESS_REFRESH_MS = 8 * 60 * 1000;
 /** Debounce burst `error` events from EventSource while connection is unhealthy. */
 const ERROR_RECONNECT_DEBOUNCE_MS = 1200;
+/** The server rejects the stream outright (e.g. plan without live updates); stop instead of reconnecting forever. */
+const MAX_FAILED_OPENS = 3;
 
 export type ActivityEventType =
     | "order:new"
@@ -87,6 +89,9 @@ export function useActivityStreamAdmin(options: UseActivityStreamAdminOptions = 
         const proactiveIntervalRef = { current: null as ReturnType<typeof setInterval> | null };
         /** Avoid overlapping refresh+reconnect pipelines from rapid `error` events. */
         const reconnectingRef = { current: false };
+        /** Connection attempts that failed before ever opening; reset on a successful open. */
+        const failedOpensRef = { current: 0 };
+        const openedRef = { current: false };
 
         const clearReconnectTimer = () => {
             if (reconnectTimerRef.current != null) {
@@ -131,8 +136,11 @@ export function useActivityStreamAdmin(options: UseActivityStreamAdminOptions = 
             esRef.current?.close();
             const es = new EventSource("/api/activity/stream");
             esRef.current = es;
+            openedRef.current = false;
 
             es.onopen = () => {
+                openedRef.current = true;
+                failedOpensRef.current = 0;
                 setConnected(true);
                 setError(null);
             };
@@ -143,6 +151,13 @@ export function useActivityStreamAdmin(options: UseActivityStreamAdminOptions = 
                 setConnected(false);
                 es.close();
                 if (esRef.current === es) esRef.current = null;
+
+                if (!openedRef.current) failedOpensRef.current += 1;
+                if (failedOpensRef.current >= MAX_FAILED_OPENS) {
+                    reconnectingRef.current = false;
+                    setError(new Error("Live updates are unavailable. Refresh the page to try again."));
+                    return;
+                }
 
                 clearReconnectTimer();
                 reconnectTimerRef.current = setTimeout(() => {

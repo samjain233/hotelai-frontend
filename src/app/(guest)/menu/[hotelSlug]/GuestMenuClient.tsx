@@ -353,7 +353,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     useActivityStreamGuest({
         hotelSlug,
         roomId: resolvedRoomId || "",
-        enabled: !!resolvedRoomId,
+        enabled: !!resolvedRoomId && hotel?.features?.includes("DIGITAL_ORDERING") === true,
         onOrderNew: loadPastOrders,
         onOrderUpdated: handleOrderUpdated,
     });

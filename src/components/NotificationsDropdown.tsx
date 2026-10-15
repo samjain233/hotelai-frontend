@@ -79,6 +79,7 @@ export function NotificationsDropdown() {
     }, [ordersEnabled, requestsEnabled]);
 
     useActivityStreamAdmin({
+        enabled: ordersEnabled || requestsEnabled,
         onOrderNew: useCallback((order: Order) => {
             if (order.status === "PLACED") {
                 setOrders((prev) => {

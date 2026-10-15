@@ -158,7 +158,7 @@ export default function GuestServicesClient() {
     useActivityStreamGuest({
         hotelSlug: hotelSlug || "",
         roomId: selectedRoom,
-        enabled: !!selectedRoom && !!hotelSlug,
+        enabled: !!selectedRoom && !!hotelSlug && hotel?.features?.includes("SERVICE_REQUESTS") === true,
         onServiceRequestNew: loadRequests,
         onServiceRequestUpdated: loadRequests,
     });
