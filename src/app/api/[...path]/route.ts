@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { forwardNestSetCookies } from '@/lib/forwardNestSetCookies';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -62,5 +63,7 @@ async function proxyRequest(request: NextRequest, { path }: { path: string[] }) 
     };
     const retryAfter = res.headers.get('retry-after');
     if (retryAfter) responseHeaders['Retry-After'] = retryAfter;
-    return new NextResponse(data, { status: res.status, headers: responseHeaders });
+    const response = new NextResponse(data, { status: res.status, headers: responseHeaders });
+    forwardNestSetCookies(res, response);
+    return response;
 }

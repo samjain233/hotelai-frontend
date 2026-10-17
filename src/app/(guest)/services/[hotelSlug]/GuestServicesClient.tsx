@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { GuestServicesSkeleton } from "@/components/ui/Skeleton";
 import { StayPinModal } from "@/components/guest/StayPinModal";
-import { getStayToken, getStayPin, clearStayToken, useStaySession } from "@/lib/staySession";
+import { isStayVerified, clearStayVerified, useStaySession } from "@/lib/staySession";
 import { toast } from "sonner";
 
 const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] = [
@@ -99,7 +99,7 @@ export default function GuestServicesClient() {
 
     const hasAutoSelectedRef = useRef(false);
     const promptedRoomRef = useRef<string | null>(null);
-    const { pin: stayPin } = useStaySession(selectedRoom);
+    const { isVerified: stayVerified } = useStaySession(selectedRoom);
 
     useEffect(() => {
         if (hasAutoSelectedRef.current || !roomFromUrl || rooms.length === 0) return;
@@ -110,13 +110,11 @@ export default function GuestServicesClient() {
         }
     }, [rooms, roomFromUrl]);
 
-    /** Auto-prompt guest for Stay PIN when scanning QR code / selecting room if token is not saved yet */
+    /** Auto-prompt guest for Stay PIN when scanning QR code / selecting room if this phone hasn't verified it yet */
     useEffect(() => {
         if (!selectedRoom || loading) return;
         if (promptedRoomRef.current === selectedRoom) return;
-        const token = getStayToken(selectedRoom);
-        const pin = getStayPin(selectedRoom);
-        if (!token || !pin) {
+        if (!isStayVerified(selectedRoom)) {
             promptedRoomRef.current = selectedRoom;
             setShowPinModal(true);
         }
@@ -125,8 +123,7 @@ export default function GuestServicesClient() {
     const loadRequests = useCallback(async () => {
         if (!selectedRoom) return;
         try {
-            const stayToken = getStayToken(selectedRoom);
-            const data = await api.getGuestServiceRequests(selectedRoom, stayToken || undefined);
+            const data = await api.getGuestServiceRequests(selectedRoom);
             setRequests(data);
         } catch (err) { console.error(err); }
     }, [selectedRoom]);
@@ -163,15 +160,13 @@ export default function GuestServicesClient() {
         onServiceRequestUpdated: loadRequests,
     });
 
-    async function handleSubmit(stayTokenOverride?: string) {
+    async function handleSubmit() {
         if (!selectedRoom) {
             toast.error("Please select your room number first");
             return;
         }
 
-        const token = stayTokenOverride || getStayToken(selectedRoom);
-
-        if (!token) {
+        if (!isStayVerified(selectedRoom)) {
             setShowPinModal(true);
             return;
         }
@@ -228,7 +223,6 @@ export default function GuestServicesClient() {
                 priority,
                 roomId: selectedRoom,
                 guestName: guestName || undefined,
-                stayToken: token,
                 ...(serviceId ? { serviceId } : {}),
             });
 
@@ -261,7 +255,7 @@ export default function GuestServicesClient() {
                 msg.toLowerCase().includes("stay") ||
                 msg.toLowerCase().includes("session")
             ) {
-                clearStayToken(selectedRoom);
+                clearStayVerified(selectedRoom);
                 setShowPinModal(true);
             }
 
@@ -332,16 +326,15 @@ export default function GuestServicesClient() {
                         </div>
                     </div>
                     {selectedRoom ? (
-                        stayPin ? (
+                        stayVerified ? (
                             <button
                                 type="button"
                                 onClick={() => setShowPinModal(true)}
                                 className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
-                                title={`Room Stay PIN: ${stayPin} (Click to re-verify)`}
+                                title="Room verified (Click to re-enter PIN)"
                             >
                                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)]">PIN</span>
-                                <span className="font-mono font-bold tracking-wider">{stayPin}</span>
+                                <span>Verified</span>
                             </button>
                         ) : (
                             <button
@@ -692,11 +685,11 @@ export default function GuestServicesClient() {
                 onClose={() => setShowPinModal(false)}
                 roomId={selectedRoom}
                 roomNumber={rooms.find((r) => r.id === selectedRoom)?.number || "Your Room"}
-                onSuccess={(newToken) => {
+                onSuccess={() => {
                     setShowPinModal(false);
                     void loadRequests();
                     if (submitting) {
-                        void handleSubmit(newToken);
+                        void handleSubmit();
                     }
                 }}
             />

@@ -169,14 +169,14 @@ export async function GET(request: NextRequest) {
     nextRes.cookies.set(AUTH_COOKIE, data.token, {
         httpOnly: true,
         secure: isProd,
-        sameSite: isProd ? "none" : "lax",
+        sameSite: "lax",
         maxAge: accessMaxAgeSec,
         path: "/",
     });
     nextRes.cookies.set(AUTH_REFRESH_COOKIE, data.refreshToken, {
         httpOnly: true,
         secure: isProd,
-        sameSite: isProd ? "none" : "lax",
+        sameSite: "lax",
         maxAge: refreshMaxAgeSec,
         path: "/",
     });

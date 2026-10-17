@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
         const response = NextResponse.json({
             admin: (data as { admin?: unknown }).admin,
             hotel: (data as { hotel?: unknown }).hotel,
-            token: (data as { token?: string }).token,
         });
         forwardNestSetCookies(res, response);
         return response;

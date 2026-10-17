@@ -24,7 +24,7 @@ import {
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 import { AnimatedOverlays } from "./GuestMenuAnimated";
 import { StayPinModal } from "@/components/guest/StayPinModal";
-import { getStayToken, getStayPin, clearStayToken, useStaySession } from "@/lib/staySession";
+import { isStayVerified, clearStayVerified, useStaySession } from "@/lib/staySession";
 import { toast } from "sonner";
 import { GuestMenuProvider, GuestMenuState } from "./components/GuestMenuContext";
 import { GuestHeader } from "./components/GuestHeader";
@@ -116,7 +116,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     );
 
     const promptedRoomRef = useRef<string | null>(null);
-    const { pin: stayPin } = useStaySession(resolvedRoomId);
+    const { isVerified: stayVerified } = useStaySession(resolvedRoomId);
 
     const digitalOrderingEnabled = hotel?.features ? hotel.features.includes("DIGITAL_ORDERING") : true;
     const serviceRequestsEnabled = hotel?.features ? hotel.features.includes("SERVICE_REQUESTS") : true;
@@ -125,9 +125,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         if (!resolvedRoomId || loading) return;
         if (!digitalOrderingEnabled && !serviceRequestsEnabled) return;
         if (promptedRoomRef.current === resolvedRoomId) return;
-        const token = getStayToken(resolvedRoomId);
-        const pin = getStayPin(resolvedRoomId);
-        if (!token || !pin) {
+        if (!isStayVerified(resolvedRoomId)) {
             promptedRoomRef.current = resolvedRoomId;
             setShowPinModal(true);
         }
@@ -315,8 +313,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
     const loadPastOrders = useCallback(async () => {
         if (!resolvedRoomId) return;
         try {
-            const stayToken = getStayToken(resolvedRoomId);
-            const orders = await api.getGuestRoomOrders(resolvedRoomId, stayToken || undefined);
+            const orders = await api.getGuestRoomOrders(resolvedRoomId);
             setPastOrders(orders);
             const tracking = orderRef.current;
             if (tracking?.id) {
@@ -387,33 +384,30 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
             setShowRoomModal(true);
             return;
         }
-        const existingToken = getStayToken(resolvedRoomId);
-        if (!existingToken) {
+        if (!isStayVerified(resolvedRoomId)) {
             setPinModalPurpose("ORDER");
             setShowPinModal(true);
             return;
         }
-        void placeOrder(existingToken);
+        void placeOrder();
     }
     function confirmRoomFromModal() {
         if (!resolvedRoomId) return;
         setShowRoomModal(false);
         if (isOpen) {
-            const existingToken = getStayToken(resolvedRoomId);
-            if (!existingToken) {
+            if (!isStayVerified(resolvedRoomId)) {
                 setPinModalPurpose("ORDER");
                 setShowPinModal(true);
                 return;
             }
-            void placeOrder(existingToken);
+            void placeOrder();
             return;
         }
         setShowCart(true);
     }
-    async function placeOrder(stayTokenOverride?: string) {
+    async function placeOrder() {
         if (!isOpen || !resolvedRoomId) return;
-        const token = stayTokenOverride || getStayToken(resolvedRoomId);
-        if (!token) {
+        if (!isStayVerified(resolvedRoomId)) {
             setPinModalPurpose("ORDER");
             setShowPinModal(true);
             return;
@@ -429,7 +423,6 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                 items: cart.map((ci) => ({ itemId: ci.item.id, quantity: ci.quantity })),
                 notes: notes || undefined,
                 guestName: guestName || undefined,
-                stayToken: token,
                 idempotencyKey,
             });
             orderIdempotencyKeyRef.current = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -443,7 +436,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Failed to place order";
             if (msg.toLowerCase().includes("pin") || msg.toLowerCase().includes("vacant") || msg.toLowerCase().includes("checked out") || msg.toLowerCase().includes("stay") || msg.toLowerCase().includes("session")) {
-                clearStayToken(resolvedRoomId);
+                clearStayVerified(resolvedRoomId);
                 setShowPinModal(true);
             }
             toast.error(msg);
@@ -637,7 +630,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     activeSortLabel={activeSortLabel}
                     removeDietFilter={removeDietFilter}
                     toggleDietFilter={toggleDietFilter}
-                    stayPin={stayPin}
+                    stayVerified={stayVerified}
                     chipCategories={chipCategories}
                     activeCategory={activeCategory}
                     scrollToCategory={scrollToCategory}
@@ -657,8 +650,7 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                         <button
                             type="button"
                             onClick={() => {
-                                const existingToken = getStayToken(resolvedRoomId);
-                                if (!existingToken) {
+                                if (!isStayVerified(resolvedRoomId)) {
                                     setPinModalPurpose("BILL");
                                     setShowPinModal(true);
                                     return;
@@ -814,11 +806,11 @@ export default function GuestMenuClient({ hotelSlug, initialData }: Props) {
                     onClose={() => setShowPinModal(false)}
                     roomId={resolvedRoomId}
                     roomNumber={roomDisplayName || "Your Room"}
-                    onSuccess={(newToken) => {
+                    onSuccess={() => {
                         setShowPinModal(false);
                         void loadPastOrders();
                         if (pinModalPurpose === "ORDER") {
-                            void placeOrder(newToken);
+                            void placeOrder();
                         } else if (pinModalPurpose === "BILL") {
                             setShowHistory(true);
                         }

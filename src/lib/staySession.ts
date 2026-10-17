@@ -1,107 +1,78 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useSyncExternalStore } from "react";
 
 /**
- * Guest Stay Session Storage Helper
- * Keeps verified Stay Tokens and PINs in browser localStorage so in-house guests
- * only need to enter their 4-digit PIN once during their stay.
+ * Guest stay session helper.
+ * The stay token lives in an httpOnly cookie set by the API, so page scripts can never read it.
+ * Here we only remember *that* this phone verified a room, to decide when to show the PIN prompt.
+ * If the cookie has expired or the PIN changed, the API rejects the request and we clear the flag.
  */
 
-const STAY_TOKEN_PREFIX = 'stay_token_';
-const STAY_PIN_PREFIX = 'stay_pin_';
+const STAY_VERIFIED_PREFIX = 'stay_verified_';
+const LEGACY_KEY_PREFIXES = ['stay_token_', 'stay_pin_'];
 
-export function getStayToken(roomId?: string | null): string | null {
-    if (!roomId || typeof window === 'undefined') return null;
+function purgeLegacyKeys(): void {
     try {
-        return localStorage.getItem(`${STAY_TOKEN_PREFIX}${roomId}`);
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && LEGACY_KEY_PREFIXES.some((p) => key.startsWith(p))) {
+                localStorage.removeItem(key);
+            }
+        }
     } catch {
-        return null;
+        // localStorage could be disabled
     }
 }
 
-export function getStayPin(roomId?: string | null): string | null {
-    if (!roomId || typeof window === 'undefined') return null;
+if (typeof window !== 'undefined') purgeLegacyKeys();
+
+function notify(roomId: string): void {
+    window.dispatchEvent(new CustomEvent('stay_session_change', { detail: { roomId } }));
+}
+
+export function isStayVerified(roomId?: string | null): boolean {
+    if (!roomId || typeof window === 'undefined') return false;
     try {
-        return localStorage.getItem(`${STAY_PIN_PREFIX}${roomId}`);
+        return localStorage.getItem(`${STAY_VERIFIED_PREFIX}${roomId}`) === '1';
     } catch {
-        return null;
+        return false;
     }
 }
 
-export function setStaySession(roomId: string, token: string, pin?: string): void {
+export function markStayVerified(roomId: string): void {
     if (!roomId || typeof window === 'undefined') return;
     try {
-        localStorage.setItem(`${STAY_TOKEN_PREFIX}${roomId}`, token);
-        if (pin) {
-            localStorage.setItem(`${STAY_PIN_PREFIX}${roomId}`, pin);
-        }
-        window.dispatchEvent(new CustomEvent('stay_session_change', { detail: { roomId } }));
+        localStorage.setItem(`${STAY_VERIFIED_PREFIX}${roomId}`, '1');
     } catch {
         // localStorage could be disabled or full
     }
+    notify(roomId);
 }
 
-export function setStayToken(roomId: string, token: string): void {
-    setStaySession(roomId, token);
-}
-
-export function setStayPin(roomId: string, pin: string): void {
+export function clearStayVerified(roomId?: string | null): void {
     if (!roomId || typeof window === 'undefined') return;
     try {
-        localStorage.setItem(`${STAY_PIN_PREFIX}${roomId}`, pin);
-        window.dispatchEvent(new CustomEvent('stay_session_change', { detail: { roomId } }));
+        localStorage.removeItem(`${STAY_VERIFIED_PREFIX}${roomId}`);
     } catch {
         // ignore
     }
+    notify(roomId);
 }
 
-export function clearStayToken(roomId?: string | null): void {
-    if (!roomId || typeof window === 'undefined') return;
-    try {
-        localStorage.removeItem(`${STAY_TOKEN_PREFIX}${roomId}`);
-        localStorage.removeItem(`${STAY_PIN_PREFIX}${roomId}`);
-        window.dispatchEvent(new CustomEvent('stay_session_change', { detail: { roomId } }));
-    } catch {
-        // ignore
-    }
+function subscribe(onChange: () => void): () => void {
+    window.addEventListener('stay_session_change', onChange);
+    window.addEventListener('storage', onChange);
+    return () => {
+        window.removeEventListener('stay_session_change', onChange);
+        window.removeEventListener('storage', onChange);
+    };
 }
 
 /**
- * React Hook to access reactive stay session token and verified PIN for a given room.
+ * React hook: whether this phone has verified the given room.
  */
 export function useStaySession(roomId?: string | null) {
-    const readSession = useCallback(() => {
-        return {
-            token: getStayToken(roomId),
-            pin: getStayPin(roomId),
-        };
-    }, [roomId]);
-
-    const [session, setSession] = useState<{ token: string | null; pin: string | null }>(() => readSession());
-
-    useEffect(() => {
-        setSession(readSession());
-
-        const handleUpdate = (e?: Event) => {
-            const customEvent = e as CustomEvent<{ roomId?: string }> | undefined;
-            if (!customEvent?.detail?.roomId || customEvent.detail.roomId === roomId) {
-                setSession(readSession());
-            }
-        };
-
-        window.addEventListener('stay_session_change', handleUpdate);
-        window.addEventListener('storage', handleUpdate);
-
-        return () => {
-            window.removeEventListener('stay_session_change', handleUpdate);
-            window.removeEventListener('storage', handleUpdate);
-        };
-    }, [roomId, readSession]);
-
-    return {
-        token: session.token,
-        pin: session.pin,
-        isVerified: !!session.token,
-    };
+    const isVerified = useSyncExternalStore(subscribe, () => isStayVerified(roomId), () => false);
+    return { isVerified };
 }

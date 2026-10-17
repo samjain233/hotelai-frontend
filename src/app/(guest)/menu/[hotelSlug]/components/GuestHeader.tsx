@@ -7,7 +7,7 @@ import { Search, MapPin, X, ShoppingBag, Menu, SlidersHorizontal, ShieldCheck, H
 import { IndianVegMark, IndianNonVegMark } from "../GuestMenuDietIcons";
 import { Egg } from "lucide-react";
 import { useGuestMenuContext } from "./GuestMenuContext";
-import { getStayToken } from "@/lib/staySession";
+import { isStayVerified } from "@/lib/staySession";
 import { useState, useEffect, useRef } from "react";
 import { GuestMenuSort, GuestDietFilterKey } from "@/lib/guestMenuSearch";
 import type { GuestPublicMenuCategory } from "@/lib/types";
@@ -22,7 +22,7 @@ interface GuestHeaderProps {
     activeSortLabel: string;
     removeDietFilter: (key: GuestDietFilterKey) => void;
     toggleDietFilter: (key: GuestDietFilterKey) => void;
-    stayPin?: string | null;
+    stayVerified?: boolean;
     chipCategories: GuestPublicMenuCategory[];
     activeCategory: string;
     scrollToCategory: (categoryId: string) => void;
@@ -56,7 +56,7 @@ export function GuestHeader({
     activeSortLabel,
     removeDietFilter,
     toggleDietFilter,
-    stayPin,
+    stayVerified,
     chipCategories,
     activeCategory,
     scrollToCategory,
@@ -149,16 +149,15 @@ export function GuestHeader({
                                     ) : null}
                                 </div>
                             </div>
-                            {stayPin && (ctx.digitalOrderingEnabled || ctx.serviceRequestsEnabled) ? (
+                            {stayVerified && (ctx.digitalOrderingEnabled || ctx.serviceRequestsEnabled) ? (
                                 <button
                                     type="button"
                                     onClick={() => ctx.setShowPinModal(true)}
                                     className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
-                                    title={`Room ${ctx.roomDisplayName || ""} Stay PIN: ${stayPin} (Click to re-verify)`}
+                                    title={`Room ${ctx.roomDisplayName || ""} verified (Click to re-enter PIN)`}
                                 >
                                     <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                    <span className="text-[10px] font-sans font-medium text-[var(--guest-muted)]">PIN</span>
-                                    <span className="font-mono font-bold tracking-wider">{stayPin}</span>
+                                    <span>Verified</span>
                                 </button>
                             ) : null}
                         </div>
@@ -216,13 +215,12 @@ export function GuestHeader({
                                     role="menu"
                                     className="absolute right-0 top-12 z-[60] w-[min(calc(100vw-1.5rem),17.5rem)] max-h-[min(72vh,28rem)] overflow-y-auto rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] py-2 shadow-xl shadow-black/50"
                                 >
-                                    {stayPin && (ctx.digitalOrderingEnabled || ctx.serviceRequestsEnabled) ? (
-                                        <div className="mx-3 mb-2 flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
+                                    {stayVerified && (ctx.digitalOrderingEnabled || ctx.serviceRequestsEnabled) ? (
+                                        <div className="mx-3 mb-2 flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
                                             <span className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
                                                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                                Room {ctx.roomDisplayName || ""} PIN
+                                                Room {ctx.roomDisplayName || ""} verified
                                             </span>
-                                            <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300 tracking-wider">{stayPin}</span>
                                         </div>
                                     ) : null}
                                     <div className="px-3 pb-1">
@@ -333,8 +331,7 @@ export function GuestHeader({
                                                     className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
                                                     onClick={() => {
                                                         setShowHeaderMenu(false);
-                                                        const existingToken = getStayToken(ctx.resolvedRoomId);
-                                                        if (!existingToken) {
+                                                        if (!isStayVerified(ctx.resolvedRoomId)) {
                                                             ctx.setPinModalPurpose("BILL");
                                                             ctx.setShowPinModal(true);
                                                             return;

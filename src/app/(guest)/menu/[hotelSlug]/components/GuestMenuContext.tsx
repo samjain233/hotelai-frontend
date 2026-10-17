@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { MenuItem, CartItem, Order, PublicMenuFullData, Hotel, GuestPublicMenuCategory, Room } from "@/lib/types";
 import { api } from "@/lib/api";
 import { usePublicMenuFull } from "@/hooks/useSwrApi";
-import { getStayToken, getStayPin, clearStayToken } from "@/lib/staySession";
 import { GuestDietFilterKey, GuestMenuSort } from "@/lib/guestMenuSearch";
 
 export interface GuestMenuState {
@@ -69,7 +68,7 @@ export interface GuestMenuState {
     serviceRequestsEnabled: boolean;
     
     loadPastOrders: () => Promise<void>;
-    placeOrder: (stayTokenOverride?: string) => Promise<void>;
+    placeOrder: () => Promise<void>;
     initiateOrder: () => void;
     confirmRoomFromModal: () => void;
 }

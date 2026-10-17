@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
         }
 
         const response = NextResponse.json({
-            token: data.token,
             admin: data.admin,
             hotel: data.hotel,
         });

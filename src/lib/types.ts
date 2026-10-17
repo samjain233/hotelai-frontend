@@ -59,12 +59,8 @@ export interface StaffListMember {
     } | null;
 }
 
+/** Tokens are never in the body; the session lives in httpOnly cookies. */
 export interface AuthResponse {
-    token?: string;
-    /** Present when JSON includes it (e.g. server flows); browser sessions use httpOnly cookies. */
-    refreshToken?: string;
-    accessMaxAgeMs?: number;
-    refreshMaxAgeMs?: number;
     admin: Admin;
     hotel: Hotel;
 }

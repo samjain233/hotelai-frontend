@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { KeyRound, ShieldCheck, X, Loader2, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
-import { setStaySession, getStayPin } from "@/lib/staySession";
+import { markStayVerified } from "@/lib/staySession";
 import { toast } from "sonner";
 
 interface StayPinModalProps {
@@ -12,7 +12,7 @@ interface StayPinModalProps {
     onClose: () => void;
     roomId: string;
     roomNumber: string;
-    onSuccess: (stayToken: string) => void;
+    onSuccess: () => void;
 }
 
 export function StayPinModal({
@@ -29,12 +29,7 @@ export function StayPinModal({
 
     useEffect(() => {
         if (isOpen) {
-            const existingPin = getStayPin(roomId);
-            if (existingPin && existingPin.length === 4) {
-                setDigits(existingPin.split(""));
-            } else {
-                setDigits(["", "", "", ""]);
-            }
+            setDigits(["", "", "", ""]);
             setError(null);
             setTimeout(() => {
                 inputRefs.current[0]?.focus();
@@ -102,10 +97,10 @@ export function StayPinModal({
 
         try {
             const res = await api.verifyGuestRoomPin(roomId, pin);
-            if (res.stayToken) {
-                setStaySession(roomId, res.stayToken, pin);
+            if (res.success) {
+                markStayVerified(roomId);
                 toast.success(`Verified! Welcome to Room ${roomNumber}`);
-                onSuccess(res.stayToken);
+                onSuccess();
                 onClose();
             } else {
                 setError("Verification failed. Please try again.");

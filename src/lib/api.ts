@@ -180,7 +180,6 @@ class ApiClient {
         return {
             admin: (data as AuthResponse).admin,
             hotel: (data as AuthResponse).hotel,
-            token: (data as AuthResponse).token,
         };
     }
 
@@ -528,9 +527,9 @@ class ApiClient {
         return this.request<import('./types').PublicMenuFullData>(`/guest/menu/${hotelSlug}/full`);
     }
 
+    /** On success the API sets the stay token as an httpOnly cookie for this room. */
     async verifyGuestRoomPin(roomId: string, pin: string): Promise<{
         success: boolean;
-        stayToken: string;
         roomNumber: string;
         hotelSlug?: string;
     }> {
@@ -554,8 +553,6 @@ class ApiClient {
         notes?: string;
         guestName?: string;
         guestPhone?: string;
-        stayToken?: string;
-        pin?: string;
         idempotencyKey?: string;
     }): Promise<Order> {
         const headers: Record<string, string> = {};
@@ -573,12 +570,8 @@ class ApiClient {
         return this.request<Order>(`/guest/orders/${id}`);
     }
 
-    async getGuestRoomOrders(roomId: string, stayToken?: string): Promise<Order[]> {
-        const headers: Record<string, string> = {};
-        if (stayToken) {
-            headers['x-stay-token'] = stayToken;
-        }
-        return this.request<Order[]>(`/guest/rooms/${roomId}/orders`, { headers });
+    async getGuestRoomOrders(roomId: string): Promise<Order[]> {
+        return this.request<Order[]>(`/guest/rooms/${roomId}/orders`);
     }
 
     async getPublicRooms(hotelSlug: string): Promise<{ id: string; number: string; floor?: string; type?: string }[]> {
@@ -649,8 +642,6 @@ class ApiClient {
         roomId: string;
         guestName?: string;
         guestPhone?: string;
-        stayToken?: string;
-        pin?: string;
         serviceId?: string;
     }): Promise<ServiceRequest> {
         return this.request<ServiceRequest>('/guest/service-requests', {
@@ -659,12 +650,8 @@ class ApiClient {
         });
     }
 
-    async getGuestServiceRequests(roomId: string, stayToken?: string): Promise<ServiceRequest[]> {
-        const headers: Record<string, string> = {};
-        if (stayToken) {
-            headers['x-stay-token'] = stayToken;
-        }
-        return this.request<ServiceRequest[]>(`/guest/rooms/${roomId}/service-requests`, { headers });
+    async getGuestServiceRequests(roomId: string): Promise<ServiceRequest[]> {
+        return this.request<ServiceRequest[]>(`/guest/rooms/${roomId}/service-requests`);
     }
 
     async getServiceRequests(type?: string, status?: string): Promise<ServiceRequest[]> {
