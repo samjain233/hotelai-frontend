@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 import { User, Lock, Mail, Hotel, Eye, EyeOff } from "lucide-react";
 import { isGoogleSignInEnabled } from "@/components/GoogleSignInButton";
 
-const MIN_PASSWORD = 6;
+const MIN_PASSWORD = 10;
 
 function GoogleMark() {
     return (

@@ -9,7 +9,7 @@ import { Lock, Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { LegalFooter } from "@/components/LegalFooter";
 
-const MIN_PASSWORD = 6;
+const MIN_PASSWORD = 10;
 
 function ResetFallback() {
     return (
