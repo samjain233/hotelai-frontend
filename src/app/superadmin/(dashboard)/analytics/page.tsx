@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { platformApi, PlatformAnalytics } from "@/lib/platformApi";
-import { BarChart3, TrendingUp, Award, ShoppingBag } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, TrendingUp, Award, ShoppingBag, Sparkles } from "lucide-react";
+import { formatAiCost, formatTokens } from "../aiUsageFormat";
 
 export default function AnalyticsPage() {
     const [data, setData] = useState<PlatformAnalytics | null>(null);
@@ -172,6 +174,54 @@ export default function AnalyticsPage() {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* AI usage by hotel */}
+            <div className="dashboard-card p-5">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-[18px] h-[18px] text-violet-500" />
+                        <h2 className="font-semibold">AI spend by hotel (30 days)</h2>
+                    </div>
+                    {data.aiUsage && data.aiUsage.totals.calls > 0 && (
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                            {data.aiUsage.totals.calls} Gemini call{data.aiUsage.totals.calls === 1 ? "" : "s"} · {formatTokens(data.aiUsage.totals.totalTokens)}{" "}
+                            tokens · <span className="font-semibold text-foreground">{formatAiCost(data.aiUsage.totals.estimatedCostUsd)}</span>
+                            {data.aiUsage.totals.errorCalls > 0 ? ` · ${data.aiUsage.totals.errorCalls} failed` : ""}
+                        </p>
+                    )}
+                </div>
+                {!data.aiUsage || data.aiUsage.byHotel.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">No Gemini calls in the last 30 days.</p>
+                ) : (
+                    <div className="space-y-3">
+                        {data.aiUsage.byHotel.map((h, idx) => {
+                            const maxCost = data.aiUsage.byHotel[0]?.estimatedCostUsd || 1;
+                            return (
+                                <div key={h.hotelId} className="flex items-center gap-3">
+                                    <span className="text-xs font-bold text-muted-foreground w-5 text-right">{idx + 1}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-baseline mb-1">
+                                            <Link href={`/superadmin/hotels/${h.hotelId}`} className="text-sm font-medium truncate hover:underline">
+                                                {h.hotelName}
+                                            </Link>
+                                            <span className="text-xs text-muted-foreground shrink-0 ml-2 tabular-nums">
+                                                {h.calls} call{h.calls === 1 ? "" : "s"} · {formatTokens(h.totalTokens)} tokens
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                                            <div
+                                                className="h-full bg-violet-500 rounded-full transition-all"
+                                                style={{ width: `${Math.max(2, (h.estimatedCostUsd / maxCost) * 100)}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-semibold shrink-0 tabular-nums whitespace-nowrap">{formatAiCost(h.estimatedCostUsd)}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     );

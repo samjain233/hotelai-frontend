@@ -3,19 +3,22 @@
 import { MenuItem } from "@/lib/types";
 import { UtensilsCrossed } from "lucide-react";
 import { GuestMenuItemInsights } from "../GuestMenuItemInsights";
-import { useGuestMenuContext } from "./GuestMenuContext";
+import { useGuestMenuData } from "./GuestMenuContext";
+import type { GuestMenuPhotoLoading } from "../templates/photoLoading";
+import { GuestMenuImage, GUEST_MENU_IMAGE_SIZES_HALF } from "./GuestMenuImage";
+import { guestMenuImageSrc } from "@/lib/guestMenuImageHosts";
 import { GuestMenuDietMark, GuestMenuItemAction, formatPrice } from "./GuestMenuItemParts";
 
 interface GuestMenuGalleryCardProps {
     item: MenuItem;
     itemIndex: number;
-    isPriorityImage: boolean;
+    imageLoading: GuestMenuPhotoLoading;
 }
 
-export function GuestMenuGalleryCard({ item, itemIndex, isPriorityImage }: GuestMenuGalleryCardProps) {
-    const ctx = useGuestMenuContext();
+export function GuestMenuGalleryCard({ item, itemIndex, imageLoading }: GuestMenuGalleryCardProps) {
+    const ctx = useGuestMenuData();
     const desc = item.description?.trim() ?? "";
-    const imageSrc = item.imageUrl?.trim() ?? "";
+    const imageSrc = guestMenuImageSrc(item.imageUrl);
     const soldOut = item.available === false;
 
     return (
@@ -25,18 +28,7 @@ export function GuestMenuGalleryCard({ item, itemIndex, isPriorityImage }: Guest
         >
             <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--guest-surface-2)]">
                 {imageSrc ? (
-                    // Menu images are arbitrary hotel URLs; <img> avoids next/image domain config.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                        src={imageSrc}
-                        alt=""
-                        width={320}
-                        height={240}
-                        loading={isPriorityImage ? "eager" : "lazy"}
-                        decoding="async"
-                        fetchPriority={isPriorityImage ? "high" : "auto"}
-                        className="h-full w-full object-cover"
-                    />
+                    <GuestMenuImage src={imageSrc} width={320} height={240} sizes={GUEST_MENU_IMAGE_SIZES_HALF} loading={imageLoading} className="h-full w-full object-cover" />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center">
                         <UtensilsCrossed className="h-7 w-7 text-[var(--guest-accent)] opacity-40" aria-hidden />

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { clientIpHeaders } from '@/lib/proxyClientHeaders';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     const cookie = request.headers.get('cookie');
     const res = await fetch(upstreamUrl.toString(), {
-        headers: cookie ? { Cookie: cookie } : {},
+        headers: { ...clientIpHeaders(request), ...(cookie ? { Cookie: cookie } : {}) },
     });
 
     if (!res.ok) {

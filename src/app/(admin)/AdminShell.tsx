@@ -25,6 +25,8 @@ import {
     ChevronRight,
     PanelLeft,
     LifeBuoy,
+    ListChecks,
+    BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -32,6 +34,7 @@ import {
     filterVisibleNavItems,
     isOrderingAdminNavPath,
 } from "@/lib/adminNavConfig";
+import { loginUrlFor } from "@/lib/routes";
 import { motion, AnimatePresence } from "framer-motion";
 
 type IconType = ComponentType<{ className?: string }>;
@@ -44,7 +47,9 @@ const iconMap: Record<string, IconType> = {
     Headset,
     Wrench,
     UtensilsCrossed,
+    ListChecks,
     Palette,
+    BarChart3,
     BedDouble,
     ChefHat,
     Users,
@@ -53,7 +58,7 @@ const iconMap: Record<string, IconType> = {
 
 const NAV_GROUPS: { id: string; label: string; hrefs: string[] }[] = [
     { id: "operations", label: "Operations", hrefs: ["/dashboard", "/orders", "/kitchen", "/services"] },
-    { id: "menu", label: "Menu", hrefs: ["/menu", "/menu-design"] },
+    { id: "menu", label: "Menu", hrefs: ["/menu", "/menu/availability", "/menu-design", "/analytics"] },
     { id: "property", label: "Property", hrefs: ["/rooms", "/service-catalogue", "/staff"] },
     { id: "account", label: "Account", hrefs: ["/settings"] },
 ];
@@ -77,6 +82,16 @@ function groupNav(items: NavItem[]) {
 
 function isActivePath(pathname: string, href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * The nav item for the current page. With nested hrefs (`/menu` and `/menu/availability`)
+ * the longest matching href wins, so `/menu` is not highlighted on the availability page.
+ */
+function findActiveItem<T extends { href: string }>(pathname: string, items: T[]): T | undefined {
+    return items
+        .filter((item) => isActivePath(pathname, item.href))
+        .sort((a, b) => b.href.length - a.href.length)[0];
 }
 
 function initials(name?: string | null) {
@@ -106,9 +121,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
     useEffect(() => {
         if (!loading && !admin) {
-            router.replace("/login");
+            // Remember the page so sign-in returns here instead of the dashboard.
+            router.replace(loginUrlFor(pathname, window.location.search));
         }
-    }, [loading, admin, router]);
+    }, [loading, admin, router, pathname]);
 
     useEffect(() => {
         if (loading || !admin) return;
@@ -145,7 +161,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
     const navItems = filterVisibleNavItems(((serverNavItems as NavItem[] | undefined) ?? []).filter((item) => !item.isLocked));
     const groups = groupNav(navItems);
-    const currentItem = navItems.find((item) => isActivePath(pathname, item.href));
+    const currentItem = findActiveItem(pathname, navItems);
     const currentGroup = groups.find((group) => group.items.some((item) => item.href === currentItem?.href));
 
     if (loading || !admin) {
@@ -195,7 +211,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                         {open && (
                             <ul className="space-y-0.5">
                                 {group.items.map((item) => {
-                                    const active = isActivePath(pathname, item.href);
+                                    const active = item.href === currentItem?.href;
                                     const Icon = iconMap[item.iconName] || LayoutDashboard;
                                     return (
                                         <li key={item.href}>

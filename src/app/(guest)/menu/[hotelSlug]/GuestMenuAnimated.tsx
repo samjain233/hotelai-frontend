@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -29,6 +30,44 @@ interface CartBarProps {
     cartAnimKey: number;
     onShowCart: () => void;
 }
+/**
+ * Cart count that rolls like an odometer: the old digit slides out the way the number moved
+ * (up when adding, down when removing) and the new one slides in behind it.
+ */
+function CartCountMorph({ count }: { count: number }) {
+    const reduceMotion = useReducedMotion();
+    // Remember the last count so we know which way to roll (adjust-state-during-render pattern).
+    const [prevCount, setPrevCount] = useState(count);
+    const [direction, setDirection] = useState(1);
+    if (count !== prevCount) {
+        setDirection(count > prevCount ? 1 : -1);
+        setPrevCount(count);
+    }
+
+    return (
+        <span className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-[var(--guest-text-25)] text-xs font-bold tabular-nums text-[var(--guest-on-cta)]">
+            <AnimatePresence initial={false} mode="popLayout" custom={direction}>
+                <motion.span
+                    key={count}
+                    custom={direction}
+                    variants={{
+                        enter: (d: number) => ({ y: reduceMotion ? 0 : d * 14, opacity: 0 }),
+                        center: { y: 0, opacity: 1 },
+                        exit: (d: number) => ({ y: reduceMotion ? 0 : d * -14, opacity: 0 }),
+                    }}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 32, mass: 0.6 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                >
+                    {count}
+                </motion.span>
+            </AnimatePresence>
+        </span>
+    );
+}
+
 export function CartBar({ cartCount, cartTotal, cartAnimKey, onShowCart }: CartBarProps) {
     return (
         <AnimatePresence>
@@ -38,10 +77,12 @@ export function CartBar({ cartCount, cartTotal, cartAnimKey, onShowCart }: CartB
                     className="w-full h-14 rounded-full border border-[var(--guest-text-30)] bg-gradient-to-r from-[var(--guest-cta)] to-[var(--guest-cta-hover)] text-[var(--guest-on-cta)] shadow-xl shadow-black/35 flex items-center justify-between px-6 text-base font-semibold hover:opacity-95 active:scale-[0.98] transition-all"
                 >
                     <div className="flex items-center gap-3">
-                        <div key={cartAnimKey} className="bg-[var(--guest-text-25)] text-[var(--guest-on-cta)] w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold cart-pulse">{cartCount}</div>
+                        <div key={cartAnimKey} className="cart-pulse">
+                            <CartCountMorph count={cartCount} />
+                        </div>
                         <span>View Order</span>
                     </div>
-                    <span className="font-bold">{formatPrice(cartTotal)}</span>
+                    <span className="font-bold tabular-nums">{formatPrice(cartTotal)}</span>
                 </button>
             </motion.div>
         </AnimatePresence>

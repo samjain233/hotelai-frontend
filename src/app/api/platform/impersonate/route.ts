@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { forwardNestSetCookies } from '@/lib/forwardNestSetCookies';
+import { clientIpHeaders } from '@/lib/proxyClientHeaders';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
             headers: {
                 'Content-Type': 'application/json',
                 'x-platform-key': platformKey,
+                ...clientIpHeaders(request),
             },
         });
 

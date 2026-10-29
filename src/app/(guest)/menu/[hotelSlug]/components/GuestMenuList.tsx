@@ -1,58 +1,37 @@
 "use client";
 
-import { GuestPublicMenuCategory } from "@/lib/types";
-import { CategoryIconDisplay } from "@/lib/categoryIcons";
-import { resolveGuestMenuTemplate } from "@/lib/guestMenuTemplates";
-import { GUEST_MENU_TEMPLATE_REGISTRY } from "../templates/registry";
-import { useGuestMenuContext } from "./GuestMenuContext";
+import { memo, type ComponentType } from "react";
+import type { GuestMenuTemplate } from "@/lib/guestMenuTemplates";
+import { GUEST_MENU_TEMPLATE_RENDERERS } from "../templates/registry";
+import type { GuestMenuSectionsProps } from "../templates/types";
 
-interface GuestMenuListProps {
-    displayCategories: GuestPublicMenuCategory[];
-    searchNormalized: string;
+interface GuestMenuListProps extends GuestMenuSectionsProps {
+    /** Template the hotel currently uses (live data). */
+    template: GuestMenuTemplate;
+    /** Template the page was server-rendered with, and its renderer shipped in the initial bundle. */
+    serverTemplate?: GuestMenuTemplate;
+    ServerSections?: ComponentType<GuestMenuSectionsProps>;
 }
 
-export function GuestMenuList({ displayCategories, searchNormalized }: GuestMenuListProps) {
-    const { hotel } = useGuestMenuContext();
-    const { DishList, State } = GUEST_MENU_TEMPLATE_REGISTRY[resolveGuestMenuTemplate(hotel?.guestMenuTemplate)];
-
-    return (
-        <State>
-            {displayCategories.map((cat, catIndex) => {
-                const count = (cat.items ?? []).length;
-                return (
-                    <section
-                        key={cat.id}
-                        id={`cat-${cat.id}`}
-                        data-category-id={cat.id}
-                        aria-labelledby={`cat-title-${cat.id}`}
-                        className="relative isolate motion-reduce:transition-none"
-                            style={{
-                                scrollMarginTop: "calc(var(--guest-menu-sticky-top, 7rem) - 1px)",
-                                minHeight:
-                                    catIndex === displayCategories.length - 1 && displayCategories.length > 1
-                                        ? "calc(100dvh - var(--guest-menu-sticky-top, 7rem) - 6rem)"
-                                        : undefined,
-                            }}
-                    >
-                        <div
-                            className="sticky z-[41] -mx-4 mb-3 flex items-center justify-between gap-3 border-b border-[var(--guest-line)] bg-[var(--guest-bg)] px-4 py-3"
-                            style={{ top: "var(--guest-menu-sticky-top, 7rem)" }}
-                        >
-                            <h2
-                                id={`cat-title-${cat.id}`}
-                                className="flex min-w-0 items-center gap-2 text-[17px] font-bold tracking-tight text-[var(--guest-text)]"
-                            >
-                                <CategoryIconDisplay icon={cat.icon} size="md" className="shrink-0 text-[var(--guest-accent)]" />
-                                <span className="truncate">{cat.name}</span>
-                            </h2>
-                            <span className="shrink-0 text-xs tabular-nums text-[var(--guest-muted)]">
-                                {count} {count === 1 ? "dish" : "dishes"}
-                            </span>
-                        </div>
-                        <DishList items={cat.items ?? []} prioritizeImages={!searchNormalized && catIndex === 0} />
-                    </section>
-                );
-            })}
-        </State>
-    );
-}
+/**
+ * Mounts the hotel's template renderer.
+ *
+ * On a normal load the page passes the renderer in as a client reference (`templates/serverRegistry.ts`),
+ * so it is already loaded when hydration runs and the server HTML hydrates in place. The code-split
+ * `registry.tsx` entry is only used if the hotel's template changes while the page is open (SWR
+ * revalidation after an admin edit); that path shows `GuestMenuSectionsSkeleton` while the new chunk
+ * downloads, which is fine post-hydration.
+ *
+ * Memoised so unrelated parent re-renders do not reach the renderer.
+ */
+export const GuestMenuList = memo(function GuestMenuList({
+    template,
+    serverTemplate,
+    ServerSections,
+    displayCategories,
+    searchNormalized,
+}: GuestMenuListProps) {
+    const TemplateSections =
+        ServerSections && template === serverTemplate ? ServerSections : GUEST_MENU_TEMPLATE_RENDERERS[template];
+    return <TemplateSections displayCategories={displayCategories} searchNormalized={searchNormalized} />;
+});

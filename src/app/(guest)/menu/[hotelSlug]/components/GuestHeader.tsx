@@ -6,11 +6,14 @@ import Link from "next/link";
 import { Search, MapPin, X, ShoppingBag, Menu, SlidersHorizontal, ShieldCheck, Headset, Receipt } from "lucide-react";
 import { IndianVegMark, IndianNonVegMark } from "../GuestMenuDietIcons";
 import { Egg } from "lucide-react";
-import { useGuestMenuContext } from "./GuestMenuContext";
-import { isStayVerified } from "@/lib/staySession";
+import { useGuestCart, useGuestMenuData, useGuestMenuUi } from "./GuestMenuContext";
+import { guestMenuImageSrc } from "@/lib/guestMenuImageHosts";
 import { useState, useEffect, useRef } from "react";
 import { GuestMenuSort, GuestDietFilterKey } from "@/lib/guestMenuSearch";
 import type { GuestPublicMenuCategory } from "@/lib/types";
+
+/** Branding-bar collapse: a fast ease-out with no overshoot, so the sticky header never bounces into the content. */
+const COLLAPSE_TRANSITION = "duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
 
 interface GuestHeaderProps {
     guestHeaderRef: React.RefObject<HTMLElement>;
@@ -61,9 +64,16 @@ export function GuestHeader({
     activeCategory,
     scrollToCategory,
 }: GuestHeaderProps) {
-    const ctx = useGuestMenuContext();
+    // The header shows search, sort, cart count and room state, so it legitimately depends on all
+    // three contexts; merging them here keeps the template below readable.
+    const data = useGuestMenuData();
+    const cart = useGuestCart();
+    const ui = useGuestMenuUi();
+    const ctx = { ...data, ...cart, ...ui };
     const [showHeaderMenu, setShowHeaderMenu] = useState(false);
     const chipRowRef = useRef<HTMLDivElement>(null);
+    // Logos go through next/image too, so only our storage host is allowed; otherwise show the initial.
+    const logoSrc = guestMenuImageSrc(ctx.hotel?.logoUrl);
     const opens = formatClock(ctx.hotel?.openTime);
     const closes = formatClock(ctx.hotel?.closeTime);
     const hoursLabel = ctx.isOpen ? (closes ? `Open until ${closes}` : "Open now") : opens ? `Closed · opens ${opens}` : "Closed now";
@@ -91,75 +101,74 @@ export function GuestHeader({
                 ref={guestHeaderRef}
                 className="sticky top-0 z-50 w-full min-w-0 max-w-full border-b border-[var(--guest-line)] bg-[var(--guest-bg)]"
             >
-                <div
-                    className={cn(
-                        "mx-auto w-full min-w-0 max-w-md px-4 pb-3 transition-[padding] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
-                        brandingBarHidden ? "pt-2.5" : "pt-4",
-                    )}
-                >
+                <div className={cn("mx-auto w-full min-w-0 max-w-md px-4 pb-3", COLLAPSE_TRANSITION, "transition-[padding-top]", brandingBarHidden ? "pt-2.5" : "pt-4")}>
+                    {/* 0fr ↔ 1fr animates the row between 0 and its content height without measuring it. */}
                     <div
                         className={cn(
-                            "overflow-hidden transition-[max-height,opacity] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
-                            brandingBarHidden ? "pointer-events-none max-h-0 opacity-0" : "max-h-[8rem] opacity-100",
+                            "grid transition-[grid-template-rows,opacity]",
+                            COLLAPSE_TRANSITION,
+                            brandingBarHidden ? "pointer-events-none grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100",
                         )}
                         aria-hidden={brandingBarHidden}
                     >
-                        <div className="flex items-center justify-between gap-3 pb-3">
-                            <div className="flex min-w-0 flex-1 items-center gap-3">
-                                {ctx.hotel?.logoUrl?.trim() && !guestLogoFailed ? (
-                                    <Image
-                                        src={ctx.hotel.logoUrl.trim()}
-                                        alt=""
-                                        width={44}
-                                        height={44}
-                                        sizes="44px"
-                                        priority
-                                        className="h-11 w-11 shrink-0 rounded-xl bg-[var(--guest-surface)] object-cover ring-1 ring-[var(--guest-line)]"
-                                        onError={() => setGuestLogoFailed(true)}
-                                    />
-                                ) : (
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--guest-accent-15)] text-lg font-bold uppercase text-[var(--guest-accent)] ring-1 ring-[var(--guest-accent-25)]">
-                                        {ctx.hotel?.name?.trim().charAt(0) || "H"}
-                                    </div>
-                                )}
-                                <div className="min-w-0 flex-1">
-                                    <h1 className="truncate text-base font-bold capitalize leading-tight text-[var(--guest-text)]">{ctx.hotel?.name}</h1>
-                                    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-[var(--guest-muted)]">
-                                        <span
-                                            className={cn("h-1.5 w-1.5 shrink-0 rounded-full", ctx.isOpen ? "bg-emerald-500" : "bg-amber-500")}
-                                            aria-hidden
+                        <div className="min-h-0 overflow-hidden">
+                            <div className="flex items-center justify-between gap-3 pb-3">
+                                <div className="flex min-w-0 flex-1 items-center gap-3">
+                                    {logoSrc && !guestLogoFailed ? (
+                                        <Image
+                                            src={logoSrc}
+                                            alt=""
+                                            width={44}
+                                            height={44}
+                                            sizes="44px"
+                                            priority
+                                            className="h-11 w-11 shrink-0 rounded-xl bg-[var(--guest-surface)] object-cover ring-1 ring-[var(--guest-line)]"
+                                            onError={() => setGuestLogoFailed(true)}
                                         />
-                                        <span className="truncate">{hoursLabel}</span>
-                                        {ctx.roomDisplayName ? (
-                                            <>
-                                                <span className="text-[var(--guest-subtle)]" aria-hidden>·</span>
-                                                <MapPin className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" aria-hidden />
-                                                <span className="shrink-0 font-medium text-[var(--guest-text)]">Room {ctx.roomDisplayName}</span>
-                                            </>
-                                        ) : null}
-                                    </p>
-                                    {ctx.guestCallNumber ? (
-                                        <p className="mt-1 text-[11px] leading-snug text-[var(--guest-muted)]">
-                                            <span className="font-medium text-[var(--guest-text)]">Room service</span>
-                                            <span className="mx-1 text-[var(--guest-subtle)]">·</span>
-                                            <span className="break-all font-medium tabular-nums text-[var(--guest-text)]">
-                                                {ctx.guestCallNumber}
-                                            </span>
+                                    ) : (
+                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--guest-accent-15)] text-lg font-bold uppercase text-[var(--guest-accent)] ring-1 ring-[var(--guest-accent-25)]">
+                                            {ctx.hotel?.name?.trim().charAt(0) || "H"}
+                                        </div>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <h1 className="truncate text-base font-bold capitalize leading-tight text-[var(--guest-text)]">{ctx.hotel?.name}</h1>
+                                        <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-[var(--guest-muted)]">
+                                            <span
+                                                className={cn("h-1.5 w-1.5 shrink-0 rounded-full", ctx.isOpen ? "bg-emerald-500" : "bg-amber-500")}
+                                                aria-hidden
+                                            />
+                                            <span className="truncate">{hoursLabel}</span>
+                                            {ctx.roomDisplayName ? (
+                                                <>
+                                                    <span className="text-[var(--guest-subtle)]" aria-hidden>·</span>
+                                                    <MapPin className="h-3 w-3 shrink-0 text-[var(--guest-accent)]" aria-hidden />
+                                                    <span className="shrink-0 font-medium text-[var(--guest-text)]">Room {ctx.roomDisplayName}</span>
+                                                </>
+                                            ) : null}
                                         </p>
-                                    ) : null}
+                                        {ctx.guestCallNumber ? (
+                                            <p className="mt-1 text-[11px] leading-snug text-[var(--guest-muted)]">
+                                                <span className="font-medium text-[var(--guest-text)]">Room service</span>
+                                                <span className="mx-1 text-[var(--guest-subtle)]">·</span>
+                                                <span className="break-all font-medium tabular-nums text-[var(--guest-text)]">
+                                                    {ctx.guestCallNumber}
+                                                </span>
+                                            </p>
+                                        ) : null}
+                                    </div>
                                 </div>
+                                {stayVerified && (ctx.digitalOrderingEnabled || ctx.serviceRequestsEnabled) ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => ctx.setShowPinModal(true)}
+                                        className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
+                                        title={`Room ${ctx.roomDisplayName || ""} verified (Click to re-enter PIN)`}
+                                    >
+                                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                        <span>Verified</span>
+                                    </button>
+                                ) : null}
                             </div>
-                            {stayVerified && (ctx.digitalOrderingEnabled || ctx.serviceRequestsEnabled) ? (
-                                <button
-                                    type="button"
-                                    onClick={() => ctx.setShowPinModal(true)}
-                                    className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition hover:bg-emerald-500/20 active:scale-95"
-                                    title={`Room ${ctx.roomDisplayName || ""} verified (Click to re-enter PIN)`}
-                                >
-                                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                    <span>Verified</span>
-                                </button>
-                            ) : null}
                         </div>
                     </div>
 
@@ -331,12 +340,7 @@ export function GuestHeader({
                                                     className="flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm text-[var(--guest-text-70)] hover:bg-[var(--guest-surface-2)]"
                                                     onClick={() => {
                                                         setShowHeaderMenu(false);
-                                                        if (!isStayVerified(ctx.resolvedRoomId)) {
-                                                            ctx.setPinModalPurpose("BILL");
-                                                            ctx.setShowPinModal(true);
-                                                            return;
-                                                        }
-                                                        ctx.setShowHistory(true);
+                                                        ctx.openRoomBill();
                                                     }}
                                                 >
                                                     <Receipt className="h-4 w-4 shrink-0 text-[var(--guest-accent)]" />

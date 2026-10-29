@@ -8,9 +8,11 @@ import type { Order, OrderStatus, Room, ServiceRequest } from "@/lib/types";
 import { useEffect, useState } from "react";
 import {
     ArrowRight,
+    BarChart3,
     BedDouble,
     Check,
     ClipboardList,
+    Eye,
     Headset,
     Sparkles,
     Utensils,
@@ -18,6 +20,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPageSkeleton } from "@/components/ui/Skeleton";
+import { TierBadge } from "@/components/admin/TierBadge";
+import { useMenuAnalytics } from "@/hooks/useSwrApi";
+
+const ANALYTICS_ROLES = ["OWNER", "GENERAL_MANAGER", "MANAGER"];
 
 const OPEN_ORDER_STATUSES: OrderStatus[] = ["PLACED", "CONFIRMED", "PREPARING", "READY"];
 const OPEN_REQUEST_STATUSES = ["SUBMITTED", "ACKNOWLEDGED", "IN_PROGRESS"];
@@ -150,6 +156,9 @@ export default function DashboardPage() {
     const isOrderingEnabled = hotel?.features?.includes("DIGITAL_ORDERING") ?? false;
     const isStaffEnabled = hotel?.features?.includes("STAFF_MANAGEMENT") ?? false;
     const isRequestsEnabled = hotel?.features?.includes("SERVICE_REQUESTS") ?? false;
+    const canSeeAnalytics = ANALYTICS_ROLES.includes(admin?.role ?? "");
+    const isAnalyticsEnabled = canSeeAnalytics && (hotel?.features?.includes("MENU_ANALYTICS") ?? false);
+    const { data: menuAnalytics } = useMenuAnalytics(7, isAnalyticsEnabled);
     const timeZone = hotel?.timezone;
 
     useEffect(() => {
@@ -258,9 +267,12 @@ export default function DashboardPage() {
                 <div className="min-w-0 space-y-8">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0">
-                            <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                                {hotel?.name || "Your hotel"}
-                            </h1>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                                    {hotel?.name || "Your hotel"}
+                                </h1>
+                                <TierBadge tier={hotel?.tier} />
+                            </div>
                             <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
                                 {greeting(timeZone)}
                                 {firstName ? `, ${firstName}` : ""}. {longDate(timeZone)}. Rooms, orders and the menu, in one place.
@@ -280,6 +292,12 @@ export default function DashboardPage() {
                                     <Utensils className="h-4 w-4" />
                                     {menuItems} menu items
                                 </span>
+                                {isAnalyticsEnabled && menuAnalytics && (
+                                    <Link href="/analytics" className="inline-flex cursor-pointer items-center gap-2 hover:text-foreground">
+                                        <Eye className="h-4 w-4" />
+                                        {menuAnalytics.totals.views.toLocaleString("en-IN")} menu view{menuAnalytics.totals.views === 1 ? "" : "s"} this week
+                                    </Link>
+                                )}
                             </div>
                         </div>
 
@@ -548,6 +566,9 @@ export default function DashboardPage() {
                         <div className="mt-3 space-y-1">
                             <Shortcut href="/menu" icon={Utensils} label="Update menu" />
                             <Shortcut href="/rooms" icon={BedDouble} label="Rooms and QR cards" />
+                            {canSeeAnalytics && (
+                                <Shortcut href="/analytics" icon={BarChart3} label={isAnalyticsEnabled ? "Menu analytics" : "Menu analytics · Starter"} />
+                            )}
                             {isOrderingEnabled && <Shortcut href="/orders" icon={ClipboardList} label="Orders" />}
                             {isRequestsEnabled && <Shortcut href="/services" icon={Headset} label="Guest requests" />}
                             {isStaffEnabled && (

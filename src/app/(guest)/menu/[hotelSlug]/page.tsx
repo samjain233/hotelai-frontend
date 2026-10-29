@@ -1,9 +1,13 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import GuestMenuClient from "./GuestMenuClient";
 import type { PublicMenuFullData } from "@/lib/types";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
 import { fetchGuestMenuFullData } from "@/lib/guestMenuFullServer";
+import { resolveGuestMenuTemplate } from "@/lib/guestMenuTemplates";
+import { guestMenuTitle } from "@/lib/guestMenuTitle";
+import { loadGuestMenuTemplateSections } from "./templates/serverRegistry";
 
 /** Edge-friendly HTML cache: rebuild at most once per minute per hotel slug. */
 export const revalidate = 60;
@@ -16,25 +20,46 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { hotelSlug } = await params;
     const data = await fetchGuestMenuFullData(hotelSlug);
-    const hotel = data?.hotel;
-    const name = hotel?.name ?? hotelSlug;
+    if (!data) notFound();
+    const hotel = data.hotel;
+    const name = hotel.name?.trim() || hotelSlug;
     const description = hotel?.address
         ? `Order room service at ${name}. ${hotel.address}`
         : `Browse the digital menu and order room service at ${name}.`;
     return {
-        title: `${name} — Menu`,
+        // `absolute` skips the root "%s | Hotel AI" template so the client only has to add the room.
+        title: { absolute: guestMenuTitle(name) },
         description,
     };
 }
 
-/** Server Component: fetches menu+rooms server-side for faster QR scan load */
+/**
+ * Server Component: fetches menu+rooms server-side for faster QR scan load.
+ *
+ * Unknown slug → `notFound()` (real 404, `not-found.tsx`). Backend failure → the fetch throws: with a
+ * cached copy ISR keeps serving it; without one `error.tsx` shows a retry. Never a cached skeleton.
+ */
 export default async function GuestMenuPage({ params }: Props) {
     const { hotelSlug } = await params;
     const initialData = await fetchGuestMenuFullData(hotelSlug);
+    if (!initialData) notFound();
+    // Ship the hotel's template as a client reference so it is loaded before hydration (see serverRegistry.ts).
+    const serverTemplate = resolveGuestMenuTemplate(initialData.hotel.guestMenuTemplate);
+    const ServerTemplateSections = await loadGuestMenuTemplateSections(serverTemplate);
+    // Intentionally impure: this Server Component runs once per ISR regeneration, and the client needs
+    // that instant to hydrate open/closed state identically to the cached HTML (see useMinuteClock).
+    // eslint-disable-next-line react-hooks/purity
+    const renderedAt = Date.now();
 
     return (
-        <Suspense fallback={<MenuSkeleton hotel={initialData?.hotel} />}>
-            <GuestMenuClient hotelSlug={hotelSlug} initialData={initialData} />
+        <Suspense fallback={<MenuSkeleton hotel={initialData.hotel} />}>
+            <GuestMenuClient
+                hotelSlug={hotelSlug}
+                initialData={initialData}
+                serverTemplate={serverTemplate}
+                ServerTemplateSections={ServerTemplateSections}
+                renderedAt={renderedAt}
+            />
         </Suspense>
     );
 }

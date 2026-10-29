@@ -1,5 +1,4 @@
 import {
-    Admin,
     AuthMeProfile,
     AuthResponse,
     Hotel,
@@ -17,10 +16,56 @@ import {
     ServiceRequest,
     RegisterPendingResponse,
     GuestStay,
+    MenuAnalytics,
+    MenuAnalyticsRange,
 } from './types';
 import type { GuestMenuTemplate } from './guestMenuTemplates';
+import { isUnauthenticatedRoute, loginUrlFor } from './routes';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+/**
+ * Non-2xx response from the API. `status` is the HTTP status; `code` is the backend's optional
+ * machine-readable error code (e.g. stay-access errors), which callers should switch on instead of
+ * matching `message` text.
+ */
+export class ApiError extends Error {
+    readonly status: number;
+    readonly code?: string;
+
+    constructor(message: string, status: number, code?: string) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+        this.code = code;
+    }
+
+    /** 4xx: the backend's message describes something the guest did or can act on. */
+    get isClientError(): boolean {
+        return this.status >= 400 && this.status < 500;
+    }
+}
+
+/** Reads `message` (string or class-validator array) and `code` out of a Nest error body. */
+function parseApiErrorBody(body: unknown, status: number): { message: string; code?: string } {
+    const b = (body ?? {}) as { message?: unknown; code?: unknown };
+    const message = Array.isArray(b.message)
+        ? b.message.map(String).join(', ')
+        : typeof b.message === 'string' && b.message
+          ? b.message
+          : `HTTP ${status}`;
+    const code = typeof b.code === 'string' && b.code ? b.code : undefined;
+    return { message, code };
+}
+
+/**
+ * Message safe to show a guest for a failed action: the backend's text for 4xx (validation,
+ * closed hours, unavailable items), a generic one for 5xx / network failures.
+ */
+export function guestFacingErrorMessage(err: unknown, fallback: string): string {
+    if (err instanceof ApiError && err.isClientError) return err.message;
+    return fallback;
+}
 
 /** Use same-origin /api proxy when not on localhost (e.g. Vercel) so cookies work for SSE */
 export function shouldUseSameOriginApiProxy(): boolean {
@@ -30,17 +75,65 @@ export function shouldUseSameOriginApiProxy(): boolean {
     return !isLocal || process.env.NEXT_PUBLIC_USE_PROXY === 'true';
 }
 
-/** POST `/auth/refresh` (or Next proxy). Shared by API client, SSE hooks, etc. */
-export async function refreshHotelSession(): Promise<boolean> {
-    if (typeof window === 'undefined') return false;
+let refreshInFlight: Promise<boolean> | null = null;
+
+/**
+ * POST `/auth/refresh` (or Next proxy). Shared by API client, SSE hooks, etc.
+ *
+ * Single-flight: on a page load several requests can 401 at once (profile, navigation, page data).
+ * Refresh tokens rotate, so letting each of them call /auth/refresh races the rotation; the server
+ * tolerates one stale token, not several. All concurrent callers share one refresh here.
+ */
+export function refreshHotelSession(): Promise<boolean> {
+    if (typeof window === 'undefined') return Promise.resolve(false);
+    if (refreshInFlight) return refreshInFlight;
     const refreshUrl = shouldUseSameOriginApiProxy()
         ? '/api/auth/refresh'
         : `${API_URL}/auth/refresh`;
+    refreshInFlight = fetch(refreshUrl, { method: 'POST', credentials: 'include' })
+        .then((ref) => ref.ok)
+        .catch(() => false)
+        .finally(() => {
+            refreshInFlight = null;
+        });
+    return refreshInFlight;
+}
+
+/** Hard-redirect to /login, remembering the current page so sign-in can return to it. */
+function redirectToLoginFromCurrentPage(): void {
+    if (typeof window === 'undefined') return;
+    const { pathname, search } = window.location;
+    if (isUnauthenticatedRoute(pathname)) return;
+    window.location.href = loginUrlFor(pathname, search);
+}
+
+/**
+ * Admin writes that change what `GET /guest/menu/:slug/full` returns (hotel profile/theme, categories,
+ * dishes, availability, rooms, tags). Upload tokens and AI extraction do not touch the menu until a
+ * follow-up write, which is matched on its own.
+ */
+const GUEST_MENU_MUTATION_PREFIXES = ['/auth/hotel', '/admin/menu', '/admin/categories', '/admin/rooms', '/tags'];
+const GUEST_MENU_MUTATION_IGNORE = ['/upload-token', '/extract-from-image'];
+
+export function affectsGuestMenu(path: string, method: string | undefined): boolean {
+    if (!method || method.toUpperCase() === 'GET' || method.toUpperCase() === 'HEAD') return false;
+    const clean = path.split('?')[0];
+    if (GUEST_MENU_MUTATION_IGNORE.some((p) => clean.includes(p))) return false;
+    return GUEST_MENU_MUTATION_PREFIXES.some((p) => clean === p || clean.startsWith(`${p}/`));
+}
+
+/**
+ * Purge the ISR-cached guest menu for the signed-in hotel so the next scan or refresh shows the change
+ * immediately instead of the stale page that `revalidate = 60` would serve once. Same-origin on purpose:
+ * only the Next server can call `revalidatePath`. Awaited so "Open guest menu" right after Save is fresh;
+ * failures are swallowed because the ISR window still catches up within a minute.
+ */
+export async function revalidateGuestMenuCache(): Promise<void> {
+    if (typeof window === 'undefined') return;
     try {
-        const ref = await fetch(refreshUrl, { method: 'POST', credentials: 'include' });
-        return ref.ok;
+        await fetch('/api/revalidate-guest-menu', { method: 'POST', credentials: 'include' });
     } catch {
-        return false;
+        /* best effort */
     }
 }
 
@@ -65,8 +158,8 @@ class ApiClient {
         });
 
         if (!res.ok) {
-            const error = await res.json().catch(() => ({ message: 'Request failed' }));
-            const message = error.message || `HTTP ${res.status}`;
+            const body: unknown = await res.json().catch(() => ({ message: 'Request failed' }));
+            const { message, code } = parseApiErrorBody(body, res.status);
 
             if (
                 res.status === 401 &&
@@ -85,33 +178,16 @@ class ApiClient {
             }
 
             if (res.status === 401) {
-                // Avoid redirect loop: don't redirect when already on public routes
-                if (typeof window !== 'undefined') {
-                    const path = window.location.pathname;
-                    const isPublicRoute =
-                        path === '/login' ||
-                        path === '/register' ||
-                        path === '/forgot-password' ||
-                        path === '/reset-password' ||
-                        path === '/verify-email' ||
-                        path === '/verify-email/pending' ||
-                        path === '/' ||
-                        path === '/staff/access' ||
-                        path.startsWith('/menu/') ||
-                        path.startsWith('/services/') ||
-                        // Platform admin uses sessionStorage + x-platform-key, not hotel JWT
-                        path.startsWith('/superadmin');
-                    if (!isPublicRoute) {
-                        window.location.href = '/login';
-                    }
-                }
-                throw new Error(message);
+                // No redirect on public/auth/superadmin routes (would loop); see routes.ts.
+                redirectToLoginFromCurrentPage();
             }
 
-            throw new Error(message);
+            throw new ApiError(message, res.status, code);
         }
 
-        return res.json();
+        const json = (await res.json()) as T;
+        if (affectsGuestMenu(path, options.method)) await revalidateGuestMenuCache();
+        return json;
     }
 
     /** GET request for SWR fetcher. Same credentials/error handling as request. */
@@ -379,26 +455,14 @@ class ApiClient {
         let data = await res.json().catch(() => ({}));
 
         if (!res.ok && res.status === 401 && typeof window !== 'undefined') {
-            const path = window.location.pathname;
-            const isPublicRoute =
-                path === '/login' ||
-                path === '/register' ||
-                path.startsWith('/superadmin');
-            if (!isPublicRoute && (await this.refreshSessionOnce())) {
+            if (!isUnauthenticatedRoute(window.location.pathname) && (await this.refreshSessionOnce())) {
                 res = await fetch(url, init);
                 data = await res.json().catch(() => ({}));
             }
         }
 
         if (!res.ok) {
-            if (res.status === 401 && typeof window !== 'undefined') {
-                const path = window.location.pathname;
-                const isPublicRoute =
-                    path === '/login' ||
-                    path === '/register' ||
-                    path.startsWith('/superadmin');
-                if (!isPublicRoute) window.location.href = '/login';
-            }
+            if (res.status === 401) redirectToLoginFromCurrentPage();
             const d = data as { message?: string; errors?: BulkMenuImportErrorRow[] };
             let msg = d.message || `HTTP ${res.status}`;
             if (Array.isArray(d.errors) && d.errors.length) {
@@ -409,7 +473,27 @@ class ApiClient {
             throw new Error(msg);
         }
 
+        await revalidateGuestMenuCache();
         return data as { created: number; categoriesCreated: number };
+    }
+
+    /** Sold out / back on the menu. Narrow endpoint usable by kitchen and front-desk roles. */
+    async setMenuItemAvailability(id: string, available: boolean): Promise<MenuItem> {
+        return this.request(`/admin/menu/${id}/availability`, {
+            method: 'PATCH',
+            body: JSON.stringify({ available }),
+        });
+    }
+
+    /** Flip every item in a category at once. */
+    async setCategoryAvailability(
+        categoryId: string,
+        available: boolean,
+    ): Promise<{ categoryId: string; available: boolean; updated: number }> {
+        return this.request(`/admin/categories/${categoryId}/availability`, {
+            method: 'PATCH',
+            body: JSON.stringify({ available }),
+        });
     }
 
     async updateMenuItem(id: string, data: Partial<MenuItem>): Promise<MenuItem> {
@@ -583,6 +667,12 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify({ hotelId }),
         });
+    }
+
+    // ─── Analytics (Admin, Starter+) ─────────────────────────
+
+    async getMenuAnalytics(range: MenuAnalyticsRange = 7): Promise<MenuAnalytics> {
+        return this.request(`/admin/analytics/menu?range=${range}`);
     }
 
     // ─── Services (Guest) ───────────────────────────────────

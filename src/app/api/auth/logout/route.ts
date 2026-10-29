@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { clientIpHeaders } from '@/lib/proxyClientHeaders';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const AUTH_COOKIE_NAME = 'auth_token';
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
         const cookie = request.headers.get('cookie');
         await fetch(`${API_URL}/auth/logout`, {
             method: 'POST',
-            headers: cookie ? { Cookie: cookie } : {},
+            headers: { ...clientIpHeaders(request), ...(cookie ? { Cookie: cookie } : {}) },
         });
     } catch {
         // ignore

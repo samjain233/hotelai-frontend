@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, Playfair_Display } from "next/font/google";
+import { Cormorant_Garamond, IBM_Plex_Mono, Outfit, Oswald, Playfair_Display } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 import { SWRProvider } from "@/components/SWRProvider";
 import { Toaster } from "sonner";
@@ -9,14 +9,40 @@ import "./globals.css";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const siteUrl = getSiteUrl();
 
+// latin-ext carries the rupee sign (U+20B9), used on every price; preload it with the base subset.
 const outfit = Outfit({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   variable: "--font-outfit",
 });
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
+});
+
+// Condensed face for the "Board" guest menu template only. Not preloaded: browsers fetch
+// the file lazily, so pages that never use `font-condensed` pay nothing beyond the @font-face rule.
+const oswald = Oswald({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-oswald",
+  preload: false,
+});
+
+// Garamond for the "Heritage" guest menu template only; same lazy-load reasoning as Oswald.
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin", "latin-ext"],
+  weight: ["500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
+  preload: false,
+});
+
+// Monospace for the "Bistro" guest menu template only (dish numbers and prices); lazy like the others.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
+  variable: "--font-plex-mono",
+  preload: false,
 });
 
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -63,12 +89,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Font variables live on <html> so Tailwind's :root --font-sans/--font-serif can resolve them.
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${outfit.variable} ${playfair.variable} ${oswald.variable} ${cormorant.variable} ${plexMono.variable}`} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href={API_URL} crossOrigin="anonymous" />
       </head>
-      <body className={`${outfit.variable} ${playfair.variable} font-sans antialiased selection:bg-primary/30 selection:text-white`}>
+      <body className="font-sans antialiased selection:bg-primary/30 selection:text-white">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

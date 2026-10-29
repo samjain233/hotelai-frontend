@@ -10,10 +10,15 @@ import { cn } from "@/lib/utils";
 import { DietMark, formatMenuPrice } from "./menuDisplay";
 
 /** Matches the API limit for the base64 request body. */
-const MAX_MENU_PHOTO_BYTES = 8 * 1024 * 1024;
+/** Raw file picked by the user; it is shrunk on-device before upload so this never reaches the API. */
+const MAX_MENU_PHOTO_BYTES = 10 * 1024 * 1024;
 /** Matches the API. Gemini bills 768px tiles; 1536px stays inside four tiles. */
 const MENU_SCAN_MAX_EDGE = 1536;
 const MENU_SCAN_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"]);
+/** API JSON body limit is 2MB (see backend main.ts); keep the base64 payload under the DTO cap. */
+const MENU_SCAN_MAX_BASE64_CHARS = 1_900_000;
+/** Base64 grows bytes by 4/3; a blob under this encodes below MENU_SCAN_MAX_BASE64_CHARS. */
+const MENU_SCAN_MAX_BLOB_BYTES = 1_400_000;
 
 function readBlobAsDataUrl(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -48,9 +53,13 @@ async function shrinkMenuPhoto(file: File): Promise<Blob> {
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Could not prepare the image.");
         ctx.drawImage(bitmap, 0, 0, width, height);
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.8));
-        if (!blob) throw new Error("Could not prepare the image.");
-        return blob;
+        // A 1536px menu photo is normally 200–600KB at q0.8; drop quality once if it's unusually heavy.
+        for (const quality of [0.8, 0.6]) {
+            const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+            if (!blob) throw new Error("Could not prepare the image.");
+            if (blob.size <= MENU_SCAN_MAX_BLOB_BYTES) return blob;
+        }
+        throw new Error("Could not shrink the image enough.");
     } finally {
         bitmap.close();
     }
@@ -135,7 +144,7 @@ export function MenuScanModal({ open, onClose, existingItems, categories, onSave
             return;
         }
         if (file.size > MAX_MENU_PHOTO_BYTES) {
-            setError("This photo is larger than 8 MB. Choose a smaller photo.");
+            setError("This photo is larger than 10 MB. Choose a smaller photo.");
             return;
         }
 
@@ -151,6 +160,11 @@ export function MenuScanModal({ open, onClose, existingItems, categories, onSave
                 const parsed = parseImageDataUrl(await readBlobAsDataUrl(source));
                 if (!parsed || !MENU_SCAN_MIME.has(parsed.mimeType)) {
                     setError("We couldn't open this photo. Try a different one.");
+                    return;
+                }
+                // Reached only when the browser couldn't shrink the photo and we fell back to the raw file.
+                if (parsed.imageBase64.length > MENU_SCAN_MAX_BASE64_CHARS) {
+                    setError("This photo is too large to send. Take a screenshot of it or choose a smaller photo.");
                     return;
                 }
                 const { items } = await api.extractMenuFromImage(parsed);

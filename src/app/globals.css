@@ -3,6 +3,9 @@
 @theme {
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-serif: var(--font-playfair), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-condensed: var(--font-oswald), "Arial Narrow", "Helvetica Neue Condensed", ui-sans-serif, sans-serif;
+  --font-garamond: var(--font-cormorant), "Cormorant Garamond", Garamond, "EB Garamond", Georgia, serif;
+  --font-ticket: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -335,6 +338,127 @@
 
 .cart-pulse {
   animation: cartPulse 0.3s ease-in-out;
+}
+
+/* Guest menu: branded splash (components/GuestMenuSplash.tsx). Fixed timeline from first paint:
+   hold 2s, fade 0.5s, then stay hidden. Independent of JS so slow connections are not penalised. */
+@keyframes guestSplashOut {
+  0%, 80% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+@keyframes guestSplashMark {
+  from { opacity: 0; transform: scale(0.88); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.guest-splash {
+  animation: guestSplashOut 2.5s ease-in-out forwards;
+}
+
+.guest-splash-mark {
+  animation: guestSplashMark 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Splash motion during the 2s hold, so the wait reads as progress. The bar fills fast then eases
+   and reaches the end as the fade starts. Delays live here rather than in Tailwind
+   `[animation-delay:…]` utilities: these unlayered `animation` shorthands would override them. */
+@keyframes guestSplashRise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes guestSplashFadeUp {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes guestSplashRipple {
+  from { opacity: 0.6; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.7); }
+}
+
+@keyframes guestSplashGlow {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 0.9; transform: scale(1.05); }
+}
+
+@keyframes guestSplashProgress {
+  0% { transform: scaleX(0.04); }
+  25% { transform: scaleX(0.4); }
+  55% { transform: scaleX(0.68); }
+  80% { transform: scaleX(0.88); }
+  100% { transform: scaleX(1); }
+}
+
+@keyframes guestSplashGloss {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+@keyframes guestSplashDot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
+.guest-splash-glow { animation: guestSplashGlow 2s ease-in-out infinite; }
+.guest-splash-ripple { animation: guestSplashRipple 1.6s cubic-bezier(0, 0, 0.2, 1) 0.3s infinite backwards; }
+.guest-splash-ripple-late { animation-delay: 1.1s; }
+.guest-splash-rise { animation: guestSplashRise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both; }
+.guest-splash-rise-2 { animation-delay: 0.25s; }
+.guest-splash-rise-3 { animation-delay: 0.35s; }
+.guest-splash-progress { animation: guestSplashProgress 1.7s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both; }
+.guest-splash-gloss { animation: guestSplashGloss 1.1s ease-in-out 0.4s infinite backwards; }
+.guest-splash-msg-first { animation: guestSplashFadeUp 0.25s ease-in 1.2s forwards; }
+.guest-splash-msg-next { animation: guestSplashRise 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 1.35s both; }
+.guest-splash-dot { animation: guestSplashDot 1s ease-in-out infinite; }
+.guest-splash-dot:nth-child(2) { animation-delay: 0.15s; }
+.guest-splash-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* First category's dishes stagger in as the splash fades. `both` keeps them hidden during their
+   delay (the splash covers that anyway). All delays end before the splash does. Once the splash is
+   gone, GuestMenuClient swaps this class for `guest-stagger-done`, which cancels the animation:
+   the cancelled state equals the finished state, so nothing moves, and search re-renders in the
+   first section appear instantly instead of waiting out the delays. (Merely removing the class
+   makes Chrome replay the animation.) */
+.guest-stagger > section:first-of-type .animate-fade-in-up {
+  animation-duration: 0.3s;
+  animation-fill-mode: both;
+  animation-delay: 2.2s;
+}
+
+.guest-stagger > section:first-of-type .animate-fade-in-up:nth-child(1) { animation-delay: 1.85s; }
+.guest-stagger > section:first-of-type .animate-fade-in-up:nth-child(2) { animation-delay: 1.9s; }
+.guest-stagger > section:first-of-type .animate-fade-in-up:nth-child(3) { animation-delay: 1.95s; }
+.guest-stagger > section:first-of-type .animate-fade-in-up:nth-child(4) { animation-delay: 2s; }
+.guest-stagger > section:first-of-type .animate-fade-in-up:nth-child(5) { animation-delay: 2.05s; }
+.guest-stagger > section:first-of-type .animate-fade-in-up:nth-child(6) { animation-delay: 2.1s; }
+.guest-stagger > section:first-of-type .animate-fade-in-up:nth-child(7) { animation-delay: 2.15s; }
+
+.guest-stagger-done > section:first-of-type .animate-fade-in-up {
+  animation: none;
+}
+
+/* Already seen this session (flag read by the inline script in GuestMenuSplash before paint):
+   no splash, no stagger. With `display: none` the splash has no animations, so the component
+   reports done at mount and unmounts itself. */
+html.guest-splash-seen .guest-splash {
+  display: none;
+}
+
+html.guest-splash-seen .guest-stagger > section:first-of-type .animate-fade-in-up {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guest-splash {
+    animation: none;
+    visibility: hidden;
+  }
+
+  .guest-splash-mark,
+  .guest-stagger > section:first-of-type .animate-fade-in-up {
+    animation: none;
+  }
 }
 
 /* No Scrollbar */

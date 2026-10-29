@@ -15,6 +15,8 @@ import {
     X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clearPlatformKey } from "@/lib/platformApi";
+import { usePlatformKey } from "@/hooks/usePlatformKey";
 import { AnimatePresence, motion } from "framer-motion";
 
 const navItems = [
@@ -28,20 +30,16 @@ const navItems = [
 export default function SuperAdminDashboardLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
-    const [ready, setReady] = useState(false);
+    const { key, remembered, hydrated } = usePlatformKey();
+    const ready = hydrated && !!key;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
-        const key = sessionStorage.getItem("platform_key");
-        if (!key) {
-            router.replace("/superadmin/login");
-        } else {
-            setReady(true);
-        }
-    }, [router]);
+        if (hydrated && !key) router.replace("/superadmin/login");
+    }, [hydrated, key, router]);
 
     function handleLogout() {
-        sessionStorage.removeItem("platform_key");
+        clearPlatformKey();
         router.replace("/superadmin/login");
     }
 
@@ -117,8 +115,11 @@ export default function SuperAdminDashboardLayout({ children }: { children: Reac
                     </button>
                     <div className="hidden lg:block" />
                     <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-muted-foreground bg-secondary/60 px-3 py-1.5 rounded-full border border-border">
-                            Super Admin
+                        <span
+                            className="text-xs font-medium text-muted-foreground bg-secondary/60 px-3 py-1.5 rounded-full border border-border"
+                            title={remembered ? "Key stored on this device (localStorage)" : "Key kept for this tab only (sessionStorage)"}
+                        >
+                            Super Admin · {remembered ? "this device" : "this tab"}
                         </span>
                     </div>
                 </header>

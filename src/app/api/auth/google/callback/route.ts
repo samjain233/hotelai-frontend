@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { OAuth2Client } from "google-auth-library";
+import { clientIpHeaders } from "@/lib/proxyClientHeaders";
 
 const STATE_COOKIE = "g_oauth_state";
 const REGISTER_COOKIE = "g_oauth_register";
@@ -129,6 +130,7 @@ export async function GET(request: NextRequest) {
         headers: {
             "Content-Type": "application/json",
             "X-Hotel-AI-Google-Sync": bridgeSecret,
+            ...clientIpHeaders(request),
         },
         body: JSON.stringify(syncBody),
     });

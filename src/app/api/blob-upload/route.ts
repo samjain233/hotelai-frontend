@@ -1,5 +1,6 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
+import { clientIpHeaders } from '@/lib/proxyClientHeaders';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -25,7 +26,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
                 const res = await fetch(`${API_URL}/admin/menu/upload-token/consume`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...clientIpHeaders(request) },
                     body: JSON.stringify({ token }),
                 });
 

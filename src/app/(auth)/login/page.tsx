@@ -2,13 +2,35 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { LegalFooter } from "@/components/LegalFooter";
-import { GoogleSignInButton, isGoogleSignInEnabled } from "@/components/GoogleSignInButton";
+import { useAuth } from "@/context/AuthContext";
+import { isGoogleSignInEnabled } from "@/components/GoogleSignInButton";
+import { getSafeNextPath } from "@/lib/routes";
+import {
+    AuthShell,
+    AuthHeading,
+    AuthError,
+    AuthInput,
+    AuthButton,
+    AuthDivider,
+    AuthFootnote,
+    AuthTextLink,
+    GoogleLinkButton,
+    PasswordToggle,
+    consumeErrorParam,
+} from "@/components/auth/AuthShell";
+
+const PANEL_POINTS = [
+    "Change a price from your phone; guests see it on the next scan.",
+    "Print fresh QR cards for any room in one click.",
+    "See how many guests opened the menu today.",
+] as const;
+
+/** `?next=` (set when an expired session bounced the user here) wins over the role default. */
+function destinationAfterLogin(role: string, next: string | null): string {
+    if (next) return next;
+    return role === "KITCHEN" ? "/orders" : "/dashboard";
+}
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -18,23 +40,25 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const { admin, login, loading: authLoading } = useAuth();
     const router = useRouter();
+    // Read once: the redirect below changes the URL, and this effect re-runs when the profile
+    // fetch updates `admin`, so reading `?next=` at that point would find nothing.
+    const [nextPath] = useState<string | null>(() =>
+        typeof window === "undefined" ? null : getSafeNextPath(window.location.search),
+    );
 
-    // Reverse guard: if already logged in, go to appropriate page
+    // Reverse guard: if already logged in, go back to where the user was (?next=) or the default page.
     useEffect(() => {
         if (!authLoading && admin) {
-            router.replace(admin.role === 'KITCHEN' ? '/orders' : '/dashboard');
+            router.replace(destinationAfterLogin(admin.role, nextPath));
         }
-    }, [authLoading, admin, router]);
+    }, [authLoading, admin, router, nextPath]);
 
+    // One-time read of the OAuth callback's ?error= param; must run on the client after mount
+    // (window) and cannot be a state initializer without a hydration mismatch.
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const e = params.get("error");
-        if (e) {
-            setError(decodeURIComponent(e));
-            const url = new URL(window.location.href);
-            url.searchParams.delete("error");
-            window.history.replaceState({}, "", url.pathname + url.search);
-        }
+        const e = consumeErrorParam();
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (e) setError(e);
     }, []);
 
     async function handleSubmit(e: React.FormEvent) {
@@ -44,7 +68,7 @@ export default function LoginPage() {
         try {
             const loggedInAdmin = await login(email, password);
             if (loggedInAdmin) {
-                router.replace(loggedInAdmin.role === 'KITCHEN' ? '/orders' : '/dashboard');
+                router.replace(destinationAfterLogin(loggedInAdmin.role, nextPath));
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Login failed");
@@ -53,110 +77,66 @@ export default function LoginPage() {
         }
     }
 
+    const googleEnabled = isGoogleSignInEnabled();
+
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-            <div className="w-full max-w-sm">
-                {/* Brand */}
-                <div className="text-center mb-8">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center mx-auto mb-5">
-                        <span className="text-base font-bold text-white">H</span>
-                    </div>
-                    <h1 className="text-xl font-semibold text-white mb-1">Sign in to your account</h1>
-                    <p className="text-sm text-zinc-500">Manage your hotel operations</p>
-                </div>
+        <AuthShell panelTitle={<>Welcome back. Your rooms are waiting.</>} panelPoints={PANEL_POINTS}>
+            <AuthHeading title="Sign in" subtitle="Manage your menu, rooms and QR cards." />
 
-                {/* Form */}
-                <div className="p-6 rounded-xl bg-card border border-border space-y-4">
-                    {isGoogleSignInEnabled() && (
-                        <>
-                            <GoogleSignInButton label="Sign in with Google" />
-                            <div className="relative py-1">
-                                <div className="absolute inset-0 flex items-center">
-                                    <span className="w-full border-t border-border" />
-                                </div>
-                                <div className="relative flex justify-center text-xs uppercase">
-                                    <span className="bg-card px-2 text-muted-foreground">or with email</span>
-                                </div>
-                            </div>
-                        </>
-                    )}
+            <AuthError>{error}</AuthError>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {error && (
-                            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg text-center">
-                                {error}
-                            </div>
-                        )}
+            {googleEnabled ? (
+                <>
+                    <GoogleLinkButton label="Continue with Google" />
+                    <AuthDivider>or with email</AuthDivider>
+                </>
+            ) : null}
 
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Email</label>
-                                <Input
-                                    icon={<Mail className="w-4 h-4" />}
-                                    type="email"
-                                    placeholder="you@example.com"
-                                    value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Password</label>
-                                <Input
-                                    icon={<Lock className="w-4 h-4" />}
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    required
-                                    autoComplete="current-password"
-                                    rightElement={
-                                        <button
-                                            type="button"
-                                            className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800/80 hover:text-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                                            aria-label={showPassword ? "Hide password" : "Show password"}
-                                            aria-pressed={showPassword}
-                                            onClick={() => setShowPassword((v) => !v)}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff className="h-4 w-4" aria-hidden />
-                                            ) : (
-                                                <Eye className="h-4 w-4" aria-hidden />
-                                            )}
-                                        </button>
-                                    }
-                                />
-                                <div className="flex justify-end mt-1.5">
-                                    <Link
-                                        href="/forgot-password"
-                                        className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
-                                    >
-                                        Forgot password?
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <AuthInput
+                    label="Email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="you@yourhotel.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoFocus
+                />
+                <AuthInput
+                    label="Password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="Your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    labelAside={
+                        <Link
+                            href="/forgot-password"
+                            className="text-[13px] font-medium text-[#4b5068] transition-colors hover:text-[#14172b]"
+                        >
+                            Forgot password?
+                        </Link>
+                    }
+                    rightElement={<PasswordToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
+                />
 
-                        <Button type="submit" loading={loading} className="w-full h-10">
-                            Sign in
-                        </Button>
-                    </form>
-                </div>
+                <AuthButton type="submit" loading={loading} className="mt-2">
+                    Sign in
+                </AuthButton>
+            </form>
 
-                <p className="text-center text-sm text-zinc-600 mt-3">
-                    Staff with an access key?{" "}
-                    <Link href="/staff/access" className="font-medium text-indigo-400 transition-colors hover:text-indigo-300">
-                        Enter key
-                    </Link>
-                </p>
-                <p className="mt-2 text-center text-sm text-zinc-600">
-                    Don&apos;t have an account?{" "}
-                    <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-                        Register
-                    </Link>
-                </p>
-                <LegalFooter className="mt-8" />
-            </div>
-        </div>
+            <AuthFootnote>
+                New to DreamCanvas? <AuthTextLink href="/register">Create a free account</AuthTextLink>
+            </AuthFootnote>
+            <p className="mt-3 text-center text-[13.5px] text-[#7a7f99]">
+                Staff with an access key?{" "}
+                <Link href="/staff/access" className="font-medium text-[#4b5068] hover:text-[#14172b]">
+                    Enter it here
+                </Link>
+            </p>
+        </AuthShell>
     );
 }

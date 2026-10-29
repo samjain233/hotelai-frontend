@@ -3,13 +3,16 @@
 import { cn } from "@/lib/utils";
 import { MenuItem } from "@/lib/types";
 import { GuestMenuItemInsights } from "../GuestMenuItemInsights";
-import { useGuestMenuContext } from "./GuestMenuContext";
+import { useGuestMenuData } from "./GuestMenuContext";
 import { formatPrice, GuestMenuDietMark, GuestMenuItemAction } from "./GuestMenuItemParts";
+import type { GuestMenuPhotoLoading } from "../templates/photoLoading";
+import { GuestMenuImage } from "./GuestMenuImage";
+import { guestMenuImageSrc } from "@/lib/guestMenuImageHosts";
 
 interface GuestMenuItemCardProps {
     item: MenuItem;
     itemIndex: number;
-    isPriorityImage: boolean;
+    imageLoading: GuestMenuPhotoLoading;
     expandedDescId: string | null;
     setExpandedDescId: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -17,16 +20,16 @@ interface GuestMenuItemCardProps {
 export function GuestMenuItemCard({
     item,
     itemIndex,
-    isPriorityImage,
+    imageLoading,
     expandedDescId,
     setExpandedDescId,
 }: GuestMenuItemCardProps) {
-    const ctx = useGuestMenuContext();
+    const ctx = useGuestMenuData();
 
     const desc = item.description?.trim() ?? "";
     const descLong = desc.length > 72;
     const descOpen = expandedDescId === item.id;
-    const imageSrc = item.imageUrl?.trim() ?? "";
+    const imageSrc = guestMenuImageSrc(item.imageUrl);
     const hasImage = imageSrc.length > 0;
     const actionBlock = <GuestMenuItemAction item={item} />;
 
@@ -76,16 +79,12 @@ export function GuestMenuItemCard({
                     ctx.digitalOrderingEnabled && "pb-3"
                 )}>
                     <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--guest-surface)] ring-1 ring-[var(--guest-line)] shadow-sm">
-                        {/* Menu images are arbitrary hotel URLs; <img> avoids next/image domain config. */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <GuestMenuImage
                             src={imageSrc}
-                            alt=""
                             width={240}
                             height={240}
-                            loading={isPriorityImage ? "eager" : "lazy"}
-                            decoding="async"
-                            fetchPriority={isPriorityImage ? "high" : "auto"}
+                            sizes="(min-width: 640px) 124px, 114px"
+                            loading={imageLoading}
                             className="h-full w-full object-cover"
                         />
                     </div>

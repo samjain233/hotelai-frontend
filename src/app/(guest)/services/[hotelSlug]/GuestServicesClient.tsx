@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useParams, useSearchParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, guestFacingErrorMessage } from "@/lib/api";
 import { usePublicMenuFull } from "@/hooks/useSwrApi";
 import { useActivityStreamGuest } from "@/hooks/useActivityStream";
 import { Service, ServiceRequest } from "@/lib/types";
 import { buildGuestMenuThemeStyle } from "@/lib/guestMenuTheme";
-import { motion, AnimatePresence } from "framer-motion";
+import { guestMenuImageSrc } from "@/lib/guestMenuImageHosts";
 import type { LucideIcon } from "lucide-react";
 import {
     AlertTriangle,
@@ -30,9 +31,11 @@ import {
     KeyRound,
 } from "lucide-react";
 import { GuestServicesSkeleton } from "@/components/ui/Skeleton";
-import { StayPinModal } from "@/components/guest/StayPinModal";
-import { isStayVerified, clearStayVerified, useStaySession } from "@/lib/staySession";
+import { isStayVerified, clearStayVerified, useStaySession, isStayAccessError } from "@/lib/staySession";
 import { toast } from "sonner";
+
+// Uses framer-motion; loaded only when the PIN prompt opens.
+const StayPinModal = dynamic(() => import("@/components/guest/StayPinModal").then((m) => m.StayPinModal), { ssr: false });
 
 const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] = [
     { label: "Room Issue", Icon: Building2, desc: "AC, plumbing, electricity" },
@@ -44,6 +47,8 @@ const COMPLAINT_CATEGORIES: { label: string; desc: string; Icon: LucideIcon }[] 
 ];
 
 type Tab = "complaint" | "services";
+
+const NO_SERVICES: Service[] = [];
 
 const STATUS_COLORS: Record<string, string> = {
     SUBMITTED: "bg-[var(--guest-accent-15)] text-[var(--guest-accent)] border-[var(--guest-accent-30)]",
@@ -66,27 +71,33 @@ export default function GuestServicesClient() {
     const themeStyle = useMemo(() => buildGuestMenuThemeStyle(hotel), [hotel]);
 
     const [activeTab, setActiveTab] = useState<Tab>("complaint");
-    const [selectedRoom, setSelectedRoom] = useState("");
+    // The QR's `?room=<id|scanCode>` preselects a room once the list loads, until the guest picks one.
+    const [pickedRoom, setSelectedRoom] = useState<string | null>(null);
+    const roomFromUrlId = useMemo(
+        () => (roomFromUrl ? rooms.find((r) => r.id === roomFromUrl || (r.scanCode != null && r.scanCode === roomFromUrl))?.id ?? "" : ""),
+        [rooms, roomFromUrl],
+    );
+    const selectedRoom = pickedRoom ?? roomFromUrlId;
     const [guestName, setGuestName] = useState("");
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [showPinModal, setShowPinModal] = useState(false);
-    const [guestLogoFailed, setGuestLogoFailed] = useState(false);
+    // Keyed by URL so a new logo gets a fresh attempt without an effect to reset the flag.
+    const logoSrc = guestMenuImageSrc(hotel?.logoUrl);
+    const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null);
+    const guestLogoFailed = failedLogoSrc === logoSrc;
 
     // Complaint form state
     const [complaintCategory, setComplaintCategory] = useState("");
     const [complaintDesc, setComplaintDesc] = useState("");
     const [complaintPriority, setComplaintPriority] = useState("NORMAL");
     // Hotel services
-    const [services, setServices] = useState<Service[]>([]);
-    const [servicesLoading, setServicesLoading] = useState(false);
+    const [loadedServices, setLoadedServices] = useState<{ hotelSlug: string; services: Service[] } | null>(null);
+    const services = loadedServices?.hotelSlug === hotelSlug ? loadedServices.services : NO_SERVICES;
+    const servicesLoading = !!hotelSlug && loadedServices?.hotelSlug !== hotelSlug;
     const [selectedServiceId, setSelectedServiceId] = useState("");
     const [serviceNote, setServiceNote] = useState("");
-
-    useEffect(() => {
-        setGuestLogoFailed(false);
-    }, [hotel?.logoUrl, hotel?.id]);
 
     useEffect(() => {
         const hotelTitle = hotel?.name?.trim() || (loading ? "" : hotelSlug);
@@ -97,18 +108,8 @@ export default function GuestServicesClient() {
         document.title = `${hotelTitle} | Guest Services | Dream Canvas`;
     }, [hotel?.name, hotelSlug, loading]);
 
-    const hasAutoSelectedRef = useRef(false);
     const promptedRoomRef = useRef<string | null>(null);
     const { isVerified: stayVerified } = useStaySession(selectedRoom);
-
-    useEffect(() => {
-        if (hasAutoSelectedRef.current || !roomFromUrl || rooms.length === 0) return;
-        const match = rooms.find((r) => r.id === roomFromUrl || (r.scanCode != null && r.scanCode === roomFromUrl));
-        if (match) {
-            setSelectedRoom(match.id);
-            hasAutoSelectedRef.current = true;
-        }
-    }, [rooms, roomFromUrl]);
 
     /** Auto-prompt guest for Stay PIN when scanning QR code / selecting room if this phone hasn't verified it yet */
     useEffect(() => {
@@ -116,6 +117,7 @@ export default function GuestServicesClient() {
         if (promptedRoomRef.current === selectedRoom) return;
         if (!isStayVerified(selectedRoom)) {
             promptedRoomRef.current = selectedRoom;
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to an external store (localStorage) after hydration
             setShowPinModal(true);
         }
     }, [selectedRoom, loading]);
@@ -129,28 +131,27 @@ export default function GuestServicesClient() {
     }, [selectedRoom]);
 
     useEffect(() => {
-        if (selectedRoom) loadRequests();
-    }, [selectedRoom, loadRequests]);
-
-    const loadServices = useCallback(async () => {
-        if (!hotelSlug) return;
-
-        setServicesLoading(true);
-
-        try {
-            const data = await api.getGuestServices(hotelSlug);
-            setServices(data);
-        } catch (err) {
-            console.error("Failed to load guest services:", err);
-            setServices([]);
-        } finally {
-            setServicesLoading(false);
-        }
-    }, [hotelSlug]);
+        if (!selectedRoom) return;
+        let cancelled = false;
+        api.getGuestServiceRequests(selectedRoom).then(
+            (data) => { if (!cancelled) setRequests(data); },
+            (err) => console.error(err),
+        );
+        return () => { cancelled = true; };
+    }, [selectedRoom]);
 
     useEffect(() => {
-        void loadServices();
-    }, [loadServices]);
+        if (!hotelSlug) return;
+        let cancelled = false;
+        api.getGuestServices(hotelSlug).then(
+            (data) => { if (!cancelled) setLoadedServices({ hotelSlug, services: data }); },
+            (err) => {
+                console.error("Failed to load guest services:", err);
+                if (!cancelled) setLoadedServices({ hotelSlug, services: [] });
+            },
+        );
+        return () => { cancelled = true; };
+    }, [hotelSlug]);
 
     useActivityStreamGuest({
         hotelSlug: hotelSlug || "",
@@ -243,23 +244,12 @@ export default function GuestServicesClient() {
 
             setTimeout(() => setSubmitted(false), 3000);
         } catch (err: unknown) {
-            const msg =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to submit request";
-
-            if (
-                msg.toLowerCase().includes("pin") ||
-                msg.toLowerCase().includes("vacant") ||
-                msg.toLowerCase().includes("checked out") ||
-                msg.toLowerCase().includes("stay") ||
-                msg.toLowerCase().includes("session")
-            ) {
+            console.error("Service request failed", err);
+            if (isStayAccessError(err)) {
                 clearStayVerified(selectedRoom);
                 setShowPinModal(true);
             }
-
-            toast.error(msg);
+            toast.error(guestFacingErrorMessage(err, "We couldn't send your request. Please try again."));
         } finally {
             setSubmitting(false);
         }
@@ -303,15 +293,15 @@ export default function GuestServicesClient() {
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
-                        {hotel?.logoUrl?.trim() && !guestLogoFailed ? (
+                        {logoSrc && !guestLogoFailed ? (
                             <Image
-                                src={hotel.logoUrl.trim()}
+                                src={logoSrc}
                                 alt=""
                                 width={36}
                                 height={36}
                                 priority
                                 className="h-9 w-9 shrink-0 rounded-lg bg-[var(--guest-surface)] object-cover ring-1 ring-[var(--guest-line)]"
-                                onError={() => setGuestLogoFailed(true)}
+                                onError={() => setFailedLogoSrc(logoSrc)}
                             />
                         ) : hotel?.name ? (
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--guest-cta)] to-[var(--guest-cta-hover)] text-sm font-bold text-[var(--guest-on-cta)] ring-1 ring-[var(--guest-line)]">
@@ -403,194 +393,186 @@ export default function GuestServicesClient() {
                     ))}
                 </div>
 
-                {/* Tab Content */}
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={activeTab}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                    >
-                        {activeTab === "complaint" && (
-                            <div className="space-y-3">
-                                <p className="text-xs text-[var(--guest-muted)]">Select a category:</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {COMPLAINT_CATEGORIES.map((cat) => {
-                                        const isSel = complaintCategory === cat.label;
-                                        const CatIcon = cat.Icon;
-                                        return (
-                                            <button
-                                                key={cat.label}
-                                                type="button"
-                                                onClick={() => setComplaintCategory(cat.label)}
-                                                aria-pressed={isSel}
-                                                className={`text-left rounded-xl border p-3 transition-all focus-visible:outline-none ${isSel
-                                                    ? "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] shadow-sm"
-                                                    : "border-[var(--guest-line)] bg-[var(--guest-surface)] hover:border-[var(--guest-border)]"
+                {/* Tab Content (keyed so the enter animation replays on every tab switch) */}
+                <div key={activeTab} className="animate-fade-in-up motion-reduce:animate-none">
+                    {activeTab === "complaint" && (
+                        <div className="space-y-3">
+                            <p className="text-xs text-[var(--guest-muted)]">Select a category:</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                {COMPLAINT_CATEGORIES.map((cat) => {
+                                    const isSel = complaintCategory === cat.label;
+                                    const CatIcon = cat.Icon;
+                                    return (
+                                        <button
+                                            key={cat.label}
+                                            type="button"
+                                            onClick={() => setComplaintCategory(cat.label)}
+                                            aria-pressed={isSel}
+                                            className={`text-left rounded-xl border p-3 transition-all focus-visible:outline-none ${isSel
+                                                ? "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] shadow-sm"
+                                                : "border-[var(--guest-line)] bg-[var(--guest-surface)] hover:border-[var(--guest-border)]"
+                                                }`}
+                                        >
+                                            <div
+                                                className={`flex h-9 w-9 items-center justify-center rounded-lg ${isSel ? "bg-[var(--guest-accent-25)] text-[var(--guest-accent)]" : "bg-[var(--guest-surface-2)] text-[var(--guest-muted)]"
                                                     }`}
                                             >
-                                                <div
-                                                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${isSel ? "bg-[var(--guest-accent-25)] text-[var(--guest-accent)]" : "bg-[var(--guest-surface-2)] text-[var(--guest-muted)]"
-                                                        }`}
-                                                >
-                                                    <CatIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                                                </div>
-                                                <p className={`mt-2 text-sm font-semibold text-[var(--guest-text)]`}>
-                                                    {cat.label}
+                                                <CatIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                                            </div>
+                                            <p className={`mt-2 text-sm font-semibold text-[var(--guest-text)]`}>
+                                                {cat.label}
+                                            </p>
+                                            <p className="mt-0.5 text-[10px] leading-snug text-[var(--guest-muted)]">{cat.desc}</p>
+                                            {isSel ? (
+                                                <p className="mt-1.5 flex items-center gap-1 text-[10px] font-medium text-[var(--guest-accent)]">
+                                                    <CheckCircle className="h-3 w-3" aria-hidden />
+                                                    Selected
                                                 </p>
-                                                <p className="mt-0.5 text-[10px] leading-snug text-[var(--guest-muted)]">{cat.desc}</p>
-                                                {isSel ? (
-                                                    <p className="mt-1.5 flex items-center gap-1 text-[10px] font-medium text-[var(--guest-accent)]">
-                                                        <CheckCircle className="h-3 w-3" aria-hidden />
-                                                        Selected
-                                                    </p>
-                                                ) : null}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                <div>
-                                    <label className="text-xs text-[var(--guest-muted)] mb-1 block font-medium">Priority</label>
-                                    <div className="flex gap-2">
-                                        {["LOW", "NORMAL", "HIGH", "URGENT"].map(p => (
-                                            <button
-                                                key={p}
-                                                onClick={() => setComplaintPriority(p)}
-                                                className={`flex-1 py-2 rounded-lg text-xs transition-all border ${complaintPriority === p
-                                                    ? p === "URGENT" ? "border-red-500/60 bg-red-500/15 text-red-300 font-semibold"
-                                                        : p === "HIGH" ? "border-amber-500/60 bg-amber-500/15 text-amber-300 font-semibold"
-                                                            : "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] text-[var(--guest-text)] font-semibold"
-                                                    : "border-[var(--guest-line)] bg-[var(--guest-surface)] text-[var(--guest-muted)] hover:border-[var(--guest-border)] hover:text-[var(--guest-text)]"
-                                                    }`}
-                                            >
-                                                {p}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <textarea
-                                    value={complaintDesc}
-                                    onChange={(e) => setComplaintDesc(e.target.value)}
-                                    placeholder="Describe your issue..."
-                                    rows={3}
-                                    className="w-full rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-2.5 text-sm text-[var(--guest-text)] outline-none transition placeholder:text-[var(--guest-subtle)] focus:border-[var(--guest-accent-40)] focus:ring-1 focus:ring-[var(--guest-accent-30)] resize-none"
-                                />
+                                            ) : null}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        )}
 
-                        {activeTab === "services" && (
-                            <div className="space-y-3">
-                                <p className="text-xs text-[var(--guest-muted)]">
-                                    Select a service:
-                                </p>
+                            <div>
+                                <label className="text-xs text-[var(--guest-muted)] mb-1 block font-medium">Priority</label>
+                                <div className="flex gap-2">
+                                    {["LOW", "NORMAL", "HIGH", "URGENT"].map(p => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setComplaintPriority(p)}
+                                            className={`flex-1 py-2 rounded-lg text-xs transition-all border ${complaintPriority === p
+                                                ? p === "URGENT" ? "border-red-500/60 bg-red-500/15 text-red-300 font-semibold"
+                                                    : p === "HIGH" ? "border-amber-500/60 bg-amber-500/15 text-amber-300 font-semibold"
+                                                        : "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] text-[var(--guest-text)] font-semibold"
+                                                : "border-[var(--guest-line)] bg-[var(--guest-surface)] text-[var(--guest-muted)] hover:border-[var(--guest-border)] hover:text-[var(--guest-text)]"
+                                                }`}
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
-                                {servicesLoading ? (
-                                    <div className="rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-6 text-center">
-                                        <div className="mx-auto h-5 w-5 rounded-full border-2 border-[var(--guest-accent)]/30 border-t-[var(--guest-accent)] animate-spin" />
-                                        <p className="mt-2 text-xs text-[var(--guest-muted)]">
-                                            Loading services...
-                                        </p>
-                                    </div>
-                                ) : services.length === 0 ? (
-                                    <div className="rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-6 text-center">
-                                        <Headset className="mx-auto h-8 w-8 text-[var(--guest-muted)]" />
+                            <textarea
+                                value={complaintDesc}
+                                onChange={(e) => setComplaintDesc(e.target.value)}
+                                placeholder="Describe your issue..."
+                                rows={3}
+                                className="w-full rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-2.5 text-sm text-[var(--guest-text)] outline-none transition placeholder:text-[var(--guest-subtle)] focus:border-[var(--guest-accent-40)] focus:ring-1 focus:ring-[var(--guest-accent-30)] resize-none"
+                            />
+                        </div>
+                    )}
 
-                                        <p className="mt-3 text-sm font-semibold text-[var(--guest-text)]">
-                                            No services available
-                                        </p>
+                    {activeTab === "services" && (
+                        <div className="space-y-3">
+                            <p className="text-xs text-[var(--guest-muted)]">
+                                Select a service:
+                            </p>
 
-                                        <p className="mt-1 text-xs text-[var(--guest-muted)]">
-                                            This hotel has not added any guest services yet.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="space-y-2">
-                                            {services.map((service) => {
-                                                const isSelected =
-                                                    selectedServiceId === service.id;
+                            {servicesLoading ? (
+                                <div className="rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-6 text-center">
+                                    <div className="mx-auto h-5 w-5 rounded-full border-2 border-[var(--guest-accent)]/30 border-t-[var(--guest-accent)] animate-spin" />
+                                    <p className="mt-2 text-xs text-[var(--guest-muted)]">
+                                        Loading services...
+                                    </p>
+                                </div>
+                            ) : services.length === 0 ? (
+                                <div className="rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] p-6 text-center">
+                                    <Headset className="mx-auto h-8 w-8 text-[var(--guest-muted)]" />
 
-                                                return (
-                                                    <button
-                                                        key={service.id}
-                                                        type="button"
-                                                        disabled={!service.available}
-                                                        onClick={() => {
-                                                            if (!service.available) return;
+                                    <p className="mt-3 text-sm font-semibold text-[var(--guest-text)]">
+                                        No services available
+                                    </p>
 
-                                                            setSelectedServiceId(service.id);
-                                                        }}
-                                                        aria-pressed={isSelected}
-                                                        className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all focus-visible:outline-none ${
-                                                            !service.available
-                                                                ? "cursor-not-allowed border-[var(--guest-line)] bg-[var(--guest-surface)] opacity-60"
-                                                                : isSelected
-                                                                    ? "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] shadow-sm"
-                                                                    : "border-[var(--guest-line)] bg-[var(--guest-surface)] hover:border-[var(--guest-border)]"
+                                    <p className="mt-1 text-xs text-[var(--guest-muted)]">
+                                        This hotel has not added any guest services yet.
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-2">
+                                        {services.map((service) => {
+                                            const isSelected =
+                                                selectedServiceId === service.id;
+
+                                            return (
+                                                <button
+                                                    key={service.id}
+                                                    type="button"
+                                                    disabled={!service.available}
+                                                    onClick={() => {
+                                                        if (!service.available) return;
+
+                                                        setSelectedServiceId(service.id);
+                                                    }}
+                                                    aria-pressed={isSelected}
+                                                    className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all focus-visible:outline-none ${
+                                                        !service.available
+                                                            ? "cursor-not-allowed border-[var(--guest-line)] bg-[var(--guest-surface)] opacity-60"
+                                                            : isSelected
+                                                                ? "border-[var(--guest-accent)] bg-[var(--guest-accent-15)] shadow-sm"
+                                                                : "border-[var(--guest-line)] bg-[var(--guest-surface)] hover:border-[var(--guest-border)]"
+                                                    }`}
+                                                >
+                                                    <div
+                                                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                                                            isSelected
+                                                                ? "bg-[var(--guest-accent-25)] text-[var(--guest-accent)]"
+                                                                : "bg-[var(--guest-surface-2)] text-[var(--guest-muted)]"
                                                         }`}
                                                     >
-                                                        <div
-                                                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                                                                isSelected
-                                                                    ? "bg-[var(--guest-accent-25)] text-[var(--guest-accent)]"
-                                                                    : "bg-[var(--guest-surface-2)] text-[var(--guest-muted)]"
-                                                            }`}
-                                                        >
-                                                            <Headset className="h-5 w-5" />
-                                                        </div>
+                                                        <Headset className="h-5 w-5" />
+                                                    </div>
 
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="text-sm font-medium text-[var(--guest-text)]">
-                                                                {service.name}
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-sm font-medium text-[var(--guest-text)]">
+                                                            {service.name}
+                                                        </p>
+
+                                                        {service.description && (
+                                                            <p className="mt-0.5 text-[10px] leading-snug text-[var(--guest-muted)]">
+                                                                {service.description}
                                                             </p>
+                                                        )}
 
-                                                            {service.description && (
-                                                                <p className="mt-0.5 text-[10px] leading-snug text-[var(--guest-muted)]">
-                                                                    {service.description}
-                                                                </p>
-                                                            )}
+                                                        <p className="mt-1 text-[10px] font-medium text-[var(--guest-muted)]">
+                                                            {Number(service.price) > 0
+                                                                ? `₹${Number(service.price).toLocaleString()}`
+                                                                : "Free"}
+                                                        </p>
+                                                    </div>
 
-                                                            <p className="mt-1 text-[10px] font-medium text-[var(--guest-muted)]">
-                                                                {Number(service.price) > 0
-                                                                    ? `₹${Number(service.price).toLocaleString()}`
-                                                                    : "Free"}
-                                                            </p>
-                                                        </div>
+                                                    <div className="shrink-0">
+                                                        {!service.available ? (
+                                                            <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 text-[9px] font-semibold text-red-400">
+                                                                Unavailable
+                                                            </span>
+                                                        ) : isSelected ? (
+                                                            <CheckCircle className="h-5 w-5 text-[var(--guest-accent)]" />
+                                                        ) : null}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
 
-                                                        <div className="shrink-0">
-                                                            {!service.available ? (
-                                                                <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 text-[9px] font-semibold text-red-400">
-                                                                    Unavailable
-                                                                </span>
-                                                            ) : isSelected ? (
-                                                                <CheckCircle className="h-5 w-5 text-[var(--guest-accent)]" />
-                                                            ) : null}
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {selectedServiceId && (
-                                            <textarea
-                                                value={serviceNote}
-                                                onChange={(e) =>
-                                                    setServiceNote(e.target.value)
-                                                }
-                                                placeholder="Additional instructions (optional)..."
-                                                rows={2}
-                                                className="w-full resize-none rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-2.5 text-sm text-[var(--guest-text)] outline-none transition placeholder:text-[var(--guest-subtle)] focus:border-[var(--guest-accent-40)] focus:ring-1 focus:ring-[var(--guest-accent-30)]"
-                                            />
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </motion.div>
-                </AnimatePresence>
+                                    {selectedServiceId && (
+                                        <textarea
+                                            value={serviceNote}
+                                            onChange={(e) =>
+                                                setServiceNote(e.target.value)
+                                            }
+                                            placeholder="Additional instructions (optional)..."
+                                            rows={2}
+                                            className="w-full resize-none rounded-xl border border-[var(--guest-line)] bg-[var(--guest-surface)] px-3 py-2.5 text-sm text-[var(--guest-text)] outline-none transition placeholder:text-[var(--guest-subtle)] focus:border-[var(--guest-accent-40)] focus:ring-1 focus:ring-[var(--guest-accent-30)]"
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 {/* Submit Button */}
                 {!selectedRoom && (
@@ -599,16 +581,15 @@ export default function GuestServicesClient() {
                         Please select your room before submitting
                     </p>
                 )}
-                <motion.button
+                <button
                     type="button"
-                    whileTap={{ scale: selectedRoom ? 0.97 : 1 }}
                     onClick={() => void handleSubmit()}
                     disabled={submitting || submitted || !selectedRoom}
                     className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold transition-all ${submitted
                         ? "bg-emerald-600 text-white"
                         : !selectedRoom
                             ? "cursor-not-allowed bg-[var(--guest-surface-2)] text-[var(--guest-muted)]/50 border border-[var(--guest-line)]"
-                            : "bg-[var(--guest-cta)] text-[var(--guest-on-cta)] hover:bg-[var(--guest-cta-hover)] shadow-md disabled:opacity-50"
+                            : "bg-[var(--guest-cta)] text-[var(--guest-on-cta)] hover:bg-[var(--guest-cta-hover)] shadow-md disabled:opacity-50 active:scale-[0.97]"
                         }`}
                 >
                     {submitted ? (
@@ -618,7 +599,7 @@ export default function GuestServicesClient() {
                     ) : (
                         <><Send className="w-4 h-4" /> Submit Request</>
                     )}
-                </motion.button>
+                </button>
 
                 {/* My Requests */}
                 {myRequests.length > 0 && (
@@ -680,19 +661,21 @@ export default function GuestServicesClient() {
             </div>
 
             {/* In-Room Stay PIN Verification Modal */}
-            <StayPinModal
-                isOpen={showPinModal}
-                onClose={() => setShowPinModal(false)}
-                roomId={selectedRoom}
-                roomNumber={rooms.find((r) => r.id === selectedRoom)?.number || "Your Room"}
-                onSuccess={() => {
-                    setShowPinModal(false);
-                    void loadRequests();
-                    if (submitting) {
-                        void handleSubmit();
-                    }
-                }}
-            />
+            {showPinModal && (
+                <StayPinModal
+                    isOpen
+                    onClose={() => setShowPinModal(false)}
+                    roomId={selectedRoom}
+                    roomNumber={rooms.find((r) => r.id === selectedRoom)?.number || "Your Room"}
+                    onSuccess={() => {
+                        setShowPinModal(false);
+                        void loadRequests();
+                        if (submitting) {
+                            void handleSubmit();
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 }

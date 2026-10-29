@@ -2,20 +2,41 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Lock, Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
-import { LegalFooter } from "@/components/LegalFooter";
+import {
+    AuthShell,
+    AuthHeading,
+    AuthError,
+    AuthSuccess,
+    AuthInput,
+    AuthButton,
+    AuthFootnote,
+    AuthTextLink,
+    AuthLinkButton,
+    PasswordToggle,
+} from "@/components/auth/AuthShell";
 
 const MIN_PASSWORD = 10;
 
+const PANEL_POINTS = [
+    "Use at least 10 characters. A short phrase is easier to remember than a jumble.",
+    "Changing your password signs out other devices using your account.",
+    "Staff access keys are separate and are not affected.",
+] as const;
+
+function Shell({ children }: { children: React.ReactNode }) {
+    return (
+        <AuthShell panelTitle={<>Choose a new password.</>} panelPoints={PANEL_POINTS}>
+            {children}
+        </AuthShell>
+    );
+}
+
 function ResetFallback() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground text-sm">
-            Loading…
-        </div>
+        <Shell>
+            <AuthHeading title="Set a new password" subtitle="Loading…" />
+        </Shell>
     );
 }
 
@@ -55,122 +76,90 @@ function ResetPasswordInner() {
 
     if (!token) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-                <div className="w-full max-w-sm p-6 rounded-xl bg-card border border-border text-center space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                        Missing reset link. Open the link from your email or request a new one.
-                    </p>
-                    <Link href="/forgot-password" className="text-sm text-indigo-400 hover:text-indigo-300 font-medium">
-                        Request new link
-                    </Link>
-                    <Link href="/login" className="block text-sm text-zinc-500 hover:text-zinc-400">
-                        Back to sign in
-                    </Link>
-                </div>
-                <LegalFooter className="mt-8" />
-            </div>
+            <Shell>
+                <AuthHeading
+                    title="This link is incomplete"
+                    subtitle="Open the reset link from your email, or request a new one."
+                />
+                <AuthLinkButton href="/forgot-password">Request a new link</AuthLinkButton>
+                <AuthFootnote>
+                    <AuthTextLink href="/login">Back to sign in</AuthTextLink>
+                </AuthFootnote>
+            </Shell>
         );
     }
 
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-            <div className="w-full max-w-sm">
-                <div className="text-center mb-8">
-                    <h1 className="text-xl font-semibold text-white mb-1">Set new password</h1>
-                    <p className="text-sm text-zinc-500">Choose a strong password for your account.</p>
-                </div>
+    if (success) {
+        return (
+            <Shell>
+                <AuthHeading title="Password updated" />
+                <AuthSuccess>{success}</AuthSuccess>
+                <AuthLinkButton href="/login">Sign in with your new password</AuthLinkButton>
+            </Shell>
+        );
+    }
 
-                <div className="p-6 rounded-xl bg-card border border-border">
-                    {success ? (
-                        <div className="space-y-4 text-center">
-                            <p className="text-sm text-indigo-300/90">{success}</p>
-                            <Link
-                                href="/login"
-                                className="inline-block text-sm text-indigo-400 hover:text-indigo-300 font-medium"
-                            >
-                                Sign in
-                            </Link>
-                        </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {error && (
-                                <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg text-center">
-                                    {error}
-                                </div>
-                            )}
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-400 mb-1.5">New password</label>
-                                <Input
-                                    icon={<Lock className="w-4 h-4" />}
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    minLength={MIN_PASSWORD}
-                                    autoComplete="new-password"
-                                    rightElement={
-                                        <button
-                                            type="button"
-                                            className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800/80 hover:text-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                                            aria-label={showPassword ? "Hide password" : "Show password"}
-                                            aria-pressed={showPassword}
-                                            onClick={() => setShowPassword((v) => !v)}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff className="h-4 w-4" aria-hidden />
-                                            ) : (
-                                                <Eye className="h-4 w-4" aria-hidden />
-                                            )}
-                                        </button>
-                                    }
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-                                    Confirm password
-                                </label>
-                                <Input
-                                    icon={<Lock className="w-4 h-4" />}
-                                    type={showConfirm ? "text" : "password"}
-                                    placeholder="••••••••"
-                                    value={confirm}
-                                    onChange={(e) => setConfirm(e.target.value)}
-                                    required
-                                    minLength={MIN_PASSWORD}
-                                    autoComplete="new-password"
-                                    rightElement={
-                                        <button
-                                            type="button"
-                                            className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800/80 hover:text-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                                            aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
-                                            aria-pressed={showConfirm}
-                                            onClick={() => setShowConfirm((v) => !v)}
-                                        >
-                                            {showConfirm ? (
-                                                <EyeOff className="h-4 w-4" aria-hidden />
-                                            ) : (
-                                                <Eye className="h-4 w-4" aria-hidden />
-                                            )}
-                                        </button>
-                                    }
-                                />
-                            </div>
-                            <Button type="submit" loading={loading} className="w-full h-10">
-                                Update password
-                            </Button>
-                            <Link
-                                href="/login"
-                                className="block text-center text-sm text-zinc-500 hover:text-zinc-400"
-                            >
-                                Back to sign in
-                            </Link>
-                        </form>
-                    )}
-                </div>
-            </div>
-            <LegalFooter className="mt-8" />
-        </div>
+    const pwLen = password.length;
+    const pwOk = pwLen >= MIN_PASSWORD;
+    const confirmTouched = confirm.length > 0;
+    const confirmMatches = confirmTouched && confirm === password;
+
+    return (
+        <Shell>
+            <AuthHeading title="Set a new password" subtitle="Choose a password you have not used here before." />
+            <AuthError>{error}</AuthError>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <AuthInput
+                    label="New password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder={`At least ${MIN_PASSWORD} characters`}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={MIN_PASSWORD}
+                    autoFocus
+                    rightElement={<PasswordToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
+                    hint={
+                        pwLen === 0 ? (
+                            `Use ${MIN_PASSWORD} or more characters.`
+                        ) : pwOk ? (
+                            <span className="text-[#2f7f6f]">Good length.</span>
+                        ) : (
+                            `${MIN_PASSWORD - pwLen} more character${MIN_PASSWORD - pwLen === 1 ? "" : "s"} needed.`
+                        )
+                    }
+                />
+                <AuthInput
+                    label="Confirm new password"
+                    type={showConfirm ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder="Type it again"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    required
+                    minLength={MIN_PASSWORD}
+                    rightElement={
+                        <PasswordToggle shown={showConfirm} onToggle={() => setShowConfirm((v) => !v)} label="confirm password" />
+                    }
+                    hint={
+                        confirmTouched ? (
+                            confirmMatches ? (
+                                <span className="text-[#2f7f6f]">Passwords match.</span>
+                            ) : (
+                                <span className="text-[#9b2c20]">Passwords do not match yet.</span>
+                            )
+                        ) : undefined
+                    }
+                />
+                <AuthButton type="submit" loading={loading} className="mt-2">
+                    Update password
+                </AuthButton>
+            </form>
+            <AuthFootnote>
+                <AuthTextLink href="/login">Back to sign in</AuthTextLink>
+            </AuthFootnote>
+        </Shell>
     );
 }
 

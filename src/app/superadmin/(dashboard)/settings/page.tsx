@@ -1,13 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, Shield, ExternalLink } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Settings, Shield, ExternalLink, LogOut } from "lucide-react";
+import { clearPlatformKey } from "@/lib/platformApi";
+import { usePlatformKey } from "@/hooks/usePlatformKey";
 
 export default function PlatformSettingsPage() {
+    const router = useRouter();
     const [keyVisible, setKeyVisible] = useState(false);
+    const { key: platformKey, remembered } = usePlatformKey();
 
-    const platformKey = typeof window !== "undefined" ? sessionStorage.getItem("platform_key") || "" : "";
     const maskedKey = platformKey ? platformKey.slice(0, 4) + "•".repeat(Math.max(platformKey.length - 8, 4)) + platformKey.slice(-4) : "—";
+
+    function forgetKey() {
+        clearPlatformKey();
+        router.replace("/superadmin/login");
+    }
 
     return (
         <div className="space-y-8 max-w-2xl">
@@ -38,9 +47,18 @@ export default function PlatformSettingsPage() {
                         </button>
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1.5">
-                        Stored in sessionStorage. Cleared when you close the tab.
+                        {remembered
+                            ? "Stored on this device (localStorage). It stays until you sign out."
+                            : "Stored for this tab only (sessionStorage). Cleared when the tab closes."}
                     </p>
                 </div>
+                <button
+                    onClick={forgetKey}
+                    className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-border bg-card hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition text-muted-foreground"
+                >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Forget key on this {remembered ? "device" : "tab"}
+                </button>
             </div>
 
             {/* Quick Links */}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { clientIpHeaders } from '@/lib/proxyClientHeaders';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -7,7 +8,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const res = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...clientIpHeaders(request) },
             body: JSON.stringify(body),
         });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { platformApi, PlatformComplaint } from "@/lib/platformApi";
 import { MessageSquareWarning, Search, Filter, X } from "lucide-react";
 
@@ -10,15 +10,19 @@ const TYPE_OPTIONS = ["", "COMPLAINT", "ROOM_SERVICE", "HOUSEKEEPING"];
 
 export default function ComplaintsPage() {
     const [complaints, setComplaints] = useState<PlatformComplaint[]>([]);
-    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [priorityFilter, setPriorityFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
     const [showFilters, setShowFilters] = useState(false);
 
-    const fetchComplaints = useCallback(() => {
-        setLoading(true);
+    // Loading is derived: we are loading until the result for the current filter set has arrived.
+    const filterKey = JSON.stringify({ statusFilter, priorityFilter, typeFilter });
+    const [loadedFor, setLoadedFor] = useState<string | null>(null);
+    const loading = loadedFor !== filterKey;
+
+    useEffect(() => {
+        let cancelled = false;
         const params: Record<string, string> = {};
         if (statusFilter) params.status = statusFilter;
         if (priorityFilter) params.priority = priorityFilter;
@@ -26,14 +30,18 @@ export default function ComplaintsPage() {
 
         platformApi
             .getComplaints(Object.keys(params).length > 0 ? params : undefined)
-            .then(setComplaints)
-            .catch(() => {})
-            .finally(() => setLoading(false));
-    }, [statusFilter, priorityFilter, typeFilter]);
-
-    useEffect(() => {
-        fetchComplaints();
-    }, [fetchComplaints]);
+            .then((rows) => {
+                if (cancelled) return;
+                setComplaints(rows);
+                setLoadedFor(filterKey);
+            })
+            .catch(() => {
+                if (!cancelled) setLoadedFor(filterKey);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [filterKey, statusFilter, priorityFilter, typeFilter]);
 
     const q = search.toLowerCase();
     const filtered = complaints.filter(

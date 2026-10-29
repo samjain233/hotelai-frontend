@@ -26,8 +26,56 @@ export interface Hotel {
     guestMenuTemplate?: string;
     /** IANA timezone for category serving windows (default Asia/Kolkata). */
     timezone?: string;
-    /** Features unlocked for the hotel based on subscription */
+    /** Epoch ms of the last guest-visible menu change (guest payload only). Polled via `/guest/menu/:slug/version`. */
+    menuUpdatedAt?: number;
+    /** Effective subscription tier; an inactive or missing subscription reports FREE. */
+    tier?: SubscriptionTier;
+    /** Features unlocked for the hotel based on subscription (see `Feature`). */
     features?: string[];
+}
+
+/** Mirrors the Prisma `SubscriptionTier` enum. FREE is the default. */
+export type SubscriptionTier = 'FREE' | 'STARTER' | 'CORE' | 'PRO' | 'ENTERPRISE';
+
+/** Mirrors backend `Feature` in `features.constant.ts`. Tier → features is decided server-side. */
+export type Feature =
+    // Starter
+    | 'ITEM_PHOTOS'
+    | 'GEMINI_IMPORT'
+    | 'MENU_TEMPLATES'
+    | 'CUSTOM_THEME'
+    | 'REMOVE_BRANDING'
+    | 'CATEGORY_SCHEDULES'
+    | 'TAP_TO_CALL'
+    | 'MENU_ANALYTICS'
+    // Core and above
+    | 'DIGITAL_ORDERING'
+    | 'SERVICE_REQUESTS'
+    | 'STAFF_MANAGEMENT'
+    | 'AI_ANALYTICS';
+
+export function hotelHasFeature(hotel: { features?: string[] } | null | undefined, feature: Feature): boolean {
+    return hotel?.features?.includes(feature) ?? false;
+}
+
+// ─── Menu analytics (GET /admin/analytics/menu) ────────────
+export type MenuAnalyticsRange = 7 | 30;
+
+export interface MenuAnalytics {
+    rangeDays: MenuAnalyticsRange;
+    timezone: string;
+    retentionDays: number;
+    totals: {
+        views: number;
+        /** Same-length window before this one; null when it falls outside retention. */
+        previousViews: number | null;
+        dailyAverage: number;
+        /** 0–23 hotel local time; null with no views. */
+        peakHour: number | null;
+        peakDay: { date: string; views: number } | null;
+    };
+    daily: { date: string; views: number }[];
+    hourly: { hour: number; views: number }[];
 }
 
 // ─── Admin ────────────────────────────────────────────────
@@ -225,22 +273,31 @@ export interface CartItem {
 }
 
 // ─── Public Menu ──────────────────────────────────────────
-/** Slim category shape returned by guest public menu APIs (no schedule/sort metadata). */
+/**
+ * Slim category shape returned by guest public menu APIs. Schedule fields are present only when set;
+ * the device decides visibility (`lib/guestMenuSchedule.ts`), the server does not filter by time.
+ */
 export interface GuestPublicMenuCategory {
     id: string;
     name: string;
     icon?: string;
+    /** HH:mm in the hotel timezone; both present or both absent. */
+    serveTimeStart?: string;
+    serveTimeEnd?: string;
+    /** ISO weekdays 1 = Monday … 7 = Sunday; absent = every day. */
+    serveDaysOfWeek?: number[];
     items: MenuItem[];
 }
 
+/** No clock-dependent fields: `isOpen` is computed on the device from the hotel's hours. */
 export interface PublicMenuData {
     hotel: Hotel;
     categories: GuestPublicMenuCategory[];
-    isOpen?: boolean;
 }
 
 export interface PublicMenuFullData extends PublicMenuData {
-    rooms: { id: string; number: string; floor?: string; type?: string; scanCode?: string | null }[];
+    /** Only present for tiers with ordering or service requests; view-only hotels get no room inventory. */
+    rooms?: { id: string; number: string; floor?: string; type?: string; scanCode?: string | null }[];
 }
 
 // ─── Service Request ──────────────────────────────────────

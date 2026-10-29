@@ -1,6 +1,19 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { ApiError } from "./api";
+
+/**
+ * Backend `code` values for stay-access failures (mirrors `STAY_ACCESS_ERROR_CODES` in
+ * `guest-stay.service.ts`). Both mean "this phone can no longer act for the room": clear the
+ * verified flag and re-prompt for the PIN.
+ */
+export const STAY_ACCESS_ERROR_CODES = new Set(["ROOM_VACANT", "STAY_UNVERIFIED"]);
+
+/** True when a failed guest action (order, service request) was rejected for lack of stay access. */
+export function isStayAccessError(err: unknown): boolean {
+    return err instanceof ApiError && !!err.code && STAY_ACCESS_ERROR_CODES.has(err.code);
+}
 
 /**
  * Guest stay session helper.

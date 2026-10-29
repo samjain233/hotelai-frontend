@@ -1,47 +1,17 @@
 'use client';
 
+import { useEffect } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { swrFetcher } from '@/lib/api';
-import type { PublicMenuData, PublicMenuFullData } from '@/lib/types';
+import type { PublicMenuFullData } from '@/lib/types';
 
-/** Cache keys - centralized for consistent invalidation */
-export const SWR_KEYS = {
-    publicMenu: (hotelSlug: string) => [`guest/menu/${hotelSlug}`] as const,
-    publicMenuFull: (hotelSlug: string) => [`guest/menu/${hotelSlug}/full`] as const,
-    publicRooms: (hotelSlug: string) => [`guest/rooms/${hotelSlug}`] as const,
-    categories: () => ['admin/categories'] as const,
-    menuItems: () => ['admin/menu'] as const,
-    adminRooms: () => ['admin/rooms'] as const,
-    navigation: () => ['auth/navigation'] as const,
-} as const;
-
-/** SWR config: 60s dedup - avoid duplicate requests within a minute */
-const STALE_60 = { dedupingInterval: 60_000, revalidateOnFocus: true };
-
-/**
- * Public menu for guests. Safe to cache; menu changes infrequently.
- */
-export function usePublicMenu(hotelSlug: string | null) {
-    return useSWR<PublicMenuData>(
-        hotelSlug ? `/guest/menu/${hotelSlug}` : null,
-        swrFetcher,
-        STALE_60,
-    );
-}
-
-/**
- * Public rooms for guests. Safe to cache.
- */
-export function usePublicRooms(hotelSlug: string | null) {
-    return useSWR<{ id: string; number: string; floor?: string; type?: string; scanCode?: string | null; hotelId?: string }[]>(
-        hotelSlug ? `/guest/rooms/${hotelSlug}` : null,
-        swrFetcher,
-        STALE_60,
-    );
-}
+const publicMenuFullKey = (hotelSlug: string) => `/guest/menu/${hotelSlug}/full`;
 
 /**
  * Combined menu + rooms (single request). Use with initialData from server for faster load.
+ *
+ * Freshness is driven by `useGuestMenuVersion` (cheap poll + focus), not by refetching this 7 KB
+ * payload on every focus: `revalidateOnFocus` is off here on purpose.
  */
 export function usePublicMenuFull(
     hotelSlug: string | null,
@@ -49,15 +19,52 @@ export function usePublicMenuFull(
 ) {
     const hasSsrFallback = !!options?.fallbackData;
     return useSWR<PublicMenuFullData>(
-        hotelSlug ? `/guest/menu/${hotelSlug}/full` : null,
+        hotelSlug ? publicMenuFullKey(hotelSlug) : null,
         swrFetcher,
         {
-            ...STALE_60,
+            dedupingInterval: 10_000,
+            revalidateOnFocus: false,
             fallbackData: options?.fallbackData ?? undefined,
             // SSR already returned fresh data; avoid an immediate duplicate /full fetch on hydration.
             revalidateOnMount: !hasSsrFallback,
+            // Initial try + 3 retries (~5s, ~10s, ~20s), then wait for the next focus/reconnect.
+            // SWR's default is unbounded; a guest with the menu already on screen gains nothing from more.
+            errorRetryCount: 3,
         },
     );
+}
+
+export const GUEST_MENU_VERSION_POLL_MS = 30_000;
+
+/**
+ * Change signal for an open guest tab. Polls `GET /guest/menu/:slug/version` (one indexed read,
+ * ~20-byte body, 304 when unchanged) every 30 s while the tab is visible and on focus/reconnect, and
+ * refetches `/full` only when `menuUpdatedAt` moves past what the page already holds.
+ *
+ * `currentMenuUpdatedAt` is `hotel.menuUpdatedAt` from the data on screen (SSR or last fetch).
+ */
+export function useGuestMenuVersion(hotelSlug: string | null, currentMenuUpdatedAt: number | undefined) {
+    const { data } = useSWR<{ menuUpdatedAt: number }>(
+        hotelSlug ? `/guest/menu/${hotelSlug}/version` : null,
+        swrFetcher,
+        {
+            refreshInterval: GUEST_MENU_VERSION_POLL_MS,
+            refreshWhenHidden: false,
+            refreshWhenOffline: false,
+            revalidateOnFocus: true,
+            focusThrottleInterval: 10_000,
+            dedupingInterval: 5_000,
+            errorRetryCount: 3,
+            // A failed poll is not worth surfacing anywhere; the menu on screen is still valid.
+            shouldRetryOnError: true,
+        },
+    );
+
+    const latest = data?.menuUpdatedAt;
+    useEffect(() => {
+        if (!hotelSlug || latest == null || currentMenuUpdatedAt == null) return;
+        if (latest > currentMenuUpdatedAt) void globalMutate(publicMenuFullKey(hotelSlug));
+    }, [hotelSlug, latest, currentMenuUpdatedAt]);
 }
 
 /**
@@ -94,6 +101,18 @@ export function useAdminRooms(enabled = true) {
 }
 
 /**
+ * Menu-view analytics for the signed-in hotel (Starter+). Pass `enabled=false` for FREE hotels
+ * so the locked preview never triggers a 402 round-trip.
+ */
+export function useMenuAnalytics(range: import('@/lib/types').MenuAnalyticsRange, enabled = true) {
+    return useSWR<import('@/lib/types').MenuAnalytics>(
+        enabled ? `/admin/analytics/menu?range=${range}` : null,
+        swrFetcher,
+        { dedupingInterval: 60_000, revalidateOnFocus: false, keepPreviousData: true },
+    );
+}
+
+/**
  * Admin navigation tabs. Rarely changes.
  */
 export function useAdminNavigation(enabled = true) {
@@ -104,9 +123,10 @@ export function useAdminNavigation(enabled = true) {
     );
 }
 
-/** Invalidate menu-related cache after admin creates/updates/deletes categories or items */
+/**
+ * Invalidate admin menu caches after creating/updating/deleting categories or items. Guest menus
+ * are refreshed by their own version poll (`useGuestMenuVersion`), not from here.
+ */
 export function invalidateMenuCache() {
-    return globalMutate(
-        (key) => typeof key === 'string' && (key.startsWith('/admin/') || key.startsWith('guest/')),
-    );
+    return globalMutate((key) => typeof key === 'string' && key.startsWith('/admin/'));
 }

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { GUEST_MENU_IMAGE_HOSTS } from "./src/lib/guestMenuImageHosts";
 
 const isDev = process.env.NODE_ENV !== "production";
 const apiOrigin = (() => {
@@ -51,18 +52,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "g4lkbzwx6qe62z9g.public.blob.vercel-storage.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-        pathname: "/**",
-      },
-    ],
+    // Single source of truth for allowed image hosts: src/lib/guestMenuImageHosts.ts
+    remotePatterns: GUEST_MENU_IMAGE_HOSTS.map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+      pathname: "/**",
+    })),
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
