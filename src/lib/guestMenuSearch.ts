@@ -108,6 +108,29 @@ export function findDidYouMeanItem(queryRaw: string, items: MenuItem[]): MenuIte
     return best;
 }
 
+/**
+ * True when the query names the category ("soups", "main course", typo "desert"). Stricter than
+ * `itemMatchesSearch` because a hit shows the whole section: every query token must start a word of
+ * the name (so "tea" does not open "Steaks"), and typos allow 1 edit up to 5 characters, 2 beyond
+ * (so "rice" does not open "Juices").
+ */
+export function categoryMatchesSearch(cat: GuestPublicMenuCategory, queryRaw: string): boolean {
+    const q = normalizeSearchText(queryRaw);
+    if (q.length < 3) return false;
+
+    const name = normalizeSearchText(cat.name);
+    const words = name.split(" ");
+    const tokens = q.split(" ");
+    if (tokens.every((t) => words.some((w) => w.startsWith(t)))) return true;
+
+    if (q.length >= 4) {
+        const maxD = q.length <= 5 ? 1 : 2;
+        if (levenshtein(q, name) <= maxD) return true;
+        if (words.some((w) => w.length >= 3 && levenshtein(q, w) <= maxD)) return true;
+    }
+    return false;
+}
+
 function categoryItems(cat: GuestPublicMenuCategory): MenuItem[] {
     return cat.items ?? [];
 }
@@ -123,7 +146,9 @@ export function filterCategoriesBySearch(
     return categories
         .map((cat) => ({
             ...cat,
-            items: categoryItems(cat).filter((item) => itemMatchesSearch(item, queryRaw)),
+            items: categoryMatchesSearch(cat, queryRaw)
+                ? [...categoryItems(cat)]
+                : categoryItems(cat).filter((item) => itemMatchesSearch(item, queryRaw)),
         }))
         .filter((cat) => cat.items.length > 0);
 }

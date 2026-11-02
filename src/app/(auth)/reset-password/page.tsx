@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import {
     AuthShell,
     AuthHeading,
@@ -14,9 +14,11 @@ import {
     AuthTextLink,
     AuthLinkButton,
     PasswordToggle,
+    stripTokenFromUrl,
 } from "@/components/auth/AuthShell";
 
 const MIN_PASSWORD = 10;
+const MAX_PASSWORD = 128;
 
 const PANEL_POINTS = [
     "Use at least 10 characters. A short phrase is easier to remember than a jumble.",
@@ -42,7 +44,11 @@ function ResetFallback() {
 
 function ResetPasswordInner() {
     const params = useSearchParams();
-    const token = params.get("token")?.trim() || "";
+    // Read once: the token is then removed from the address bar, which updates `params`.
+    const [token] = useState(() => params.get("token")?.trim() || "");
+    useEffect(() => {
+        stripTokenFromUrl();
+    }, []);
 
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
@@ -51,12 +57,18 @@ function ResetPasswordInner() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState<string | null>(null);
+    /** The backend rejected the link itself (used, expired or replaced by a newer one). */
+    const [linkUnusable, setLinkUnusable] = useState(false);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError("");
         if (password.length < MIN_PASSWORD) {
             setError(`Password must be at least ${MIN_PASSWORD} characters.`);
+            return;
+        }
+        if (password.length > MAX_PASSWORD) {
+            setError(`Password must be at most ${MAX_PASSWORD} characters.`);
             return;
         }
         if (password !== confirm) {
@@ -68,18 +80,27 @@ function ResetPasswordInner() {
             const { message } = await api.resetPassword(token, password);
             setSuccess(message);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Reset failed");
+            // Password rules are checked above, so a 400 here is about the link.
+            if (err instanceof ApiError && err.status === 400) {
+                setLinkUnusable(true);
+            } else {
+                setError(err instanceof Error ? err.message : "Reset failed");
+            }
         } finally {
             setLoading(false);
         }
     }
 
-    if (!token) {
+    if (!token || linkUnusable) {
         return (
             <Shell>
                 <AuthHeading
-                    title="This link is incomplete"
-                    subtitle="Open the reset link from your email, or request a new one."
+                    title={token ? "This reset link can't be used" : "This link is incomplete"}
+                    subtitle={
+                        token
+                            ? "It has already been used, has expired, or a newer link was sent. Request a new one and use the link in the latest email."
+                            : "Open the reset link from your email, or request a new one."
+                    }
                 />
                 <AuthLinkButton href="/forgot-password">Request a new link</AuthLinkButton>
                 <AuthFootnote>
@@ -106,7 +127,7 @@ function ResetPasswordInner() {
 
     return (
         <Shell>
-            <AuthHeading title="Set a new password" subtitle="Choose a password you have not used here before." />
+            <AuthHeading title="Set a new password" subtitle="Choose a new password for your account." />
             <AuthError>{error}</AuthError>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <AuthInput
@@ -118,6 +139,7 @@ function ResetPasswordInner() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={MIN_PASSWORD}
+                    maxLength={MAX_PASSWORD}
                     autoFocus
                     rightElement={<PasswordToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
                     hint={
@@ -139,6 +161,7 @@ function ResetPasswordInner() {
                     onChange={(e) => setConfirm(e.target.value)}
                     required
                     minLength={MIN_PASSWORD}
+                    maxLength={MAX_PASSWORD}
                     rightElement={
                         <PasswordToggle shown={showConfirm} onToggle={() => setShowConfirm((v) => !v)} label="confirm password" />
                     }

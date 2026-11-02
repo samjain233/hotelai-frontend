@@ -17,6 +17,7 @@ import {
     Smartphone,
 } from "lucide-react";
 import { LandingMobileNav } from "@/components/LandingMobileNav";
+import { SESSION_COOKIES } from "@/lib/routes";
 
 export const metadata: Metadata = {
     title: { absolute: "DreamCanvas — Digital menu and room service for hotels" },
@@ -335,7 +336,7 @@ function DashboardMockup() {
 
 export default async function LandingPage() {
     const cookieStore = await cookies();
-    const loggedIn = Boolean(cookieStore.get("auth_token")?.value || cookieStore.get("auth_refresh")?.value);
+    const loggedIn = SESSION_COOKIES.some((name) => cookieStore.get(name)?.value);
     const primaryHref = loggedIn ? "/dashboard" : "/register";
 
     return (

@@ -113,6 +113,12 @@ export interface AuthResponse {
     hotel: Hotel;
 }
 
+/** POST /auth/verify-email: the email is verified; the user still signs in with their password. */
+export interface VerifyEmailResponse {
+    verified: true;
+    email: string;
+}
+
 /** Email/password sign-up: verify inbox before login */
 export interface RegisterPendingResponse {
     requiresVerification: true;
@@ -222,7 +228,16 @@ export interface Room {
     checkedInAt?: string | null;
     hotelId: string;
     _count?: { orders: number };
-    activeStay?: GuestStay | null;
+    activeStay?: ActiveStaySummary | null;
+}
+
+/** The current stay as listed on `GET /admin/rooms`; full stay details come from the stays endpoint. */
+export type ActiveStaySummary = Pick<GuestStay, "id" | "guestName" | "guestPhone" | "groupStayId" | "isPrimaryRoom" | "checkInAt">;
+
+/** Hotel-wide QR: the guest menu link without a room. */
+export interface PropertyQr {
+    qrCode: string;
+    menuUrl: string;
 }
 
 export interface RoomQr {

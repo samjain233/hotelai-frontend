@@ -15,6 +15,7 @@ import {
     Service,
     ServiceRequest,
     RegisterPendingResponse,
+    VerifyEmailResponse,
     GuestStay,
     MenuAnalytics,
     MenuAnalyticsRange,
@@ -46,8 +47,12 @@ export class ApiError extends Error {
     }
 }
 
+const TOO_MANY_ATTEMPTS_MESSAGE = 'Too many attempts. Please wait a minute and try again.';
+
 /** Reads `message` (string or class-validator array) and `code` out of a Nest error body. */
 function parseApiErrorBody(body: unknown, status: number): { message: string; code?: string } {
+    // The rate limiter's own text ("ThrottlerException: Too Many Requests") is not meant for people.
+    if (status === 429) return { message: TOO_MANY_ATTEMPTS_MESSAGE };
     const b = (body ?? {}) as { message?: unknown; code?: unknown };
     const message = Array.isArray(b.message)
         ? b.message.map(String).join(', ')
@@ -214,7 +219,7 @@ class ApiClient {
         });
     }
 
-    async verifyEmail(token: string): Promise<AuthResponse> {
+    async verifyEmail(token: string): Promise<VerifyEmailResponse> {
         return this.request('/auth/verify-email', {
             method: 'POST',
             body: JSON.stringify({ token }),
@@ -251,6 +256,7 @@ class ApiClient {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
+            if (res.status === 429) throw new Error(TOO_MANY_ATTEMPTS_MESSAGE);
             throw new Error((data as { message?: string }).message || 'Invalid or expired access key');
         }
         return {

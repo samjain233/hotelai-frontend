@@ -337,6 +337,32 @@ export function consumeErrorParam(): string {
     return decodeURIComponent(e);
 }
 
+/**
+ * Removes `?token=` from the address bar (and so from browser history) once the page has read it.
+ * Client-only; call from a mount effect after copying the token into state.
+ */
+export function stripTokenFromUrl(): void {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("token")) return;
+    url.searchParams.delete("token");
+    window.history.replaceState({}, "", url.pathname + url.search);
+}
+
+/**
+ * Reads and clears `?verified=1&email=` set after an email verification link, so a refresh
+ * does not show the notice again. Returns the verified email (may be empty), or `null`.
+ * Client-only; call from a mount effect.
+ */
+export function consumeVerifiedParam(): string | null {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("verified") !== "1") return null;
+    const email = url.searchParams.get("email") ?? "";
+    url.searchParams.delete("verified");
+    url.searchParams.delete("email");
+    window.history.replaceState({}, "", url.pathname + url.search);
+    return email;
+}
+
 export function AuthFootnote({ children }: { children: ReactNode }) {
     return <p className="mt-6 text-center text-[14px] text-[#4b5068]">{children}</p>;
 }

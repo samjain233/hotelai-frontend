@@ -101,6 +101,33 @@ export function useAdminRooms(enabled = true) {
 }
 
 /**
+ * QR PNGs for every room. The server stamps a QR download on each fetch, so no focus refetch.
+ */
+export function useAllRoomQrs(enabled = true) {
+    return useSWR<import('@/lib/types').RoomQr[]>(
+        enabled ? '/admin/rooms/qr/all' : null,
+        swrFetcher,
+        { revalidateOnFocus: false },
+    );
+}
+
+export function usePropertyQr(enabled = true) {
+    return useSWR<import('@/lib/types').PropertyQr>(
+        enabled ? '/admin/rooms/qr/property' : null,
+        swrFetcher,
+        { revalidateOnFocus: false },
+    );
+}
+
+export function useRoomQr(roomId: string | null) {
+    return useSWR<import('@/lib/types').RoomQr>(
+        roomId ? `/admin/rooms/${roomId}/qr` : null,
+        swrFetcher,
+        { revalidateOnFocus: false },
+    );
+}
+
+/**
  * Menu-view analytics for the signed-in hotel (Starter+). Pass `enabled=false` for FREE hotels
  * so the locked preview never triggers a 402 round-trip.
  */

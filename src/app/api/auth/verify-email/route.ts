@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { forwardNestSetCookies } from '@/lib/forwardNestSetCookies';
 import { clientIpHeaders } from '@/lib/proxyClientHeaders';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+/** Verifying an email does not sign in, so no auth cookies are forwarded. */
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
@@ -14,17 +14,7 @@ export async function POST(request: NextRequest) {
         });
 
         const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-            return NextResponse.json(data, { status: res.status });
-        }
-
-        const response = NextResponse.json({
-            admin: data.admin,
-            hotel: data.hotel,
-        });
-        forwardNestSetCookies(res, response);
-        return response;
+        return NextResponse.json(data, { status: res.status });
     } catch (err) {
         console.error('Verify-email proxy error:', err);
         return NextResponse.json({ message: 'Verification failed' }, { status: 500 });

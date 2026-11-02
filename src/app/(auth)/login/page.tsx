@@ -10,6 +10,7 @@ import {
     AuthShell,
     AuthHeading,
     AuthError,
+    AuthSuccess,
     AuthInput,
     AuthButton,
     AuthDivider,
@@ -18,6 +19,7 @@ import {
     GoogleLinkButton,
     PasswordToggle,
     consumeErrorParam,
+    consumeVerifiedParam,
 } from "@/components/auth/AuthShell";
 
 const PANEL_POINTS = [
@@ -37,6 +39,7 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
     const [loading, setLoading] = useState(false);
     const { admin, login, loading: authLoading } = useAuth();
     const router = useRouter();
@@ -53,12 +56,17 @@ export default function LoginPage() {
         }
     }, [authLoading, admin, router, nextPath]);
 
-    // One-time read of the OAuth callback's ?error= param; must run on the client after mount
-    // (window) and cannot be a state initializer without a hydration mismatch.
+    // One-time read of the OAuth callback's ?error= param and the verify-email page's ?verified=1;
+    // must run on the client after mount (window) and cannot be a state initializer without a hydration mismatch.
     useEffect(() => {
         const e = consumeErrorParam();
         // eslint-disable-next-line react-hooks/set-state-in-effect
         if (e) setError(e);
+        const verifiedEmail = consumeVerifiedParam();
+        if (verifiedEmail !== null) {
+            setNotice("Your email is verified. Sign in to continue.");
+            if (verifiedEmail) setEmail(verifiedEmail);
+        }
     }, []);
 
     async function handleSubmit(e: React.FormEvent) {
@@ -84,6 +92,7 @@ export default function LoginPage() {
             <AuthHeading title="Sign in" subtitle="Manage your menu, rooms and QR cards." />
 
             <AuthError>{error}</AuthError>
+            {error ? null : <AuthSuccess>{notice}</AuthSuccess>}
 
             {googleEnabled ? (
                 <>

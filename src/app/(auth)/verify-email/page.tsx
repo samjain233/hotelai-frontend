@@ -1,16 +1,16 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, MailWarning } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import type { VerifyEmailResponse } from "@/lib/types";
 import {
     AuthShell,
     AuthHeading,
     AuthBadge,
     AuthLinkButton,
-    AuthFootnote,
-    AuthTextLink,
+    stripTokenFromUrl,
 } from "@/components/auth/AuthShell";
 
 const PANEL_POINTS = [
@@ -27,45 +27,66 @@ function Shell({ children }: { children: React.ReactNode }) {
     );
 }
 
+/** The token is single-use; Strict Mode runs the effect twice in dev, so both runs share one request. */
+const verifyRequests = new Map<string, Promise<VerifyEmailResponse>>();
+function verifyOnce(token: string): Promise<VerifyEmailResponse> {
+    let request = verifyRequests.get(token);
+    if (!request) {
+        request = api.verifyEmail(token);
+        verifyRequests.set(token, request);
+    }
+    return request;
+}
+
 function VerifyFallback() {
     return (
         <Shell>
             <AuthBadge>
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
             </AuthBadge>
-            <AuthHeading title="Verifying your email" subtitle="This takes a second. You will be taken to your dashboard." />
+            <AuthHeading title="Verifying your email" subtitle="This takes a second. You will then sign in with your password." />
         </Shell>
     );
 }
 
 function VerifyEmailInner() {
     const params = useSearchParams();
+    const router = useRouter();
+    // Read once: the token is then removed from the address bar, which updates `params`.
+    const [token] = useState(() => params.get("token")?.trim() || "");
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const token = params.get("token");
-        if (!token?.trim()) {
+        stripTokenFromUrl();
+        if (!token) {
             // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of the URL on mount
-            setError("This link is invalid. Open the verification link from your email, or request a new one below.");
+            setError("It is incomplete. Open the verification link from your email, or request a new one below.");
             return;
         }
 
         let cancelled = false;
-        api.verifyEmail(token)
-            .then(() => {
+        verifyOnce(token)
+            .then(({ email }) => {
                 if (!cancelled) {
-                    window.location.href = "/dashboard";
+                    router.replace(`/login?verified=1&email=${encodeURIComponent(email)}`);
                 }
             })
             .catch((e) => {
                 if (!cancelled) {
-                    setError(e instanceof Error ? e.message : "Verification failed");
+                    // The token is cleared once used, so "already verified" and "expired" both arrive as a 400.
+                    setError(
+                        e instanceof ApiError && e.status === 400
+                            ? "It has already been used or has expired. If you already verified your email, just sign in."
+                            : e instanceof Error
+                              ? e.message
+                              : "Verification failed",
+                    );
                 }
             });
         return () => {
             cancelled = true;
         };
-    }, [params]);
+    }, [token, router]);
 
     if (error) {
         return (
@@ -73,11 +94,13 @@ function VerifyEmailInner() {
                 <AuthBadge>
                     <MailWarning className="h-5 w-5" aria-hidden />
                 </AuthBadge>
-                <AuthHeading title="We could not verify that link" subtitle={error} />
-                <AuthLinkButton href="/verify-email/pending">Send a new verification email</AuthLinkButton>
-                <AuthFootnote>
-                    <AuthTextLink href="/login">Back to sign in</AuthTextLink>
-                </AuthFootnote>
+                <AuthHeading title="This link can't be used" subtitle={error} />
+                <div className="space-y-3">
+                    <AuthLinkButton href="/login">Sign in</AuthLinkButton>
+                    <AuthLinkButton href="/verify-email/pending" variant="outline">
+                        Send a new verification email
+                    </AuthLinkButton>
+                </div>
             </Shell>
         );
     }

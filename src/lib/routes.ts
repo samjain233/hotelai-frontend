@@ -6,6 +6,13 @@
  * backend reserves the same words so no hotel can claim them as a slug.
  */
 
+/**
+ * httpOnly cookies the Nest API sets on sign-in (`AUTH_COOKIE_NAME`, `AUTH_REFRESH_COOKIE_NAME`).
+ * Either one means the browser may still hold a session: the access token is short-lived, and the
+ * API client renews it from the refresh token on the first 401.
+ */
+export const SESSION_COOKIES = ["auth_token", "auth_refresh"] as const;
+
 /** Admin pages nested under /menu. Keep in sync with `RESERVED_HOTEL_SLUGS` in the backend. */
 export const ADMIN_MENU_SUBPATHS = ["/menu/availability"] as const;
 

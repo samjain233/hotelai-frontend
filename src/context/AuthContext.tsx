@@ -49,7 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [impersonating, setImpersonating] = useState(false);
     const pathname = usePathname();
     const skipInitialFetch = isPublicRoute(pathname);
-    const [loading, setLoading] = useState(!skipInitialFetch);
+    const [profileChecked, setProfileChecked] = useState(false);
+    // Derived, not stored: navigating client-side from a public page (where no fetch runs) to an
+    // admin page must report loading until the profile request settles, or the admin shell
+    // sees "no admin" and bounces to /login.
+    const loading = !skipInitialFetch && !profileChecked;
 
     const applyProfile = useCallback((profile: AuthMeProfile) => {
         setAdmin({
@@ -63,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     useEffect(() => {
-        if (skipInitialFetch) return;
+        if (skipInitialFetch || profileChecked) return;
         api.getProfile()
             .then(applyProfile)
             .catch(() => {
@@ -71,8 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setHotel(null);
                 setImpersonating(false);
             })
-            .finally(() => setLoading(false));
-    }, [applyProfile, skipInitialFetch]);
+            .finally(() => setProfileChecked(true));
+    }, [applyProfile, skipInitialFetch, profileChecked]);
 
     async function login(email: string, password: string) {
         const res = await api.login(email, password);

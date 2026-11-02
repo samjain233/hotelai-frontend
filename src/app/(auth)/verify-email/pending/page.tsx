@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MailCheck } from "lucide-react";
 import { api } from "@/lib/api";
@@ -18,7 +18,7 @@ import {
 
 const PANEL_POINTS = [
     "The email comes from DreamCanvas; check spam or promotions if it is not in your inbox.",
-    "The link signs you in and opens your dashboard.",
+    "After you open the link, sign in with your password to reach your dashboard.",
     "Wrong address? Go back and register again with the right one.",
 ] as const;
 
@@ -41,12 +41,31 @@ function PendingFallback() {
     );
 }
 
+/** Each resend replaces the previous link, so resending while the first email is still arriving breaks it. */
+const RESEND_COOLDOWN_SECONDS = 90;
+
+/** Seconds left until `until` (epoch ms), ticking once a second; 0 when it has passed. */
+function useSecondsUntil(until: number): number {
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        if (until <= Date.now()) return;
+        const id = window.setInterval(() => setNow(Date.now()), 1000);
+        return () => window.clearInterval(id);
+    }, [until]);
+    return Math.max(0, Math.ceil((until - now) / 1000));
+}
+
 function PendingInner() {
     const params = useSearchParams();
     const emailFromQuery = params.get("email")?.trim() || "";
     const [emailInput, setEmailInput] = useState(emailFromQuery);
     const [sending, setSending] = useState(false);
     const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+    // Arriving straight from sign-up means an email was just sent, so start the wait right away.
+    const [cooldownUntil, setCooldownUntil] = useState(() =>
+        emailFromQuery ? Date.now() + RESEND_COOLDOWN_SECONDS * 1000 : 0,
+    );
+    const secondsLeft = useSecondsUntil(cooldownUntil);
 
     const email = emailFromQuery || emailInput.trim();
 
@@ -55,11 +74,16 @@ function PendingInner() {
             setNotice({ kind: "error", text: "Enter the email you used to register." });
             return;
         }
+        if (secondsLeft > 0) return;
         setSending(true);
         setNotice(null);
         try {
             const { message } = await api.resendVerification(email);
-            setNotice({ kind: "ok", text: message });
+            setNotice({
+                kind: "ok",
+                text: `${message} Only the link in this newest email will work; earlier ones no longer do.`,
+            });
+            setCooldownUntil(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
         } catch (e) {
             setNotice({ kind: "error", text: e instanceof Error ? e.message : "Could not resend" });
         } finally {
@@ -108,8 +132,8 @@ function PendingInner() {
                         required
                     />
                 ) : null}
-                <AuthButton type="submit" variant="outline" loading={sending}>
-                    Resend verification email
+                <AuthButton type="submit" variant="outline" loading={sending} disabled={secondsLeft > 0}>
+                    {secondsLeft > 0 ? `Resend available in ${secondsLeft}s` : "Resend verification email"}
                 </AuthButton>
             </form>
 

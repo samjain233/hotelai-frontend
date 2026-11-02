@@ -27,6 +27,7 @@ import {
     LifeBuoy,
     ListChecks,
     BarChart3,
+    ConciergeBell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -36,6 +37,7 @@ import {
 } from "@/lib/adminNavConfig";
 import { loginUrlFor } from "@/lib/routes";
 import { motion, AnimatePresence } from "framer-motion";
+import { AdminShellSkeleton, SIDEBAR_COLLAPSED_KEY } from "./AdminShellSkeleton";
 
 type IconType = ComponentType<{ className?: string }>;
 
@@ -44,6 +46,7 @@ type NavItem = { name: string; href: string; iconName: string; isLocked?: boolea
 const iconMap: Record<string, IconType> = {
     LayoutDashboard,
     ClipboardList,
+    ConciergeBell,
     Headset,
     Wrench,
     UtensilsCrossed,
@@ -57,14 +60,13 @@ const iconMap: Record<string, IconType> = {
 };
 
 const NAV_GROUPS: { id: string; label: string; hrefs: string[] }[] = [
-    { id: "operations", label: "Operations", hrefs: ["/dashboard", "/orders", "/kitchen", "/services"] },
+    { id: "operations", label: "Operations", hrefs: ["/dashboard", "/orders", "/front-desk", "/kitchen", "/services"] },
     { id: "menu", label: "Menu", hrefs: ["/menu", "/menu/availability", "/menu-design", "/analytics"] },
     { id: "property", label: "Property", hrefs: ["/rooms", "/service-catalogue", "/staff"] },
     { id: "account", label: "Account", hrefs: ["/settings"] },
 ];
 
 const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_LEGAL_CONTACT_EMAIL;
-const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed";
 const CLOSED_GROUPS_KEY = "admin-nav-closed-groups";
 
 function groupNav(items: NavItem[]) {
@@ -164,14 +166,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     const currentItem = findActiveItem(pathname, navItems);
     const currentGroup = groups.find((group) => group.items.some((item) => item.href === currentItem?.href));
 
-    if (loading || !admin) {
+    if (loading) return <AdminShellSkeleton pathname={pathname} />;
+
+    if (!admin) {
         return (
             <div className="min-h-screen bg-canvas flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                        {loading ? "Loading..." : "Redirecting to login..."}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Redirecting to login...</p>
                 </div>
             </div>
         );

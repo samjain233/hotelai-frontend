@@ -105,6 +105,57 @@ describe("search", () => {
     });
 });
 
+describe("category search", () => {
+    const CAFE: GuestPublicMenuCategory[] = [
+        { id: "steaks", name: "Steaks", items: [item("ribeye", "Ribeye", 900, "NON_VEG")] },
+        {
+            id: "tea-coffee",
+            name: "Tea & Coffee",
+            items: [item("chai", "Masala Chai", 60, "VEG"), item("filter", "Filter Coffee", 80, "VEG")],
+        },
+        { id: "juice", name: "Fresh Juice", items: [item("mosambi", "Mosambi", 90, "VEG")] },
+        { id: "desserts", name: "Desserts", items: [item("mousse", "Coffee Mousse", 180, "VEG")] },
+    ];
+
+    it("shows the whole section when the query names it", () => {
+        const { result } = renderFilters();
+        act(() => result.current.setSearchQuery("starters"));
+        expect(shownIds(result.current.displayCategories)).toEqual(["paneer-tikka", "chicken-tikka", "masala-omelette"]);
+        expect(result.current.isSearchUnmatched).toBe(false);
+    });
+
+    it("tolerates a typo in the section name", () => {
+        const { result } = renderFilters();
+        act(() => result.current.setSearchQuery("desert"));
+        expect(shownIds(result.current.displayCategories)).toEqual(["gulab-jamun"]);
+    });
+
+    it("keeps diet filters inside a matched section", () => {
+        const { result } = renderFilters();
+        act(() => {
+            result.current.toggleDietFilter("VEG");
+            result.current.setSearchQuery("starters");
+        });
+        expect(shownIds(result.current.displayCategories)).toEqual(["paneer-tikka"]);
+    });
+
+    it("shows the matched section plus matching dishes from other sections", () => {
+        const { result } = renderFilters(CAFE);
+        act(() => result.current.setSearchQuery("coffee"));
+        expect(shownIds(result.current.displayCategories)).toEqual(["chai", "filter", "mousse"]);
+    });
+
+    it.each([
+        ["tea", ["chai", "filter"]],
+        ["rice", []],
+    ])("does not open unrelated sections for %j", (query, expected) => {
+        const { result } = renderFilters(CAFE);
+        act(() => result.current.setSearchQuery(query));
+        const ids = result.current.isSearchUnmatched ? [] : shownIds(result.current.displayCategories);
+        expect(ids).toEqual(expected);
+    });
+});
+
 describe("diet filters", () => {
     it("toggles filters on and off", () => {
         const { result } = renderFilters();
