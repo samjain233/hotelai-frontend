@@ -1,21 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Settings, Shield, ExternalLink, LogOut } from "lucide-react";
-import { clearPlatformKey } from "@/lib/platformApi";
-import { usePlatformKey } from "@/hooks/usePlatformKey";
+import { Settings, Shield, ExternalLink, LogOut, MonitorX } from "lucide-react";
+import { platformAuth } from "@/lib/platformApi";
+import { usePlatformSession } from "@/hooks/usePlatformSession";
 
 export default function PlatformSettingsPage() {
-    const router = useRouter();
-    const [keyVisible, setKeyVisible] = useState(false);
-    const { key: platformKey, remembered } = usePlatformKey();
+    const { session } = usePlatformSession();
+    const [busy, setBusy] = useState<"one" | "all" | null>(null);
+    const [error, setError] = useState("");
 
-    const maskedKey = platformKey ? platformKey.slice(0, 4) + "•".repeat(Math.max(platformKey.length - 8, 4)) + platformKey.slice(-4) : "—";
-
-    function forgetKey() {
-        clearPlatformKey();
-        router.replace("/superadmin/login");
+    async function signOut(everywhere: boolean) {
+        if (everywhere && !window.confirm("Sign out of super-admin on every browser and device, including this one?")) return;
+        setBusy(everywhere ? "all" : "one");
+        setError("");
+        try {
+            await (everywhere ? platformAuth.logoutEverywhere() : platformAuth.logout());
+            window.location.replace("/superadmin/login");
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Sign out failed");
+            setBusy(null);
+        }
     }
 
     return (
@@ -33,32 +38,36 @@ export default function PlatformSettingsPage() {
                     <Shield className="w-4 h-4 text-primary" />
                     <h2 className="font-semibold">Session</h2>
                 </div>
-                <div>
-                    <label className="text-xs text-muted-foreground">Platform Key</label>
-                    <div className="flex items-center gap-2 mt-1">
-                        <code className="flex-1 text-sm font-mono bg-secondary/50 px-3 py-2 rounded-lg border border-border truncate">
-                            {keyVisible ? platformKey : maskedKey}
-                        </code>
-                        <button
-                            onClick={() => setKeyVisible((v) => !v)}
-                            className="text-xs px-3 py-2 rounded-lg border border-border bg-card hover:bg-secondary transition text-muted-foreground"
-                        >
-                            {keyVisible ? "Hide" : "Show"}
-                        </button>
+                {session && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <EnvRow label="Google account" value={session.email} />
+                        <EnvRow label="Signed in" value={new Date(session.signedInAt).toLocaleString()} />
+                        <EnvRow label="Ends at the latest" value={new Date(session.expiresAt).toLocaleString()} />
+                        <EnvRow label="Ends after inactivity" value={`${session.idleTimeoutMinutes} minutes`} />
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1.5">
-                        {remembered
-                            ? "Stored on this device (localStorage). It stays until you sign out."
-                            : "Stored for this tab only (sessionStorage). Cleared when the tab closes."}
-                    </p>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                    If you think someone else got in, sign out everywhere and secure your Google account.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={() => signOut(false)}
+                        disabled={busy !== null}
+                        className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-border bg-card hover:bg-secondary transition text-muted-foreground disabled:opacity-50"
+                    >
+                        <LogOut className="w-3.5 h-3.5" />
+                        {busy === "one" ? "Signing out…" : "Sign out"}
+                    </button>
+                    <button
+                        onClick={() => signOut(true)}
+                        disabled={busy !== null}
+                        className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-border bg-card hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition text-muted-foreground disabled:opacity-50"
+                    >
+                        <MonitorX className="w-3.5 h-3.5" />
+                        {busy === "all" ? "Signing out…" : "Sign out everywhere"}
+                    </button>
                 </div>
-                <button
-                    onClick={forgetKey}
-                    className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-border bg-card hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition text-muted-foreground"
-                >
-                    <LogOut className="w-3.5 h-3.5" />
-                    Forget key on this {remembered ? "device" : "tab"}
-                </button>
+                {error && <p className="text-xs text-destructive">{error}</p>}
             </div>
 
             {/* Quick Links */}

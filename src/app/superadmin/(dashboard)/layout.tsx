@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
     LayoutDashboard,
@@ -15,8 +15,8 @@ import {
     X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clearPlatformKey } from "@/lib/platformApi";
-import { usePlatformKey } from "@/hooks/usePlatformKey";
+import { platformAuth } from "@/lib/platformApi";
+import { usePlatformSession } from "@/hooks/usePlatformSession";
 import { AnimatePresence, motion } from "framer-motion";
 
 const navItems = [
@@ -28,22 +28,31 @@ const navItems = [
 ];
 
 export default function SuperAdminDashboardLayout({ children }: { children: React.ReactNode }) {
-    const router = useRouter();
     const pathname = usePathname();
-    const { key, remembered, hydrated } = usePlatformKey();
-    const ready = hydrated && !!key;
+    const { session, error, refresh } = usePlatformSession();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    useEffect(() => {
-        if (hydrated && !key) router.replace("/superadmin/login");
-    }, [hydrated, key, router]);
-
-    function handleLogout() {
-        clearPlatformKey();
-        router.replace("/superadmin/login");
+    async function handleLogout() {
+        await platformAuth.logout().catch(() => undefined);
+        // Full navigation so no page keeps super-admin data in memory.
+        window.location.replace("/superadmin/login");
     }
 
-    if (!ready) {
+    if (!session && error) {
+        return (
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 px-4 text-center">
+                <p className="text-sm text-muted-foreground">Could not reach the server: {error.message}</p>
+                <button
+                    onClick={() => refresh()}
+                    className="text-sm px-4 py-2 rounded-lg border border-border bg-card hover:bg-secondary transition"
+                >
+                    Try again
+                </button>
+            </div>
+        );
+    }
+
+    if (!session) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -116,10 +125,10 @@ export default function SuperAdminDashboardLayout({ children }: { children: Reac
                     <div className="hidden lg:block" />
                     <div className="flex items-center gap-3">
                         <span
-                            className="text-xs font-medium text-muted-foreground bg-secondary/60 px-3 py-1.5 rounded-full border border-border"
-                            title={remembered ? "Key stored on this device (localStorage)" : "Key kept for this tab only (sessionStorage)"}
+                            className="text-xs font-medium text-muted-foreground bg-secondary/60 px-3 py-1.5 rounded-full border border-border max-w-[60vw] truncate"
+                            title={`Signed in with Google until ${new Date(session.expiresAt).toLocaleString()} at the latest`}
                         >
-                            Super Admin · {remembered ? "this device" : "this tab"}
+                            Super Admin · {session.email}
                         </span>
                     </div>
                 </header>

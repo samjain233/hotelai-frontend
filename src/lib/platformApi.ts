@@ -1,66 +1,22 @@
 import type { SubscriptionTier } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+/** Full-page navigation target that starts the super-admin Google sign-in. */
+export const PLATFORM_GOOGLE_SIGN_IN_URL = "/api/auth/google/superadmin";
 
-/** True when platform calls should go through the Next.js `/api` proxy (anything that is not plain localhost). */
-function shouldUseProxy(): boolean {
-    if (typeof window === "undefined") return process.env.NEXT_PUBLIC_USE_PROXY === "true";
-    const host = window.location.hostname;
-    const isLocal = host === "localhost" || host === "127.0.0.1";
-    return !isLocal || process.env.NEXT_PUBLIC_USE_PROXY === "true";
-}
-
-/** Base URL for platform API calls (matches login verification fetch). */
-export function getPlatformRequestBase(): string {
-    return shouldUseProxy() ? "/api" : API_URL;
-}
-
-// ─── Platform key storage ──────────────────────────────────
-// sessionStorage by default (gone when the tab closes); localStorage when the super-admin
-// ticks "keep me signed in on this device". Only one of the two is ever populated.
-
-const KEY_NAME = "platform_key";
-/** Fired on `window` after the key changes in this tab, so `usePlatformKey()` re-reads it. */
-export const PLATFORM_KEY_EVENT = "platform-key-change";
-
-export function getPlatformKey(): string {
-    if (typeof window === "undefined") return "";
-    return sessionStorage.getItem(KEY_NAME) || localStorage.getItem(KEY_NAME) || "";
-}
-
-export function isPlatformKeyRemembered(): boolean {
-    if (typeof window === "undefined") return false;
-    return !!localStorage.getItem(KEY_NAME);
-}
-
-export function setPlatformKey(key: string, remember: boolean): void {
-    sessionStorage.removeItem(KEY_NAME);
-    localStorage.removeItem(KEY_NAME);
-    (remember ? localStorage : sessionStorage).setItem(KEY_NAME, key);
-    window.dispatchEvent(new Event(PLATFORM_KEY_EVENT));
-}
-
-export function clearPlatformKey(): void {
-    if (typeof window === "undefined") return;
-    sessionStorage.removeItem(KEY_NAME);
-    localStorage.removeItem(KEY_NAME);
-    window.dispatchEvent(new Event(PLATFORM_KEY_EVENT));
-}
-
-function headers(): Record<string, string> {
-    return { "Content-Type": "application/json", "x-platform-key": getPlatformKey() };
-}
-
+/**
+ * Always the same-origin `/api` proxy: the `platform_session` cookie is SameSite=Strict on this origin,
+ * so calling the API host directly would arrive without it.
+ */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-    const url = `${getPlatformRequestBase()}${path.startsWith("/") ? path : "/" + path}`;
-    const res = await fetch(url, { ...init, headers: { ...headers(), ...(init?.headers as Record<string, string> | undefined) } });
+    const res = await fetch(`/api${path}`, {
+        ...init,
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(init?.headers as Record<string, string> | undefined) },
+    });
 
     if (!res.ok) {
-        if (res.status === 401) {
-            clearPlatformKey();
-            if (typeof window !== "undefined" && !window.location.pathname.includes("/superadmin/login")) {
-                window.location.href = "/superadmin/login";
-            }
+        if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/superadmin/login")) {
+            window.location.href = "/superadmin/login";
         }
         const err = (await res.json().catch(() => ({ message: "Request failed" }))) as { message?: string | string[] };
         const message = Array.isArray(err.message) ? err.message.join(", ") : err.message;
@@ -269,22 +225,28 @@ export interface PlatformAnalytics {
     aiUsage: PlatformAiUsage;
 }
 
+export interface PlatformSessionInfo {
+    email: string;
+    signedInAt: string;
+    /** Hard end of this sign-in (8 hours after it started). */
+    expiresAt: string;
+    idleTimeoutMinutes: number;
+}
+
 /**
- * Start hotel admin session as OWNER (platform key).
- * Always uses the Next.js route so `auth_token` is set on the app origin (required on localhost and when API is on another host).
+ * Opens the hotel admin as its owner for up to an hour. The proxy forwards Nest's `auth_token` cookies
+ * so they land on this origin.
  */
 export async function enterHotelAsAdmin(hotelId: string): Promise<void> {
-    const res = await fetch("/api/platform/impersonate", {
-        method: "POST",
-        headers: headers(),
-        credentials: "include",
-        body: JSON.stringify({ hotelId }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-        throw new Error((data as { message?: string }).message || `HTTP ${res.status}`);
-    }
+    await request<unknown>(`/platform/hotels/${encodeURIComponent(hotelId)}/impersonate-admin`, { method: "POST" });
 }
+
+export const platformAuth = {
+    /** Rejects (and redirects to the login page) when signed out. */
+    me: () => request<PlatformSessionInfo>("/platform/auth/me"),
+    logout: () => request<{ message: string }>("/platform/auth/logout", { method: "POST" }),
+    logoutEverywhere: () => request<{ message: string }>("/platform/auth/logout-all", { method: "POST" }),
+};
 
 export const platformApi = {
     getOverview: () => request<PlatformOverview>("/platform/overview"),

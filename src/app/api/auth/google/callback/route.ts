@@ -2,11 +2,20 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { OAuth2Client } from "google-auth-library";
 import { clientIpHeaders } from "@/lib/proxyClientHeaders";
+import { GOOGLE_STATE_COOKIE as STATE_COOKIE, PLATFORM_STATE_PREFIX } from "@/lib/googleOAuthStart";
 
-const STATE_COOKIE = "g_oauth_state";
 const REGISTER_COOKIE = "g_oauth_register";
 const AUTH_COOKIE = "auth_token";
 const AUTH_REFRESH_COOKIE = "auth_refresh";
+const PLATFORM_SESSION_COOKIE = "platform_session";
+
+/** Super-admin login shows `?error=` as written, so the short keys used by the hotel flow get spelled out. */
+const PLATFORM_ERROR_TEXT: Record<string, string> = {
+    google_denied: "Google sign-in was cancelled.",
+    oauth_state: "The sign-in took too long or was opened in another tab. Try again.",
+    google_token: "Google did not complete the sign-in. Try again.",
+    google_profile: "Google did not return your account details. Try again.",
+};
 
 function backendBaseUrl(): string {
     return (
@@ -56,7 +65,11 @@ export async function GET(request: NextRequest) {
     const bridgeSecret = process.env.GOOGLE_OAUTH_BRIDGE_SECRET ?? "";
 
     const origin = request.nextUrl.origin;
-    const registerCtx = parseRegisterCookie(request.cookies.get(REGISTER_COOKIE)?.value, bridgeSecret);
+    const cookieState = request.cookies.get(STATE_COOKIE)?.value;
+    const isPlatform = cookieState?.startsWith(PLATFORM_STATE_PREFIX) ?? false;
+    const registerCtx = isPlatform
+        ? null
+        : parseRegisterCookie(request.cookies.get(REGISTER_COOKIE)?.value, bridgeSecret);
 
     const fail = (path: string) => {
         const r = NextResponse.redirect(`${origin}${path}`);
@@ -66,6 +79,10 @@ export async function GET(request: NextRequest) {
     };
 
     const failAuth = (errorKey: string) => {
+        if (isPlatform) {
+            const text = PLATFORM_ERROR_TEXT[errorKey] ?? errorKey;
+            return fail(`/superadmin/login?error=${encodeURIComponent(text)}`);
+        }
         const base = registerCtx ? "/register" : "/login";
         return fail(`${base}?error=${encodeURIComponent(errorKey)}`);
     };
@@ -81,7 +98,6 @@ export async function GET(request: NextRequest) {
 
     const code = request.nextUrl.searchParams.get("code");
     const state = request.nextUrl.searchParams.get("state");
-    const cookieState = request.cookies.get(STATE_COOKIE)?.value;
     if (!code || !state || !cookieState || state !== cookieState) {
         return failAuth("oauth_state");
     }
@@ -110,9 +126,21 @@ export async function GET(request: NextRequest) {
         if (!p?.sub || !p.email) {
             return failAuth("google_profile");
         }
+        // The backend links accounts by email, so Google must vouch that this person owns it.
+        if (p.email_verified !== true) {
+            return failAuth(
+                isPlatform
+                    ? "Google has not verified this email address."
+                    : "Google has not verified this email address. Verify it in your Google account, or sign in with email and password.",
+            );
+        }
         payload = { sub: p.sub, email: p.email, name: p.name || undefined };
     } catch {
         return failAuth("google_profile");
+    }
+
+    if (isPlatform) {
+        return platformSignIn(request, { googleSub: payload.sub, email: payload.email }, bridgeSecret, failAuth);
     }
 
     const syncBody: Record<string, string> = {
@@ -180,6 +208,49 @@ export async function GET(request: NextRequest) {
         secure: isProd,
         sameSite: "lax",
         maxAge: refreshMaxAgeSec,
+        path: "/",
+    });
+    return nextRes;
+}
+
+async function platformSignIn(
+    request: NextRequest,
+    identity: { googleSub: string; email: string },
+    bridgeSecret: string,
+    failAuth: (message: string) => NextResponse,
+): Promise<NextResponse> {
+    let res: Response;
+    try {
+        res = await fetch(`${backendBaseUrl()}/platform/auth/google`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Hotel-AI-Google-Sync": bridgeSecret,
+                ...clientIpHeaders(request),
+            },
+            body: JSON.stringify({
+                ...identity,
+                userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? undefined,
+            }),
+        });
+    } catch {
+        return failAuth("Could not reach the server. Try again.");
+    }
+
+    const data = (await res.json().catch(() => ({}))) as { token?: string; message?: string | string[] };
+    if (!res.ok || !data.token) {
+        const message = Array.isArray(data.message) ? data.message[0] : data.message;
+        return failAuth(message || "Super-admin sign-in failed.");
+    }
+
+    const nextRes = NextResponse.redirect(`${request.nextUrl.origin}/superadmin`);
+    nextRes.cookies.delete(STATE_COOKIE);
+    nextRes.cookies.delete(REGISTER_COOKIE);
+    // No maxAge: the browser forgets it on close. The server ends it after 8 hours, or 30 idle minutes.
+    nextRes.cookies.set(PLATFORM_SESSION_COOKIE, data.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
         path: "/",
     });
     return nextRes;

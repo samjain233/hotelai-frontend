@@ -42,9 +42,6 @@ async function proxyRequest(request: NextRequest, { path }: { path: string[] }) 
     if (cookie) headers['Cookie'] = cookie;
     const contentType = request.headers.get('content-type');
     if (contentType) headers['Content-Type'] = contentType;
-    // Super-admin /platform/* routes require this; fetch sends it from the browser
-    const platformKey = request.headers.get('x-platform-key');
-    if (platformKey) headers['x-platform-key'] = platformKey;
     const authorization = request.headers.get('authorization');
     if (authorization) headers['Authorization'] = authorization;
     // Conditional GETs: the browser revalidates `no-cache` responses with the ETag it holds; forward it so
